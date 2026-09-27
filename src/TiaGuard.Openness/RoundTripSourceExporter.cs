@@ -125,7 +125,7 @@ namespace TiaGuard.Openness
 
         private static RoundTripExtractionHints ExtractHints(Project project, SnapshotV1 snapshot)
         {
-            var hints = new RoundTripExtractionHints();
+            var hints = new RoundTripExtractionHints { TagTableScanComplete = true };
             var rootDevices = project.Devices.ToList();
             if (rootDevices.Count == 1)
             {
@@ -151,6 +151,16 @@ namespace TiaGuard.Openness
             hints.TagTables = hints.TagTables
                 .OrderBy(value => value.PlcName, StringComparer.Ordinal)
                 .ThenBy(value => value.ScopePath, StringComparer.Ordinal)
+                .ToList();
+            var expectedPlcs = (snapshot.Plcs ?? new List<SnapshotPlc>())
+                .Select(value => value.Name).OrderBy(value => value, StringComparer.Ordinal);
+            var scannedPlcs = hints.ScannedTagTablePlcs.OrderBy(value => value, StringComparer.Ordinal);
+            if (!expectedPlcs.SequenceEqual(scannedPlcs, StringComparer.Ordinal))
+                RecordTagTableScanFailure(hints, null, "project", "PlcSoftwareScanMismatch");
+            hints.TagTableScanFailures = hints.TagTableScanFailures
+                .OrderBy(value => value.PlcName, StringComparer.Ordinal)
+                .ThenBy(value => value.ScopePath, StringComparer.Ordinal)
+                .ThenBy(value => value.FailureType, StringComparer.Ordinal)
                 .ToList();
             return hints;
         }
@@ -208,9 +218,68 @@ namespace TiaGuard.Openness
             }
             else
             {
-                identity.State = RoundTripCapabilityStates.SupportedRoundTrip;
+                try
+                {
+                    var topologyReason = ValidateDemoHardwareTopology(device);
+                    identity.State = topologyReason == null
+                        ? RoundTripCapabilityStates.SupportedRoundTrip
+                        : RoundTripCapabilityStates.Unsupported;
+                    identity.Reason = topologyReason;
+                }
+                catch (Exception error)
+                {
+                    identity.State = RoundTripCapabilityStates.Failed;
+                    identity.Reason = "Hardware DeviceItem topology could not be read (" +
+                        error.GetType().Name + ").";
+                }
             }
             return identity;
+        }
+
+        // The first v0.1 proof target is the observed motor-control demo. A CPU
+        // create identifier cannot reconstruct an added rack module, so reject any
+        // item tree beyond this verified CPU-integrated shape.
+        private static string ValidateDemoHardwareTopology(Device device)
+        {
+            var roots = device.DeviceItems.ToList();
+            if (roots.Count != 2)
+                return "v0.1 requires the verified rack and CPU DeviceItem topology.";
+            var rack = roots.SingleOrDefault(item =>
+                string.Equals(item.TypeIdentifier, "System:Rack.S71200", StringComparison.Ordinal));
+            var rootCpu = roots.SingleOrDefault(item =>
+                (item.Classification & DeviceItemClassifications.CPU) == DeviceItemClassifications.CPU);
+            if (rack == null || rootCpu == null ||
+                rack.Classification != (DeviceItemClassifications)0 || rack.DeviceItems.Any())
+                return "v0.1 requires one empty S7-1200 rack and one direct CPU item.";
+
+            var expectedChildren = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "读卡器/写卡器", "PROFINET 接口_1", "HSC_1", "HSC_2", "HSC_3",
+                "HSC_4", "HSC_5", "HSC_6", "AI 2_1", "DI 8/DQ 6_1",
+                "OPC UA", "Pulse_1", "Pulse_2", "Pulse_3", "Pulse_4"
+            };
+            var children = rootCpu.DeviceItems.ToList();
+            if (children.Count != expectedChildren.Count ||
+                !expectedChildren.SetEquals(children.Select(item => item.Name)))
+                return "v0.1 does not support additional or missing CPU DeviceItems.";
+            foreach (var child in children)
+            {
+                if (!string.IsNullOrWhiteSpace(child.TypeIdentifier) ||
+                    child.Classification != (DeviceItemClassifications)0)
+                    return "v0.1 does not support typed or classified CPU child modules.";
+                var descendants = child.DeviceItems.ToList();
+                if (child.Name == "PROFINET 接口_1")
+                {
+                    if (descendants.Count != 1 || descendants[0].Name != "端口_1" ||
+                        !string.IsNullOrWhiteSpace(descendants[0].TypeIdentifier) ||
+                        descendants[0].Classification != (DeviceItemClassifications)0 ||
+                        descendants[0].DeviceItems.Any())
+                        return "v0.1 does not support an altered PROFINET interface topology.";
+                }
+                else if (descendants.Count != 0)
+                    return "v0.1 does not support additional nested CPU DeviceItems.";
+            }
+            return null;
         }
 
         private static void CollectCpuItems(DeviceItem item, ICollection<DeviceItem> result)
@@ -236,9 +305,26 @@ namespace TiaGuard.Openness
             {
                 var plcName = SafeRead(() => software.Name) ?? "unnamed-software";
                 var softwarePath = Extend(itemPath, plcName);
-                var root = SafeRead(() => software.TagTableGroup);
-                if (root != null)
-                    ExtractTagTableHints(root, Extend(softwarePath, "PLC tags"), plcName, hints);
+                var tagPath = Extend(softwarePath, "PLC tags");
+                PlcTagTableGroup root = null;
+                try { root = software.TagTableGroup; }
+                catch (Exception error)
+                {
+                    RecordTagTableScanFailure(hints, plcName, JoinPath(tagPath), error.GetType().Name);
+                }
+                if (root == null)
+                {
+                    if (!hints.TagTableScanFailures.Any(value =>
+                            value.PlcName == plcName && value.ScopePath == JoinPath(tagPath)))
+                        RecordTagTableScanFailure(hints, plcName, JoinPath(tagPath), "TagTableGroupUnavailable");
+                }
+                else
+                {
+                    var failuresBefore = hints.TagTableScanFailures.Count;
+                    ExtractTagTableHints(root, tagPath, plcName, hints);
+                    if (hints.TagTableScanFailures.Count == failuresBefore)
+                        hints.ScannedTagTablePlcs.Add(plcName);
+                }
             }
             foreach (var child in item.DeviceItems)
                 ExtractSoftwareHints(child, itemPath, hints);
@@ -254,7 +340,12 @@ namespace TiaGuard.Openness
             {
                 foreach (var table in group.TagTables)
                 {
-                    var tableName = SafeRead(() => table.Name) ?? "unnamed-table";
+                    var tableName = SafeRead(() => table.Name);
+                    if (string.IsNullOrWhiteSpace(tableName))
+                    {
+                        RecordTagTableScanFailure(hints, plcName, JoinPath(path), "TagTableNameUnavailable");
+                        continue;
+                    }
                     var tablePath = Extend(path, tableName);
                     hints.TagTables.Add(new RoundTripTagTableHint
                     {
@@ -264,24 +355,40 @@ namespace TiaGuard.Openness
                     });
                 }
             }
-            catch (Exception)
+            catch (Exception error)
             {
-                // Snapshot diagnostics carry the authoritative failure state. Hints are
-                // only used to preserve empty tag tables that Snapshot tags cannot imply.
+                RecordTagTableScanFailure(hints, plcName, JoinPath(path), error.GetType().Name);
             }
 
             try
             {
                 foreach (var child in group.Groups)
                 {
-                    var name = SafeRead(() => child.Name) ?? "unnamed-group";
+                    var name = SafeRead(() => child.Name);
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        RecordTagTableScanFailure(hints, plcName, JoinPath(path), "TagTableGroupNameUnavailable");
+                        continue;
+                    }
                     ExtractTagTableHints(child, Extend(path, name), plcName, hints);
                 }
             }
-            catch (Exception)
+            catch (Exception error)
             {
-                // See comment above: absence of a hint never turns a partial Snapshot clean.
+                RecordTagTableScanFailure(hints, plcName, JoinPath(path), error.GetType().Name);
             }
+        }
+
+        private static void RecordTagTableScanFailure(
+            RoundTripExtractionHints hints, string plcName, string scopePath, string failureType)
+        {
+            hints.TagTableScanComplete = false;
+            hints.TagTableScanFailures.Add(new RoundTripTagTableScanFailure
+            {
+                PlcName = plcName,
+                ScopePath = scopePath,
+                FailureType = failureType
+            });
         }
 
         private static string SafeAttribute(HardwareObject hardware, string name)

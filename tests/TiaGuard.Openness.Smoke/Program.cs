@@ -177,6 +177,7 @@ namespace TiaGuard.Openness.Smoke
             {
                 var hints = new RoundTripExtractionHints
                 {
+                    TagTableScanComplete = true,
                     Hardware = new RoundTripHardwareBuildIdentity
                     {
                         DeviceName = "PLC_1",
@@ -236,6 +237,61 @@ namespace TiaGuard.Openness.Smoke
                     Directory.GetFiles(firstOutput, "tag-table-*.json", SearchOption.AllDirectories).Length != 2)
                     throw new InvalidOperationException("Round-trip source tree is incomplete or dropped an empty tag table.");
 
+                var incompleteTagHints = new RoundTripExtractionHints
+                {
+                    Hardware = hints.Hardware,
+                    TagTableScanFailures = new List<RoundTripTagTableScanFailure>
+                    {
+                        new RoundTripTagTableScanFailure
+                        {
+                            PlcName = "PLC_1", ScopePath = "PLC_1/CPU/PLC_1/PLC%20tags",
+                            FailureType = "SyntheticEnumerationFailure"
+                        }
+                    }
+                };
+                var incompleteTagScan = RoundTripSourceMaterializer.Write(sample, incompleteTagHints, blockRoot,
+                    Path.Combine(selfTestRoot, "incomplete-tag-scan"));
+                if (incompleteTagScan.RoundTripReady || !incompleteTagScan.Capabilities.Any(value =>
+                        value.ObjectKind == "tag-table-scan" && value.State == RoundTripCapabilityStates.Failed) ||
+                    !incompleteTagScan.Diagnostics.Any(value => value.Code == "TAG_TABLE_SCAN_FAILED" &&
+                        value.ObjectRef == "PLC_1/CPU/PLC_1/PLC%20tags"))
+                    throw new InvalidOperationException("A failed empty-table scan was silently treated as empty.");
+
+                sample.Plcs[0].Tags.Clear();
+                var confirmedEmptyHints = new RoundTripExtractionHints
+                {
+                    Hardware = hints.Hardware, TagTableScanComplete = true
+                };
+                var confirmedEmpty = RoundTripSourceMaterializer.Write(sample, confirmedEmptyHints, blockRoot,
+                    Path.Combine(selfTestRoot, "confirmed-empty-tags"));
+                if (!confirmedEmpty.RoundTripReady || confirmedEmpty.Capabilities.Any(value =>
+                        value.ObjectKind == "tag-table" || value.ObjectKind == "tag-table-scan"))
+                    throw new InvalidOperationException("A confirmed empty tag-table scan was treated as failure.");
+                sample.Plcs[0].Tags.Add(new SnapshotTag { Id = "tag:PLC_1/Start",
+                    ScopePath = hints.TagTables[0].ScopePath, Name = "Start", DataType = "Bool",
+                    Address = SnapshotAddressParser.Parse("%I0.0"),
+                    Comment = new SnapshotComment { Status = "missing" } });
+
+                sample.Diagnostics.Add(new SnapshotDiagnostic { Code = "TAG_NAME_READ_FAILED",
+                    Severity = "warning", ObjectId = "tag:PLC_1/Start",
+                    Message = "Sanitized source diagnostic." });
+                sample.Capture.Status = "partial";
+                var partialSource = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                    Path.Combine(selfTestRoot, "partial-source"));
+                if (partialSource.RoundTripReady || !partialSource.Diagnostics.Any(value =>
+                        value.Code == "SNAPSHOT_TAG_NAME_READ_FAILED" && value.ObjectRef == "tag:PLC_1/Start"))
+                    throw new InvalidOperationException("Source diagnostic lost its blocking object and code.");
+                sample.Diagnostics.Clear();
+                sample.Capture.Status = "complete";
+
+                sample.Plcs[0].Tags[0].Comment.Status = "multiple";
+                var multipleComments = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                    Path.Combine(selfTestRoot, "multiple-comments"));
+                if (multipleComments.RoundTripReady || !multipleComments.Capabilities.Any(value =>
+                        value.ObjectKind == "tag" && value.State == RoundTripCapabilityStates.Unsupported))
+                    throw new InvalidOperationException("Multiple tag comment translations were silently accepted.");
+                sample.Plcs[0].Tags[0].Comment.Status = "missing";
+
                 foreach (var canonicalJson in Directory.GetFiles(firstOutput, "*.json", SearchOption.AllDirectories))
                 {
                     var text = File.ReadAllText(canonicalJson);
@@ -256,9 +312,21 @@ namespace TiaGuard.Openness.Smoke
                 sample.Devices[0].Type = "System:Device.S71200";
 
                 plc.Blocks[0].Name = "RenamedOB1";
-                if (RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
-                        Path.Combine(selfTestRoot, "wrong-block-name")).RoundTripReady)
+                var renamedBlockOutput = Path.Combine(selfTestRoot, "wrong-block-name");
+                var renamedBlock = RoundTripSourceMaterializer.Write(sample, hints, blockRoot, renamedBlockOutput);
+                if (renamedBlock.RoundTripReady || !renamedBlock.Capabilities.Any(value =>
+                        value.ObjectKind == "block" && value.State == RoundTripCapabilityStates.ExportOnly) ||
+                    Directory.GetFiles(renamedBlockOutput, "source.xml", SearchOption.AllDirectories).Length != 1)
                     throw new InvalidOperationException("Renamed OB1 was marked round-trip ready.");
+
+                plc.Blocks[0].Export.Artifact = "blocks/missing.xml";
+                var missingBlockOutput = Path.Combine(selfTestRoot, "missing-export-only-artifact");
+                var missingBlock = RoundTripSourceMaterializer.Write(sample, hints, blockRoot, missingBlockOutput);
+                if (missingBlock.RoundTripReady || !missingBlock.Capabilities.Any(value =>
+                        value.ObjectKind == "block" && value.State == RoundTripCapabilityStates.Failed) ||
+                    Directory.GetFiles(missingBlockOutput, "source.xml", SearchOption.AllDirectories).Length != 0)
+                    throw new InvalidOperationException("Missing export-only artifact was falsely claimed.");
+                plc.Blocks[0].Export.Artifact = blockArtifact;
                 plc.Blocks[0].Name = "Main";
 
                 var malformedCreatedXml = blockXml.Replace(
@@ -312,6 +380,7 @@ namespace TiaGuard.Openness.Smoke
                 var blockedOutput = Path.Combine(selfTestRoot, "blocked");
                 var blockedHints = new RoundTripExtractionHints
                 {
+                    TagTableScanComplete = true,
                     Hardware = new RoundTripHardwareBuildIdentity
                     {
                         DeviceName = "PLC_1",
