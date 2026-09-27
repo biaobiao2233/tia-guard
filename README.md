@@ -1,60 +1,92 @@
 # TIA-Guard
 
-AI-assisted engineering review for Siemens TIA Portal projects.
+**Traceable engineering evidence and deterministic review for Siemens TIA Portal projects.**
 
-TIA-Guard is an independent pre-alpha project that aims to make TIA Portal engineering projects easier to inspect, review, diff, and discuss in Git/GitHub workflows.
+TIA-Guard is an independent pre-alpha project focused on a narrow problem: make evidence from an existing TIA Portal project reviewable outside TIA, then run bounded deterministic checks and produce Git/GitHub-friendly reports. AI is optional and explains evidence; it is not the source of engineering truth.
 
-It is designed around the locally installed TIA Portal Openness API. The project does not redistribute Siemens software, DLLs, licenses, or TIA project binaries.
+The project is designed around the locally installed **TIA Portal Openness API**. It does not redistribute Siemens software, DLLs, licenses, or TIA project binaries.
 
 ## v0.1 objective
 
-Build a read-first CLI for TIA Portal V21 that can:
+Prove one reproducible end-to-end loop on **TIA Portal V21**:
 
-- inspect the engineering project;
-- emit a deterministic JSON/Markdown snapshot of devices, PLCs, blocks, tags, and compile state;
-- run deterministic engineering checks (doctor);
-- generate GitHub-friendly SARIF findings;
-- optionally feed the structured snapshot to an LLM for engineering explanation/review.
+1. open a **specified offline project copy** through Openness;
+2. collect a traceable Snapshot with explicit completeness/failure state;
+3. serialize the same engineering content deterministically;
+4. run 3-5 bounded deterministic checks whose scope and false-positive boundaries are documented;
+5. show a small before/after engineering diff;
+6. emit JSON/Markdown and one **real GitHub-validated SARIF** workflow.
 
 Planned CLI surface:
 
     tia-guard info
     tia-guard snapshot
     tia-guard doctor
-    tia-guard review --ai
+    tia-guard diff
+    tia-guard review --ai   # optional experiment, not a v0.1 release gate
 
-Status: repository scaffold only. These commands are the v0.1 contract, not yet implemented.
+Status: pre-alpha. The Snapshot contract is still **draft** until it has been validated against a real sanitized TIA V21 project.
 
 ## Design principle
 
-Deterministic facts stay deterministic; AI handles interpretation.
+**Deterministic facts stay deterministic; AI handles interpretation.**
 
-Address conflicts, missing comments, naming rules, compile errors, and structural checks belong to rules and compiler evidence. LLMs are used for explanation, summarization, review suggestions, and documentation.
+TIA-Guard must distinguish:
+
+- verified engineering facts;
+- coverage and collection failures;
+- deterministic findings;
+- advisory AI output.
+
+An empty result must never mean both "nothing exists" and "collection failed".
+
+## v0.1 rule scope
+
+Initial candidates are intentionally narrow:
+
+- missing tag comments under a documented language/policy;
+- address-range overlap for supported primitive address forms, reported as overlap rather than automatically as an error;
+- M-area tag declarations as an inventory/info finding, not a claim of actual program use;
+- block consistency / compile evidence only when the evidence source and freshness are explicit;
+- incomplete collection as a first-class diagnostic that prevents a misleading "all clear".
 
 ## Safety model
 
-- Read-only by default.
-- No online PLC writes in v0.1.
-- Future write operations must be dry-run first and require explicit --apply.
-- Work against offline project copies for development/testing.
+- v0.1 targets **specified offline project copies** first.
+- No online PLC writes.
+- No automatic save, upgrade, import, property changes, protection unlock, controller state changes, or session shutdown.
+- No active compile by default.
+- Partial/unsupported/protected data is reported explicitly.
+- AI never receives local paths, credentials, or raw customer project data by default.
 
 ## Development environment
 
-The intended first target is Windows with TIA Portal V21 and TIA Portal Openness installed.
+The first target is Windows with TIA Portal V21 and TIA Portal Openness installed.
 
 Run the environment probe:
 
     powershell -ExecutionPolicy Bypass -File .\scripts\check-env.ps1
 
+Openness V21 is a **.NET Framework 4.8** integration boundary. Modern .NET components may be used elsewhere, but the collector boundary must be proven with the locally installed V21 assemblies.
+
 ## Repository layout
 
-    src/TiaGuard.Openness   Siemens Openness adapter
+    src/TiaGuard.Openness   Siemens Openness collector / evidence adapter
     src/TiaGuard.Analysis   deterministic checks
     src/TiaGuard.Reporting  Markdown/JSON/SARIF
-    src/TiaGuard.AI         optional LLM review layer
+    src/TiaGuard.AI         optional advisory layer
     src/TiaGuard.Cli        CLI composition
-    docs/contracts          stable contracts for parallel development
+    docs/contracts          draft shared evidence/finding contracts
     examples                sanitized fixtures only
+
+## Release gates for v0.1
+
+- one self-authored TIA V21 project collected and manually cross-checked against the GUI;
+- repeated unchanged collection produces identical normalized engineering content;
+- one known edit produces the expected diff;
+- supported rules have positive and negative/exception fixtures;
+- partial/protected collection does not produce a false PASS;
+- SARIF upload is demonstrated on GitHub with correct location and stable rerun behavior.
 
 ## Disclaimer
 
