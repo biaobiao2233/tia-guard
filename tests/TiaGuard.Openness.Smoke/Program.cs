@@ -137,6 +137,48 @@ namespace TiaGuard.Openness.Smoke
             sample.Plcs[0].Tags[0].Address = SnapshotAddressParser.Parse("%I0.1");
             if (SnapshotNormalization.ComputeContentId(sample) == firstContentId)
                 throw new InvalidOperationException("Engineering content change did not change content ID.");
+
+            var xmlPath = Path.Combine(Path.GetTempPath(), "tia-guard-content-" + Guid.NewGuid().ToString("N") + ".xml");
+            try
+            {
+                var firstXml = "<Document><DocumentInfo><Created>2026-09-27T00:00:00Z</Created></DocumentInfo><Block>Main</Block></Document>";
+                File.WriteAllText(xmlPath, firstXml, new UTF8Encoding(false));
+                var firstDigest = SimaticMlContentHasher.ComputeSha256(xmlPath);
+                File.WriteAllText(xmlPath, firstXml.Replace("2026-09-27", "2026-09-28"), new UTF8Encoding(false));
+                if (SimaticMlContentHasher.ComputeSha256(xmlPath) != firstDigest)
+                    throw new InvalidOperationException("SimaticML Created changed the normalized content digest.");
+                File.WriteAllText(xmlPath, firstXml.Replace("Main", "Other"), new UTF8Encoding(false));
+                var changedDigest = SimaticMlContentHasher.ComputeSha256(xmlPath);
+                if (changedDigest == firstDigest)
+                    throw new InvalidOperationException("Changed block content did not change the content digest.");
+
+                var export = sample.Plcs[0].Blocks[0].Export;
+                export.Status = "exported";
+                export.Format = "SimaticML";
+                export.Sha256 = new string('a', 64);
+                export.ContentSha256 = firstDigest;
+                export.ContentNormalizationVersion = SimaticMlContentHasher.NormalizationVersion;
+                var exportedContentId = SnapshotNormalization.ComputeContentId(sample);
+                export.Sha256 = new string('b', 64);
+                if (SnapshotNormalization.ComputeContentId(sample) != exportedContentId)
+                    throw new InvalidOperationException("Raw export SHA changed normalized content ID.");
+                export.ContentSha256 = changedDigest;
+                if (SnapshotNormalization.ComputeContentId(sample) == exportedContentId)
+                    throw new InvalidOperationException("Changed block content did not change content ID.");
+                export.ContentSha256 = null;
+                try
+                {
+                    SnapshotNormalization.ComputeContentId(sample);
+                    throw new InvalidOperationException("Missing block content digest was accepted.");
+                }
+                catch (InvalidOperationException error) when (error.Message == "Exported block lacks a normalized content digest.")
+                {
+                }
+            }
+            finally
+            {
+                if (File.Exists(xmlPath)) File.Delete(xmlPath);
+            }
             Console.WriteLine(json);
             return 0;
         }

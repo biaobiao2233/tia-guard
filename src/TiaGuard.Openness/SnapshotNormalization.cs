@@ -49,7 +49,13 @@ namespace TiaGuard.Openness
                     Add(text, block.Kind); Add(text, Format(block.Number)); Add(text, block.Language);
                     Add(text, block.Protection); Add(text, Format(block.IsConsistent));
                     Add(text, block.ModifiedAtUtc); Add(text, block.Export.Status);
-                    Add(text, block.Export.Format); Add(text, block.Export.Sha256);
+                    Add(text, block.Export.Format);
+                    if (block.Export.Status == "exported" &&
+                        (string.IsNullOrWhiteSpace(block.Export.ContentSha256) ||
+                         string.IsNullOrWhiteSpace(block.Export.ContentNormalizationVersion)))
+                        throw new InvalidOperationException("Exported block lacks a normalized content digest.");
+                    Add(text, block.Export.ContentNormalizationVersion);
+                    Add(text, block.Export.ContentSha256);
                 }
                 Add(text, plc.Tags.Count.ToString(CultureInfo.InvariantCulture));
                 foreach (var tag in plc.Tags.OrderBy(value => value.Id, StringComparer.Ordinal))
