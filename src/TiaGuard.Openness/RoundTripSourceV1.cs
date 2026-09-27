@@ -212,10 +212,21 @@ namespace TiaGuard.Openness
         public string Name { get; set; }
     }
 
+    public sealed class RoundTripTagTableScanFailure
+    {
+        public string PlcName { get; set; }
+        public string ScopePath { get; set; }
+        public string FailureType { get; set; }
+    }
+
     public sealed class RoundTripExtractionHints
     {
         public RoundTripHardwareBuildIdentity Hardware { get; set; } = new RoundTripHardwareBuildIdentity();
         public List<RoundTripTagTableHint> TagTables { get; set; } = new List<RoundTripTagTableHint>();
+        public bool TagTableScanComplete { get; set; }
+        public List<string> ScannedTagTablePlcs { get; set; } = new List<string>();
+        public List<RoundTripTagTableScanFailure> TagTableScanFailures { get; set; } =
+            new List<RoundTripTagTableScanFailure>();
         public RoundTripCompilePreparation CompilePreparation { get; set; } = new RoundTripCompilePreparation();
     }
 

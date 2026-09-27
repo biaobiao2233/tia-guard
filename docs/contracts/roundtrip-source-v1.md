@@ -36,6 +36,8 @@ Every encountered object represented by this contract has exactly one capability
 
 `tia-guard.json.roundTripReady` is true only when the source capture is complete and every required represented object is `supported-round-trip`.
 
+Snapshot warning/error diagnostics retain their stable code and engineering object reference in the manifest. A failed or unconfirmed tag-table enumeration adds a failed scan capability and blocks readiness; zero tables are accepted only after a completed scan.
+
 ## tia-guard.json
 
 The manifest records:
@@ -56,6 +58,8 @@ No operational capture metadata is permitted.
 `tia/hardware/<station-id>.json` records the supported root station and the build-grade CPU identity.
 
 The critical field is `createTypeIdentifier`: it is read directly from the CPU-classified `DeviceItem.TypeIdentifier` and is later passed to the Openness `CreateWithItem` flow. TIA-Guard never manufactures an order number or firmware suffix from the generic station `System:Device.*` identifier. The v0.1 S7-1200 subset requires an `OrderNumber:...` CPU TypeIdentifier.
+
+For the first motor-control proof target, the exporter also verifies the observed rack, CPU, and CPU-integrated DeviceItem tree. Extra rack modules or an altered CPU child tree block `roundTripReady`; the CPU create identifier alone does not prove such items can be rebuilt. This exact demo shape is a bounded v0.1 capability, not a claim of support for arbitrary S7-1200 hardware topologies.
 
 `createItemName` preserves the CPU DeviceItem name. `orderNumber` and `firmware` are supporting observed metadata; they are not used to guess a missing `createTypeIdentifier`.
 
@@ -78,6 +82,7 @@ Each tag records:
 - capability
 
 v0.1 fails closed if a required tag cannot be reconstructed without guessing.
+Multiple nonempty comment translations are outside the single-comment model and make that tag unsupported.
 
 ## Block descriptor and source.xml
 
@@ -88,6 +93,7 @@ v0.1 supports exactly one `Main` / OB1 block in LAD.
 `source.xml` is the full Siemens Openness SimaticML export. TIA-Guard does not invent a LAD DSL in v0.1. Unknown XML nodes are retained. The descriptor records a SHA-256 over the exact canonical artifact bytes.
 
 If the block is protected, export fails, or the artifact hash cannot be verified, the block is not `supported-round-trip`.
+An out-of-subset block is `export-only` only after its claimed raw artifact is found, hash-checked, and copied into canonical `source.xml`; otherwise it is `failed` or `unsupported` without a source claim.
 
 Canonical SimaticML uses normalizer `simaticml-v1`. For TIA Portal V21, the only currently classified volatile XML field is `/Document/DocumentInfo/Created`: its value is normalized to `1970-01-01T00:00:00Z`. The exporter first verifies the SHA-256 of the untouched Siemens export against Snapshot evidence, then changes only this proven non-semantic value. Any unexpected `DocumentInfo/Created` shape fails closed; unknown XML nodes are never removed or rewritten. The block descriptor SHA-256 is over the resulting canonical `source.xml`.
 

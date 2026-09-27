@@ -74,6 +74,38 @@ namespace TiaGuard.Openness
             if (snapshot.Capture?.Status != "complete")
                 AddDiagnostic(manifest, "SOURCE_CAPTURE_INCOMPLETE",
                     "The source Snapshot is not complete; round-trip readiness is blocked.", "project");
+            var sourceProblems = (snapshot.Diagnostics ?? new List<SnapshotDiagnostic>())
+                .Where(value => value.Severity != "info")
+                .OrderBy(value => value.ObjectId, StringComparer.Ordinal)
+                .ThenBy(value => value.Code, StringComparer.Ordinal)
+                .ToList();
+            foreach (var sourceDiagnostic in sourceProblems)
+            {
+                var sourceCode = Regex.IsMatch(sourceDiagnostic.Code ?? string.Empty, "^[A-Z][A-Z0-9_]*$")
+                    ? sourceDiagnostic.Code : "UNKNOWN";
+                var objectRef = Regex.IsMatch(sourceDiagnostic.ObjectId ?? string.Empty,
+                    "^(device|group|item|plc|block-group|block|tag-table|tag):")
+                    ? sourceDiagnostic.ObjectId : "project";
+                var severity = sourceDiagnostic.Severity == "warning" || sourceDiagnostic.Severity == "error"
+                    ? sourceDiagnostic.Severity : "unknown";
+                AddDiagnostic(manifest, sourceCode,
+                    "Source Snapshot reported " + sourceCode + " (" + severity + ").",
+                    objectRef);
+            }
+
+            var scanFailures = hints.TagTableScanFailures ?? new List<RoundTripTagTableScanFailure>();
+            if (!hints.TagTableScanComplete || scanFailures.Count != 0)
+            {
+                AddCapability(manifest, "tag-table-scan", "project/tag-table-scan",
+                    RoundTripCapabilityStates.Failed, "Tag table enumeration did not complete.");
+                if (scanFailures.Count == 0)
+                    AddDiagnostic(manifest, "TAG_TABLE_SCAN_INCOMPLETE",
+                        "Tag table enumeration did not complete.", "project/tag-table-scan");
+                foreach (var failure in scanFailures)
+                    AddDiagnostic(manifest, "TAG_TABLE_SCAN_FAILED",
+                        "Tag table enumeration failed (" + failure.FailureType + ").",
+                        failure.ScopePath ?? "project/tag-table-scan");
+            }
 
             var compileReady = true;
             if (hints.CompilePreparation != null)
@@ -120,6 +152,7 @@ namespace TiaGuard.Openness
             manifest.RoundTripReady =
                 supportedTiaVersion &&
                 compileReady &&
+                sourceProblems.Count == 0 &&
                 snapshot.Capture?.Status == "complete" &&
                 station != null &&
                 plc != null &&
@@ -296,12 +329,7 @@ namespace TiaGuard.Openness
             var state = RoundTripCapabilityStates.Unsupported;
             string reason;
             string canonicalSha256 = null;
-            if (!supportedShape)
-            {
-                reason = "v0.1 supports only Main / OB1 in LAD.";
-                if (block.Export?.Status == "exported") state = RoundTripCapabilityStates.ExportOnly;
-            }
-            else if (block.Export == null)
+            if (block.Export == null)
             {
                 state = RoundTripCapabilityStates.Failed;
                 reason = "Block export evidence is missing.";
@@ -321,12 +349,17 @@ namespace TiaGuard.Openness
                 state = RoundTripCapabilityStates.Failed;
                 reason = "Block export failed.";
             }
+            else if (!supportedShape && block.Export.Status == "not-attempted")
+            {
+                state = RoundTripCapabilityStates.Unsupported;
+                reason = "The block shape is outside v0.1 and no textual artifact was preserved.";
+            }
             else if (block.Export.Status != "exported" ||
                      string.IsNullOrWhiteSpace(block.Export.Artifact) ||
                      string.IsNullOrWhiteSpace(block.Export.Sha256))
             {
                 state = RoundTripCapabilityStates.Failed;
-                reason = "A full SimaticML artifact is required for the supported block.";
+                reason = "A full SimaticML artifact is required before claiming the block source.";
             }
             else
             {
@@ -460,6 +493,16 @@ namespace TiaGuard.Openness
             {
                 reason = "Tag comment semantics are unavailable.";
                 return RoundTripCapabilityStates.Opaque;
+            }
+            if (tag.Comment.Status == "multiple")
+            {
+                reason = "Multiple comment translations are outside the v0.1 single-comment model.";
+                return RoundTripCapabilityStates.Unsupported;
+            }
+            if (tag.Comment.Status != "present" && tag.Comment.Status != "missing")
+            {
+                reason = "Unrecognized tag comment status.";
+                return RoundTripCapabilityStates.Failed;
             }
             reason = null;
             return RoundTripCapabilityStates.SupportedRoundTrip;
