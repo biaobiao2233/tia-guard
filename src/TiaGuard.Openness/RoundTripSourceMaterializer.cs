@@ -534,6 +534,7 @@ namespace TiaGuard.Openness
                              bytes[0] == 0xef && bytes[1] == 0xbb && bytes[2] == 0xbf;
             var offset = hasUtf8Bom ? 3 : 0;
             string text;
+            XmlElement created;
             try
             {
                 text = new UTF8Encoding(false, true).GetString(bytes, offset, bytes.Length - offset);
@@ -555,7 +556,7 @@ namespace TiaGuard.Openness
                 }
                 if (documentInfo == null || documentInfo.HasAttributes)
                     throw new InvalidDataException("Unexpected root DocumentInfo shape.");
-                XmlElement created = null;
+                created = null;
                 foreach (XmlNode child in documentInfo.ChildNodes)
                 {
                     if (child.NodeType != XmlNodeType.Element) continue;
@@ -584,6 +585,21 @@ namespace TiaGuard.Openness
                 throw new InvalidDataException("Unexpected SimaticML DocumentInfo/Created shape.");
 
             var match = matches[0];
+            // Prove that the text span selected by the regex is the root Created element
+            // validated above, rather than a similarly named nested element.
+            var probeValue = "tia-guard-created-probe";
+            while (text.Contains(probeValue) || created.InnerText == probeValue)
+                probeValue += "-next";
+            var probe = text.Substring(0, match.Groups[1].Index + match.Groups[1].Length) +
+                        probeValue + text.Substring(match.Groups[2].Index);
+            var probeDocument = new XmlDocument { PreserveWhitespace = true, XmlResolver = null };
+            using (var reader = XmlReader.Create(new StringReader(probe),
+                       new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
+                probeDocument.Load(reader);
+            var probeCreated = probeDocument.DocumentElement?["DocumentInfo"]?["Created"];
+            if (probeCreated?.InnerText != probeValue)
+                throw new InvalidDataException("SimaticML normalization target is not the root Created element.");
+
             const string canonicalCreated = "1970-01-01T00:00:00Z";
             var normalized = text.Substring(0, match.Groups[1].Index + match.Groups[1].Length) +
                              canonicalCreated +
