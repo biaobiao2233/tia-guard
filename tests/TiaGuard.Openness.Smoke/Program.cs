@@ -127,7 +127,7 @@ namespace TiaGuard.Openness.Smoke
             var deviceId = SnapshotNormalization.MakeId("device", new[] { "PLC_1" });
             var plcId = SnapshotNormalization.MakeId("plc", new[] { "PLC_1", "CPU", "PLC_1" });
             sample.Devices.Add(new SnapshotDevice { Id = deviceId, PlcId = plcId,
-                Name = "PLC_1", Type = "CPU", EngineeringPath = "PLC_1" });
+                Name = "PLC_1", Type = "System:Device.S71200", EngineeringPath = "PLC_1" });
             var plc = new SnapshotPlc { Id = plcId, Name = "PLC_1", DeviceId = deviceId };
             var blockArtifact = "blocks/self-test.xml";
             var blockXml = "<Document><DocumentInfo><Created>2026-09-27T00:00:00Z</Created><ExportSetting>WithDefaults</ExportSetting></DocumentInfo><SW.Blocks.OB ID=\"0\"><AttributeList><Name>Main</Name></AttributeList></SW.Blocks.OB></Document>\n";
@@ -221,10 +221,16 @@ namespace TiaGuard.Openness.Smoke
                 if (!canonicalSourceText.Contains("<Created>1970-01-01T00:00:00Z</Created>") ||
                     canonicalSourceText.Contains("2026-09-27T00:00:00Z"))
                     throw new InvalidOperationException("SimaticML volatile Created timestamp was not normalized.");
+                if (!string.Equals(canonicalSourceText,
+                        blockXml.Replace("2026-09-27T00:00:00Z", "1970-01-01T00:00:00Z"),
+                        StringComparison.Ordinal))
+                    throw new InvalidOperationException("SimaticML normalization modified content outside Created.");
                 var blockDescriptorText = File.ReadAllText(Directory.GetFiles(
                     firstOutput, "block.json", SearchOption.AllDirectories).Single());
                 if (!blockDescriptorText.Contains("\"normalizationVersion\":\"simaticml-v1\""))
                     throw new InvalidOperationException("SimaticML normalization version is missing.");
+                if (!blockDescriptorText.Contains("\"sha256\":\"" + Sha256(canonicalSource) + "\""))
+                    throw new InvalidOperationException("Block descriptor hash does not match canonical source.xml.");
                 if (!File.Exists(Path.Combine(firstOutput, "tia-guard.json")) ||
                     Directory.GetFiles(firstOutput, "source.xml", SearchOption.AllDirectories).Length != 1 ||
                     Directory.GetFiles(firstOutput, "tag-table-*.json", SearchOption.AllDirectories).Length != 2)
@@ -236,6 +242,72 @@ namespace TiaGuard.Openness.Smoke
                     if (text.Contains(selfTestRoot) || text.Contains("2026-09-28T00:00:00Z"))
                         throw new InvalidOperationException("Operational path/timestamp leaked into canonical source.");
                 }
+
+                sample.Tia.Version = "V20";
+                if (RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                        Path.Combine(selfTestRoot, "wrong-version")).RoundTripReady)
+                    throw new InvalidOperationException("Non-V21 source was marked round-trip ready.");
+                sample.Tia.Version = "V21";
+
+                sample.Devices[0].Type = "System:Device.S71500";
+                if (RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                        Path.Combine(selfTestRoot, "wrong-station")).RoundTripReady)
+                    throw new InvalidOperationException("Non-S7-1200 station was marked round-trip ready.");
+                sample.Devices[0].Type = "System:Device.S71200";
+
+                plc.Blocks[0].Name = "RenamedOB1";
+                if (RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                        Path.Combine(selfTestRoot, "wrong-block-name")).RoundTripReady)
+                    throw new InvalidOperationException("Renamed OB1 was marked round-trip ready.");
+                plc.Blocks[0].Name = "Main";
+
+                var malformedCreatedXml = blockXml.Replace(
+                    "<Created>2026-09-27T00:00:00Z</Created>",
+                    "<Created Format=\"unexpected\">2026-09-27T00:00:00Z</Created>")
+                    .Replace("</Document>",
+                        "<Other><DocumentInfo><Created>2026-09-28T00:00:00Z</Created></DocumentInfo></Other></Document>");
+                File.WriteAllText(Path.Combine(blockRoot, "blocks", "self-test.xml"),
+                    malformedCreatedXml, new UTF8Encoding(false));
+                plc.Blocks[0].Export.Sha256 = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
+                var wrongCreated = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                    Path.Combine(selfTestRoot, "wrong-created-path"));
+                if (wrongCreated.RoundTripReady || !wrongCreated.Capabilities.Any(value =>
+                        value.ObjectKind == "block" && value.Reason != null &&
+                        value.Reason.Contains("Unexpected root Created shape")))
+                    throw new InvalidOperationException("Unexpected root Created shape was marked round-trip ready.");
+
+                var nestedCreatedXml = blockXml
+                    .Replace("<DocumentInfo><Created>", "<DocumentInfo><!--before-created--><Created>")
+                    .Replace("</Document>",
+                        "<Other><DocumentInfo><Created>2026-09-28T00:00:00Z</Created></DocumentInfo></Other></Document>");
+                File.WriteAllText(Path.Combine(blockRoot, "blocks", "self-test.xml"),
+                    nestedCreatedXml, new UTF8Encoding(false));
+                plc.Blocks[0].Export.Sha256 = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
+                var nestedCreated = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                    Path.Combine(selfTestRoot, "nested-created"));
+                if (nestedCreated.RoundTripReady || !nestedCreated.Capabilities.Any(value =>
+                        value.ObjectKind == "block" && value.State == RoundTripCapabilityStates.Failed &&
+                        value.Reason != null && value.Reason.Contains("not the root Created element")))
+                    throw new InvalidOperationException("Nested Created was normalized instead of the root Created.");
+
+                File.WriteAllBytes(Path.Combine(blockRoot, "blocks", "self-test.xml"), new byte[] { 0xff });
+                plc.Blocks[0].Export.Sha256 = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
+                var invalidUtf8 = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                    Path.Combine(selfTestRoot, "invalid-utf8"));
+                if (invalidUtf8.RoundTripReady || !invalidUtf8.Capabilities.Any(value =>
+                        value.ObjectKind == "block" && value.Reason != null &&
+                        value.Reason.Contains("Invalid SimaticML UTF-8")))
+                    throw new InvalidOperationException("Corrupt UTF-8 was not reported as source corruption.");
+
+                File.WriteAllText(Path.Combine(blockRoot, "blocks", "self-test.xml"),
+                    "<Document><DocumentInfo><Created>broken", new UTF8Encoding(false));
+                plc.Blocks[0].Export.Sha256 = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
+                var invalidXml = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                    Path.Combine(selfTestRoot, "invalid-xml"));
+                if (invalidXml.RoundTripReady || !invalidXml.Capabilities.Any(value =>
+                        value.ObjectKind == "block" && value.Reason != null &&
+                        value.Reason.Contains("Invalid SimaticML XML")))
+                    throw new InvalidOperationException("Corrupt XML was not reported as source corruption.");
 
                 var blockedOutput = Path.Combine(selfTestRoot, "blocked");
                 var blockedHints = new RoundTripExtractionHints

@@ -59,6 +59,8 @@ The critical field is `createTypeIdentifier`: it is read directly from the CPU-c
 
 `createItemName` preserves the CPU DeviceItem name. `orderNumber` and `firmware` are supporting observed metadata; they are not used to guess a missing `createTypeIdentifier`.
 
+This v0.1 slice supports only the verified root station type `System:Device.S71200` and TIA Portal `V21`. An `OrderNumber:` CPU identity by itself does not establish the station family.
+
 ## PLC descriptor
 
 `tia/plc/<plc-id>/plc.json` records PLC identity plus repository-relative tag-table and block descriptor paths. v0.1 requires exactly one PLC software object.
@@ -79,7 +81,7 @@ v0.1 fails closed if a required tag cannot be reconstructed without guessing.
 
 ## Block descriptor and source.xml
 
-v0.1 supports exactly one OB1 block in LAD.
+v0.1 supports exactly one `Main` / OB1 block in LAD.
 
 `block.json` records block identity, number, language, capability and a repository-relative source artifact reference.
 

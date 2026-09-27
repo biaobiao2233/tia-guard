@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml;
 
 namespace TiaGuard.Openness
 {
@@ -65,6 +66,11 @@ namespace TiaGuard.Openness
                 }
             };
 
+            var supportedTiaVersion = string.Equals(manifest.TiaVersion, "V21", StringComparison.Ordinal);
+            if (!supportedTiaVersion)
+                AddDiagnostic(manifest, "TIA_VERSION_UNSUPPORTED",
+                    "v0.1 round-trip source requires TIA Portal V21.", "project");
+
             if (snapshot.Capture?.Status != "complete")
                 AddDiagnostic(manifest, "SOURCE_CAPTURE_INCOMPLETE",
                     "The source Snapshot is not complete; round-trip readiness is blocked.", "project");
@@ -112,6 +118,7 @@ namespace TiaGuard.Openness
                 .ToList();
 
             manifest.RoundTripReady =
+                supportedTiaVersion &&
                 compileReady &&
                 snapshot.Capture?.Status == "complete" &&
                 station != null &&
@@ -150,6 +157,11 @@ namespace TiaGuard.Openness
             {
                 state = RoundTripCapabilityStates.Unsupported;
                 reason = "v0.1 requires the supported S7-1200 station to be a root project device.";
+            }
+            if (!string.Equals(device.Type, "System:Device.S71200", StringComparison.Ordinal))
+            {
+                state = RoundTripCapabilityStates.Unsupported;
+                reason = "v0.1 supports only a verified S7-1200 root station type.";
             }
             if (identity == null || !string.Equals(identity.DeviceName, device.Name, StringComparison.Ordinal))
             {
@@ -275,17 +287,18 @@ namespace TiaGuard.Openness
             var descriptorRelative = baseRelative + "/block.json";
             var sourceRelative = baseRelative + "/source.xml";
             var supportedShape =
+                string.Equals(block.Name, "Main", StringComparison.Ordinal) &&
                 block.Number == 1 &&
                 string.Equals(block.Language, "LAD", StringComparison.OrdinalIgnoreCase) &&
                 (string.Equals(block.Kind, "OB", StringComparison.OrdinalIgnoreCase) ||
-                 block.Kind.EndsWith("OB", StringComparison.OrdinalIgnoreCase));
+                 (block.Kind?.EndsWith("OB", StringComparison.OrdinalIgnoreCase) ?? false));
 
             var state = RoundTripCapabilityStates.Unsupported;
             string reason;
             string canonicalSha256 = null;
             if (!supportedShape)
             {
-                reason = "v0.1 supports only OB1 in LAD.";
+                reason = "v0.1 supports only Main / OB1 in LAD.";
                 if (block.Export?.Status == "exported") state = RoundTripCapabilityStates.ExportOnly;
             }
             else if (block.Export == null)
@@ -343,10 +356,10 @@ namespace TiaGuard.Openness
                                 : RoundTripCapabilityStates.ExportOnly;
                             reason = supportedShape ? null : "The artifact is preserved but its block shape is outside v0.1.";
                         }
-                        catch (InvalidDataException)
+                        catch (InvalidDataException error)
                         {
                             state = RoundTripCapabilityStates.Failed;
-                            reason = "SimaticML v1 normalization expected exactly one DocumentInfo/Created field.";
+                            reason = "SimaticML v1 normalization rejected source: " + error.Message;
                         }
                     }
                 }
@@ -520,13 +533,73 @@ namespace TiaGuard.Openness
             var hasUtf8Bom = bytes.Length >= 3 &&
                              bytes[0] == 0xef && bytes[1] == 0xbb && bytes[2] == 0xbf;
             var offset = hasUtf8Bom ? 3 : 0;
-            var text = Encoding.UTF8.GetString(bytes, offset, bytes.Length - offset);
+            string text;
+            XmlElement created;
+            try
+            {
+                text = new UTF8Encoding(false, true).GetString(bytes, offset, bytes.Length - offset);
+                var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
+                var document = new XmlDocument { PreserveWhitespace = true, XmlResolver = null };
+                using (var reader = XmlReader.Create(new StringReader(text), settings))
+                    document.Load(reader);
+                var root = document.DocumentElement;
+                if (root == null || root.Name != "Document" || root.NamespaceURI.Length != 0)
+                    throw new InvalidDataException("Unexpected SimaticML document root.");
+
+                XmlElement documentInfo = null;
+                foreach (XmlNode child in root.ChildNodes)
+                {
+                    if (child.NodeType != XmlNodeType.Element || child.Name != "DocumentInfo") continue;
+                    if (documentInfo != null)
+                        throw new InvalidDataException("Multiple root DocumentInfo elements.");
+                    documentInfo = (XmlElement)child;
+                }
+                if (documentInfo == null || documentInfo.HasAttributes)
+                    throw new InvalidDataException("Unexpected root DocumentInfo shape.");
+                created = null;
+                foreach (XmlNode child in documentInfo.ChildNodes)
+                {
+                    if (child.NodeType != XmlNodeType.Element) continue;
+                    if (created == null && child.Name != "Created")
+                        throw new InvalidDataException("Created must be the first DocumentInfo element.");
+                    if (child.Name != "Created") continue;
+                    if (created != null)
+                        throw new InvalidDataException("Multiple root Created elements.");
+                    created = (XmlElement)child;
+                }
+                if (created == null || created.HasAttributes || created.ChildNodes.Count != 1 ||
+                    created.FirstChild.NodeType != XmlNodeType.Text)
+                    throw new InvalidDataException("Unexpected root Created shape.");
+            }
+            catch (XmlException error)
+            {
+                throw new InvalidDataException("Invalid SimaticML XML.", error);
+            }
+            catch (DecoderFallbackException error)
+            {
+                throw new InvalidDataException("Invalid SimaticML UTF-8.", error);
+            }
             const string pattern = @"(<DocumentInfo>\s*<Created>)[^<]*(</Created>)";
             var matches = Regex.Matches(text, pattern, RegexOptions.CultureInvariant);
             if (matches.Count != 1)
                 throw new InvalidDataException("Unexpected SimaticML DocumentInfo/Created shape.");
 
             var match = matches[0];
+            // Prove that the text span selected by the regex is the root Created element
+            // validated above, rather than a similarly named nested element.
+            var probeValue = "tia-guard-created-probe";
+            while (text.Contains(probeValue) || created.InnerText == probeValue)
+                probeValue += "-next";
+            var probe = text.Substring(0, match.Groups[1].Index + match.Groups[1].Length) +
+                        probeValue + text.Substring(match.Groups[2].Index);
+            var probeDocument = new XmlDocument { PreserveWhitespace = true, XmlResolver = null };
+            using (var reader = XmlReader.Create(new StringReader(probe),
+                       new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
+                probeDocument.Load(reader);
+            var probeCreated = probeDocument.DocumentElement?["DocumentInfo"]?["Created"];
+            if (probeCreated?.InnerText != probeValue)
+                throw new InvalidDataException("SimaticML normalization target is not the root Created element.");
+
             const string canonicalCreated = "1970-01-01T00:00:00Z";
             var normalized = text.Substring(0, match.Groups[1].Index + match.Groups[1].Length) +
                              canonicalCreated +
