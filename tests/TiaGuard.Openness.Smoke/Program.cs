@@ -275,11 +275,21 @@ namespace TiaGuard.Openness.Smoke
                 sample.Diagnostics.Add(new SnapshotDiagnostic { Code = "TAG_NAME_READ_FAILED",
                     Severity = "warning", ObjectId = "tag:PLC_1/Start",
                     Message = "Sanitized source diagnostic." });
+                sample.Diagnostics.Add(new SnapshotDiagnostic { Code = "TAGS_READ_FAILED",
+                    Severity = "warning", ObjectId = "tag-table:PLC_1/Default",
+                    Message = "Synthetic table read failure." });
+                sample.Diagnostics.Add(new SnapshotDiagnostic { Code = "BLOCKS_READ_FAILED",
+                    Severity = "warning", ObjectId = "block-group:PLC_1/Program%20blocks",
+                    Message = "Synthetic block group read failure." });
                 sample.Capture.Status = "partial";
                 var partialSource = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
                     Path.Combine(selfTestRoot, "partial-source"));
                 if (partialSource.RoundTripReady || !partialSource.Diagnostics.Any(value =>
-                        value.Code == "SNAPSHOT_TAG_NAME_READ_FAILED" && value.ObjectRef == "tag:PLC_1/Start"))
+                        value.Code == "TAG_NAME_READ_FAILED" && value.ObjectRef == "tag:PLC_1/Start") ||
+                    !partialSource.Diagnostics.Any(value => value.Code == "TAGS_READ_FAILED" &&
+                        value.ObjectRef == "tag-table:PLC_1/Default") ||
+                    !partialSource.Diagnostics.Any(value => value.Code == "BLOCKS_READ_FAILED" &&
+                        value.ObjectRef == "block-group:PLC_1/Program%20blocks"))
                     throw new InvalidOperationException("Source diagnostic lost its blocking object and code.");
                 sample.Diagnostics.Clear();
                 sample.Capture.Status = "complete";

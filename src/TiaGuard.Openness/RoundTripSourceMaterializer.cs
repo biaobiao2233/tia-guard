@@ -84,10 +84,11 @@ namespace TiaGuard.Openness
                 var sourceCode = Regex.IsMatch(sourceDiagnostic.Code ?? string.Empty, "^[A-Z][A-Z0-9_]*$")
                     ? sourceDiagnostic.Code : "UNKNOWN";
                 var objectRef = Regex.IsMatch(sourceDiagnostic.ObjectId ?? string.Empty,
-                    "^(device|item|plc|block|tag):") ? sourceDiagnostic.ObjectId : "project";
+                    "^(device|group|item|plc|block-group|block|tag-table|tag):")
+                    ? sourceDiagnostic.ObjectId : "project";
                 var severity = sourceDiagnostic.Severity == "warning" || sourceDiagnostic.Severity == "error"
                     ? sourceDiagnostic.Severity : "unknown";
-                AddDiagnostic(manifest, "SNAPSHOT_" + sourceCode,
+                AddDiagnostic(manifest, sourceCode,
                     "Source Snapshot reported " + sourceCode + " (" + severity + ").",
                     objectRef);
             }
