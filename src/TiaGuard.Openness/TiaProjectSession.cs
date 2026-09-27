@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Siemens.Engineering;
@@ -10,7 +11,16 @@ namespace TiaGuard.Openness
         public string Name { get; internal set; }
         public string Path { get; internal set; }
         public string TiaVersion { get; internal set; }
+        public string TiaBuild { get; internal set; }
+        public string ProjectVersion { get; internal set; }
+        public string SourceKind { get; internal set; }
         public int? ProcessId { get; internal set; }
+    }
+
+    public sealed class SnapshotCollectionOptions
+    {
+        // Optional and explicit. Null leaves all block exports not attempted.
+        public string BlockExportDirectory { get; set; }
     }
 
     public sealed class TiaProjectSession : IDisposable
@@ -99,6 +109,8 @@ namespace TiaGuard.Openness
 
             var sourceFolder = Path.GetDirectoryName(sourcePath);
             var scratchParent = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "TiaGuard.Openness"));
+            RequireNoReparseAncestors(sourceFolder);
+            RequireNoReparseAncestors(scratchParent);
             if (scratchParent.StartsWith(sourceFolder.TrimEnd(Path.DirectorySeparatorChar) +
                     Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(scratchParent, sourceFolder, StringComparison.OrdinalIgnoreCase))
@@ -130,14 +142,29 @@ namespace TiaGuard.Openness
                 Name = _project.Name,
                 Path = _sourcePath ?? _project.Path?.FullName,
                 TiaVersion = _version,
+                TiaBuild = GetApiBuild(),
+                ProjectVersion = ReadProjectVersion(),
+                SourceKind = _scratchDirectory == null ? "attached-session" : "offline-copy",
                 ProcessId = _processId
             };
         }
 
-        public SnapshotV1 ReadSnapshot()
+        public SnapshotV1 ReadSnapshot(SnapshotCollectionOptions options = null)
         {
             ThrowIfDisposed();
-            return SnapshotExtractor.Extract(_project, ReadProjectInfo());
+            options = options ?? new SnapshotCollectionOptions();
+            if (options.BlockExportDirectory != null)
+            {
+                var target = Path.GetFullPath(options.BlockExportDirectory);
+                var sourceFolder = Path.GetDirectoryName(Path.GetFullPath(_sourcePath ?? _project.Path.FullName));
+                RequireNoReparseAncestors(target);
+                RequireNoReparseAncestors(sourceFolder);
+                if (IsInsideOrEqual(target, sourceFolder) ||
+                    (_scratchDirectory != null && IsInsideOrEqual(target, _scratchDirectory)))
+                    throw new InvalidOperationException("Block export output must be outside the TIA project folder.");
+                options = new SnapshotCollectionOptions { BlockExportDirectory = target };
+            }
+            return SnapshotExtractor.Extract(_project, ReadProjectInfo(), options);
         }
 
         public void Dispose()
@@ -174,6 +201,33 @@ namespace TiaGuard.Openness
         {
             return process.InstalledSoftware.Select(product => product.Version)
                 .FirstOrDefault(IsVersion21) ?? "V21";
+        }
+
+        private string ReadProjectVersion()
+        {
+            try { return _project.Version; }
+            catch (EngineeringNotSupportedException) { return null; }
+        }
+
+        private static string GetApiBuild()
+        {
+            var file = Path.Combine(OpennessRuntime.DefaultPublicApiDirectory, "Siemens.Engineering.Base.dll");
+            return File.Exists(file) ? FileVersionInfo.GetVersionInfo(file).FileVersion : null;
+        }
+
+        private static bool IsInsideOrEqual(string path, string directory)
+        {
+            var fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar);
+            var fullDirectory = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar);
+            return string.Equals(fullPath, fullDirectory, StringComparison.OrdinalIgnoreCase) ||
+                fullPath.StartsWith(fullDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void RequireNoReparseAncestors(string path)
+        {
+            for (var directory = new DirectoryInfo(path); directory != null; directory = directory.Parent)
+                if (directory.Exists && (directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("A project or output path contains a reparse point.");
         }
 
         private static bool IsVersion21(string version)

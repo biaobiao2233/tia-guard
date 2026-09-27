@@ -1,17 +1,26 @@
-# Openness adapter (V21)
+# Openness adapter (TIA Portal V21)
 
-`TiaProjectSession.Attach(pid)` selects one running TIA Portal V21 process with an open project. If more than one matches, supply a PID. `OpenOfflineCopy(path)` copies the **entire folder** containing a `.ap21` file to a unique temporary directory, opens only that copy in a headless V21 process, and removes the copy on disposal. Keep offline projects in dedicated folders; the adapter refuses a source folder that encloses its temporary location. It never calls `Save`, `Compile`, `Download`, or online access APIs.
+`TiaProjectSession.OpenOfflineCopy(path)` requires an explicitly selected `.ap21` file. It copies the complete containing folder to an adapter-owned temporary directory and opens that copy in a headless V21 process. Disposal closes only this owned copy and removes its verified temporary directory. The supplied project is never opened or saved. `Attach(pid)` is available for a named running V21 process; if multiple open projects match, the caller must select a PID. Disposal disconnects this adapter without closing the user's project or Portal process.
 
-`ReadProjectInfo()` returns project name/path, TIA version, and optional process ID. `ReadSnapshot()` returns the repository's Snapshot v1 DTO. It walks device groups, nested device items, block groups (including system block groups), and PLC tag table groups. Arrays are sorted with ordinal comparison. A PLC name is `device/software` when these differ. The single tag `comment` is the first nonempty translation in ordinal language order. Missing optional device metadata stays `null`. `compile` is always `null` because no compilation is run.
+`ReadProjectInfo()` reports project name, source path, source kind, project version when available, TIA version/build, and attached process ID when applicable. Paths and PIDs are operational information and are absent from Snapshot JSON.
 
-The smoke harness is in `tests/TiaGuard.Openness.Smoke`:
+`ReadSnapshot()` maps the current coordinator-owned Draft Snapshot v1 contract. It traverses device groups, nested device items, PLC software, user and system block groups, and PLC tag tables. Read failures, protected content, and unsupported evidence produce diagnostics. Warning/error diagnostics set a `partial` or `failed` capture; a successfully read empty collection remains `complete`. Diagnostics never include raw Siemens exception text or local paths. Devices, PLCs, blocks, tags, and diagnostics are ordered deterministically. Snapshot `contentId` is emitted only for a complete capture; it excludes capture time, process ID, local source path, artifact path, and observation time.
+
+Object IDs are collector-owned IDs based on Unicode-normalized engineering group/name paths. They are repeatable while those paths remain unchanged; a rename or move changes the ID. They are **not** persistent Openness object GUIDs. `scopePath` and `engineeringPath` describe the traversed engineering hierarchy. If a device has more than one PLC software object, all are listed in `plcs` and a diagnostic explains that `device.plcId` names the lowest sorted ID.
+
+Block `IsConsistent` is read as a property, without running a compile. If any block exposes it, compile mode is `consistency-only`; a `false` result yields `issues`, while all `true` results still yield `unknown`, since no compile was run. Otherwise mode is `not-observed`. `active-compile` is never emitted. Block export is `not-attempted` by default, or `protected` when know-how protection is observed. Explicit `SnapshotCollectionOptions.BlockExportDirectory` enables export outside both source and temporary project directories. Exported files are named by a hash of the block ID, with a relative artifact path and SHA-256 in Snapshot; protected and unknown-protection blocks are skipped. Export errors are reported as `unsupported` or `failed` without claiming an artifact. Raw export files stay in the caller's output directory and should be handled as project data.
+
+Tag addresses preserve their raw form. Only common `%I/%Q/%M` bit, byte, word, and double-word forms are normalized; other forms are `unsupported`, without a guessed address. Comments use the first nonempty translation in ordinal language order and distinguish `present`, `missing`, `unavailable`, and `read-failed`.
+
+The focused harness is in `tests/TiaGuard.Openness.Smoke`:
 
 ```powershell
 dotnet build tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release
-dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- probe
 dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- self-test
-dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- snapshot attach 12345
+dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- probe
+dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- info open-copy C:\path\to\project.ap21
 dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- snapshot open-copy C:\path\to\project.ap21
+dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- snapshot open-copy C:\path\to\project.ap21 --block-export-dir C:\outside\exports
 ```
 
-Exit code `3` means the **current Windows logon token** lacks effective `Siemens TIA Openness` membership. Account membership alone is insufficient until a new token is issued. Exit code `2` means another failure. `OpennessRuntime.Initialize()` resolves V21 Siemens assemblies from the installed PublicAPI and `Bin/PublicAPI` directories; the DLLs are not copied into build output or committed. The public session factories call it automatically after the access check.
+Exit code `3` means the current Windows logon token lacks effective `Siemens TIA Openness` membership. Account membership alone is insufficient until a new token is issued. Exit code `2` means another failure. The harness resolves the installed V21 PublicAPI assemblies at runtime; Siemens DLLs are neither copied into build output nor committed.

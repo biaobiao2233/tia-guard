@@ -26,7 +26,8 @@ namespace TiaGuard.Openness.Smoke
                     if (args.Length == 3 && !int.TryParse(args[2], out pid)) return Usage();
                     session = TiaProjectSession.Attach(args.Length == 3 ? (int?)pid : null);
                 }
-                else if (args[1] == "open-copy" && args.Length == 3)
+                else if (args[1] == "open-copy" && (args.Length == 3 ||
+                    (args[0] == "snapshot" && args.Length == 5 && args[3] == "--block-export-dir")))
                     session = TiaProjectSession.OpenOfflineCopy(args[2]);
                 else
                     return Usage();
@@ -39,10 +40,17 @@ namespace TiaGuard.Openness.Smoke
                         Console.WriteLine("name=" + info.Name);
                         Console.WriteLine("path=" + info.Path);
                         Console.WriteLine("tiaVersion=" + info.TiaVersion);
+                        Console.WriteLine("tiaBuild=" + (info.TiaBuild ?? "null"));
+                        Console.WriteLine("projectVersion=" + (info.ProjectVersion ?? "null"));
+                        Console.WriteLine("sourceKind=" + info.SourceKind);
                         Console.WriteLine("processId=" + (info.ProcessId?.ToString() ?? "null"));
                     }
                     else
-                        Console.WriteLine(SnapshotV1Json.Serialize(session.ReadSnapshot()));
+                    {
+                        var options = args.Length == 5 ? new SnapshotCollectionOptions
+                            { BlockExportDirectory = args[4] } : null;
+                        Console.WriteLine(SnapshotV1Json.Serialize(session.ReadSnapshot(options)));
+                    }
                 }
                 return 0;
             }
@@ -62,7 +70,8 @@ namespace TiaGuard.Openness.Smoke
         {
             var api = @"C:\Program Files\Siemens\Automation\Portal V21\PublicAPI\V21\net48";
             var filesPresent = File.Exists(Path.Combine(api, "Siemens.Engineering.Base.dll")) &&
-                File.Exists(Path.Combine(api, "Siemens.Engineering.Step7.dll"));
+                File.Exists(Path.Combine(api, "Siemens.Engineering.Step7.dll")) &&
+                File.Exists(Path.Combine(api, "Siemens.Engineering.WinCC.dll"));
             var groupEffective = OpennessAccess.HasEffectiveGroupMembership();
             var runningPortals = Process.GetProcessesByName("Siemens.Automation.Portal").Length;
             Console.WriteLine("V21 PublicAPI files present: " + filesPresent);
@@ -85,16 +94,33 @@ namespace TiaGuard.Openness.Smoke
 
         private static int SelfTest()
         {
-            var sample = new SnapshotV1
-            {
-                Project = new SnapshotProject { Name = "Demo", Path = null },
-                Tia = new SnapshotTia { Version = "V21", ProcessId = null }
+            var sample = new SnapshotV1 {
+                Project = new SnapshotProject { Name = "Demo", SourceKind = "offline-copy" },
+                Tia = new SnapshotTia { Version = "V21" },
+                Capture = new SnapshotCapture { Status = "complete", Mode = "offline-copy",
+                    CapturedAtUtc = "2026-09-27T00:00:00Z" }
             };
-            sample.Devices.Add(new SnapshotDevice { Name = "PLC_1", Type = "CPU" });
-            var plc = new SnapshotPlc { Name = "PLC_1" };
-            plc.Blocks.Add(new SnapshotBlock { Name = "Main", Kind = "OB", Language = "LAD" });
-            plc.Tags.Add(new SnapshotTag { Name = "Start", DataType = "Bool", Address = "%I0.0" });
+            var deviceId = SnapshotNormalization.MakeId("device", new[] { "PLC_1" });
+            var plcId = SnapshotNormalization.MakeId("plc", new[] { "PLC_1", "CPU", "PLC_1" });
+            sample.Devices.Add(new SnapshotDevice { Id = deviceId, PlcId = plcId,
+                Name = "PLC_1", Type = "CPU", EngineeringPath = "PLC_1" });
+            var plc = new SnapshotPlc { Id = plcId, Name = "PLC_1", DeviceId = deviceId };
+            plc.Blocks.Add(new SnapshotBlock { Id = "block:PLC_1/Program%20blocks/Main",
+                ScopePath = "Program%20blocks", Name = "Main", Kind = "OB",
+                Language = "LAD", Protection = "none" });
+            plc.Tags.Add(new SnapshotTag { Id = "tag:PLC_1/Start", ScopePath = "PLC%20tags/Default",
+                Name = "Start", DataType = "Bool", Address = SnapshotAddressParser.Parse("%I0.0"),
+                Comment = new SnapshotComment { Status = "missing" } });
             sample.Plcs.Add(plc);
+            sample.Project.ContentId = SnapshotNormalization.ComputeContentId(sample);
+            var firstContentId = sample.Project.ContentId;
+            sample.Capture.CapturedAtUtc = "2026-09-28T00:00:00Z";
+            if (SnapshotNormalization.ComputeContentId(sample) != firstContentId)
+                throw new InvalidOperationException("Capture timestamp affected normalized content ID.");
+            if (SnapshotAddressParser.Parse("%QW2").BitWidth != 16 ||
+                SnapshotAddressParser.Parse("%DB1.DBX0.0").ParseStatus != "unsupported" ||
+                SnapshotAddressParser.Parse(null).ParseStatus != "missing")
+                throw new InvalidOperationException("Address parsing failed.");
             var json = SnapshotV1Json.Serialize(sample);
             if (!string.Equals(json, SnapshotV1Json.Serialize(sample), StringComparison.Ordinal))
                 throw new InvalidOperationException("Snapshot serialization is unstable.");
@@ -103,17 +129,21 @@ namespace TiaGuard.Openness.Smoke
                 var parsed = (SnapshotV1)new DataContractJsonSerializer(typeof(SnapshotV1)).ReadObject(stream);
                 if (parsed.SchemaVersion != "1.0" || parsed.Project.Name != "Demo" ||
                     parsed.Devices.Count != 1 || parsed.Plcs.Count != 1 ||
-                    parsed.Plcs[0].Blocks.Count != 1 || parsed.Plcs[0].Tags[0].Address != "%I0.0" ||
-                    parsed.Plcs[0].Compile != null)
+                    parsed.Plcs[0].Blocks.Count != 1 || parsed.Plcs[0].Tags[0].Address.Raw != "%I0.0" ||
+                    parsed.Plcs[0].Compile.Mode != "not-observed" ||
+                    parsed.Project.ContentId != firstContentId)
                     throw new InvalidOperationException("Snapshot v1 JSON round trip failed.");
             }
+            sample.Plcs[0].Tags[0].Address = SnapshotAddressParser.Parse("%I0.1");
+            if (SnapshotNormalization.ComputeContentId(sample) == firstContentId)
+                throw new InvalidOperationException("Engineering content change did not change content ID.");
             Console.WriteLine(json);
             return 0;
         }
 
         private static int Usage()
         {
-            Console.Error.WriteLine("Usage: probe | self-test | info|snapshot attach [pid] | info|snapshot open-copy <project.ap21>");
+            Console.Error.WriteLine("Usage: probe | self-test | info|snapshot attach [pid] | info|snapshot open-copy <project.ap21> [--block-export-dir <outside-project-dir>]");
             return 2;
         }
     }
