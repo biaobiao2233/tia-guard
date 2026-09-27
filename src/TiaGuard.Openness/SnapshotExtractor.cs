@@ -243,6 +243,17 @@ namespace TiaGuard.Openness
                 result.Export.Status = "exported";
                 result.Export.Format = "SimaticML";
                 result.Export.Artifact = relative;
+                try
+                {
+                    result.Export.ContentSha256 = SimaticMlContentHasher.ComputeSha256(destination);
+                    result.Export.ContentNormalizationVersion = SimaticMlContentHasher.NormalizationVersion;
+                }
+                catch (InvalidDataException)
+                {
+                    result.Export.DiagnosticCode = "BLOCK_CONTENT_HASH_FAILED";
+                    Diagnose(snapshot, "BLOCK_CONTENT_HASH_FAILED", "warning",
+                        "The exported block could not be normalized for a stable content digest.", result.Id);
+                }
             }
             catch (EngineeringNotSupportedException)
             {
@@ -309,9 +320,16 @@ namespace TiaGuard.Openness
                     Diagnose(snapshot, "TAG_COMMENT_UNAVAILABLE", "warning", "Tag comment is unavailable.", id);
                     return new SnapshotComment { Status = "unavailable" };
                 }
-                var value = comment.Items.OrderBy(item => item.Language?.ToString(), StringComparer.Ordinal)
-                    .Select(item => item.Text).FirstOrDefault(text => !string.IsNullOrWhiteSpace(text));
-                return new SnapshotComment { Status = value == null ? "missing" : "present", Text = value };
+                var values = comment.Items.OrderBy(item => item.Language?.ToString(), StringComparer.Ordinal)
+                    .Select(item => item.Text).Where(text => !string.IsNullOrWhiteSpace(text)).ToList();
+                if (values.Count > 1)
+                {
+                    Diagnose(snapshot, "TAG_COMMENT_MULTIPLE", "warning",
+                        "Multiple nonempty comment translations are outside the single-comment model.", id);
+                    return new SnapshotComment { Status = "multiple", Text = values[0] };
+                }
+                return new SnapshotComment { Status = values.Count == 0 ? "missing" : "present",
+                    Text = values.FirstOrDefault() };
             }
             catch (EngineeringNotSupportedException)
             {

@@ -110,6 +110,11 @@
                       "type": ["string", "null"],
                       "pattern": "^[A-Fa-f0-9]{64}$"
                     },
+                    "contentSha256": {
+                      "type": ["string", "null"],
+                      "pattern": "^[A-Fa-f0-9]{64}$"
+                    },
+                    "contentNormalizationVersion": { "type": ["string", "null"] },
                     "diagnosticCode": { "type": ["string", "null"] }
                   },
                   "additionalProperties": false
@@ -145,7 +150,7 @@
                   "type": "object",
                   "required": ["status", "text"],
                   "properties": {
-                    "status": { "enum": ["present", "missing", "unavailable", "read-failed"] },
+                    "status": { "enum": ["present", "missing", "multiple", "unavailable", "read-failed"] },
                     "text": { "type": ["string", "null"] }
                   },
                   "additionalProperties": false
