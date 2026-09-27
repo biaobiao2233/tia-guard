@@ -1,0 +1,44 @@
+# Build artifacts
+bin/
+obj/
+artifacts/
+packages/
+*.user
+*.suo
+.vs/
+.idea/
+
+# Local configuration / credentials
+.env
+.env.*
+!.env.example
+*.secrets.json
+appsettings.local.json
+
+# Siemens engineering binaries / archives
+*.ap11
+*.ap12
+*.ap13
+*.ap14
+*.ap15
+*.ap16
+*.ap17
+*.ap18
+*.ap19
+*.ap20
+*.ap21
+*.zap*
+*.zal*
+*.am*
+*.tsproj
+
+# Runtime/export scratch
+out/
+tmp/
+logs/
+CLONE_PROJECT/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

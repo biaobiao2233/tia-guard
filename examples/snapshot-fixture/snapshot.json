@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "project": { "name": "S7-1200-Motor-Reversing-Control", "path": null },
+  "tia": { "version": "V21", "processId": null },
+  "devices": [
+    {
+      "name": "PLC_1",
+      "type": "CPU 1212C DC/DC/DC",
+      "orderNumber": "6ES7 212-1AE40-0XB0",
+      "firmware": "V4.7"
+    }
+  ],
+  "plcs": [
+    {
+      "name": "PLC_1",
+      "blocks": [
+        { "name": "Main", "kind": "OB", "language": "LAD" }
+      ],
+      "tags": [
+        { "name": "Start_PB", "dataType": "Bool", "address": "%I0.0", "comment": "Start push button" },
+        { "name": "KM_Forward", "dataType": "Bool", "address": "%Q0.0", "comment": "Forward contactor" }
+      ],
+      "compile": null
+    }
+  ]
+}

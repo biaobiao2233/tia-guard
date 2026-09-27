@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/tia-guard/snapshot-v1.schema.json",
+  "title": "TIA-Guard Snapshot v1",
+  "type": "object",
+  "required": ["schemaVersion", "project", "tia", "devices", "plcs"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "project": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "path": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "tia": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": { "type": "string" },
+        "processId": { "type": ["integer", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "devices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "orderNumber": { "type": ["string", "null"] },
+          "firmware": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "plcs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "blocks", "tags"],
+        "properties": {
+          "name": { "type": "string" },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "kind"],
+              "properties": {
+                "name": { "type": "string" },
+                "kind": { "type": "string" },
+                "language": { "type": ["string", "null"] }
+              },
+              "additionalProperties": false
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "dataType"],
+              "properties": {
+                "name": { "type": "string" },
+                "dataType": { "type": "string" },
+                "address": { "type": ["string", "null"] },
+                "comment": { "type": ["string", "null"] }
+              },
+              "additionalProperties": false
+            }
+          },
+          "compile": {
+            "type": ["object", "null"],
+            "properties": {
+              "errors": { "type": "integer", "minimum": 0 },
+              "warnings": { "type": "integer", "minimum": 0 }
+            },
+            "required": ["errors", "warnings"],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
