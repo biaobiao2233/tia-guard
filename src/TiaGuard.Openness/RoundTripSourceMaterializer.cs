@@ -356,10 +356,10 @@ namespace TiaGuard.Openness
                                 : RoundTripCapabilityStates.ExportOnly;
                             reason = supportedShape ? null : "The artifact is preserved but its block shape is outside v0.1.";
                         }
-                        catch (InvalidDataException)
+                        catch (InvalidDataException error)
                         {
                             state = RoundTripCapabilityStates.Failed;
-                            reason = "SimaticML v1 normalization expected exactly one DocumentInfo/Created field.";
+                            reason = "SimaticML v1 normalization rejected source: " + error.Message;
                         }
                     }
                 }

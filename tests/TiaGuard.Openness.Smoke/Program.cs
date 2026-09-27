@@ -269,9 +269,31 @@ namespace TiaGuard.Openness.Smoke
                 File.WriteAllText(Path.Combine(blockRoot, "blocks", "self-test.xml"),
                     malformedCreatedXml, new UTF8Encoding(false));
                 plc.Blocks[0].Export.Sha256 = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
-                if (RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
-                        Path.Combine(selfTestRoot, "wrong-created-path")).RoundTripReady)
+                var wrongCreated = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                    Path.Combine(selfTestRoot, "wrong-created-path"));
+                if (wrongCreated.RoundTripReady || !wrongCreated.Capabilities.Any(value =>
+                        value.ObjectKind == "block" && value.Reason != null &&
+                        value.Reason.Contains("Unexpected root Created shape")))
                     throw new InvalidOperationException("Unexpected root Created shape was marked round-trip ready.");
+
+                File.WriteAllBytes(Path.Combine(blockRoot, "blocks", "self-test.xml"), new byte[] { 0xff });
+                plc.Blocks[0].Export.Sha256 = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
+                var invalidUtf8 = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                    Path.Combine(selfTestRoot, "invalid-utf8"));
+                if (invalidUtf8.RoundTripReady || !invalidUtf8.Capabilities.Any(value =>
+                        value.ObjectKind == "block" && value.Reason != null &&
+                        value.Reason.Contains("Invalid SimaticML UTF-8")))
+                    throw new InvalidOperationException("Corrupt UTF-8 was not reported as source corruption.");
+
+                File.WriteAllText(Path.Combine(blockRoot, "blocks", "self-test.xml"),
+                    "<Document><DocumentInfo><Created>broken", new UTF8Encoding(false));
+                plc.Blocks[0].Export.Sha256 = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
+                var invalidXml = RoundTripSourceMaterializer.Write(sample, hints, blockRoot,
+                    Path.Combine(selfTestRoot, "invalid-xml"));
+                if (invalidXml.RoundTripReady || !invalidXml.Capabilities.Any(value =>
+                        value.ObjectKind == "block" && value.Reason != null &&
+                        value.Reason.Contains("Invalid SimaticML XML")))
+                    throw new InvalidOperationException("Corrupt XML was not reported as source corruption.");
 
                 var blockedOutput = Path.Combine(selfTestRoot, "blocked");
                 var blockedHints = new RoundTripExtractionHints
