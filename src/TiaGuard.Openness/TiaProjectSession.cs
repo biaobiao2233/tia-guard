@@ -167,6 +167,27 @@ namespace TiaGuard.Openness
             return SnapshotExtractor.Extract(_project, ReadProjectInfo(), options);
         }
 
+        public RoundTripManifestV1 ExportRoundTripSource(
+            string outputDirectory,
+            Action<string> progress = null)
+        {
+            ThrowIfDisposed();
+            if (_scratchDirectory == null)
+                throw new InvalidOperationException("Round-trip export requires an offline/disposable project copy.");
+            if (string.IsNullOrWhiteSpace(outputDirectory))
+                throw new ArgumentException("A round-trip output directory is required.", nameof(outputDirectory));
+
+            var target = Path.GetFullPath(outputDirectory);
+            var sourceFolder = Path.GetDirectoryName(Path.GetFullPath(_sourcePath ?? _project.Path.FullName));
+            RequireNoReparseAncestors(target);
+            RequireNoReparseAncestors(sourceFolder);
+            if (IsInsideOrEqual(target, sourceFolder) ||
+                (_scratchDirectory != null && IsInsideOrEqual(target, _scratchDirectory)))
+                throw new InvalidOperationException("Round-trip output must be outside the TIA project folder.");
+
+            return RoundTripSourceExporter.Export(_project, ReadProjectInfo(), target, progress);
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
