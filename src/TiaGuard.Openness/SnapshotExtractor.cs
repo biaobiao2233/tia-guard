@@ -38,6 +38,13 @@ namespace TiaGuard.Openness
             rootSuccess |= Collect(() => project.DeviceGroups,
                 group => AppendDeviceGroup(group, new List<string>(), snapshot, options, capturedAt),
                 snapshot, "DEVICE_GROUP_ROOT_READ_FAILED", null);
+            var ungrouped = Read(() => project.UngroupedDevicesGroup, snapshot,
+                "UNGROUPED_DEVICE_GROUP_READ_FAILED", null);
+            if (ungrouped != null)
+                rootSuccess |= Collect(() => ungrouped.Devices,
+                    device => AppendDevice(device, new List<string> { "Ungrouped devices" },
+                        snapshot, options, capturedAt),
+                    snapshot, "UNGROUPED_DEVICES_READ_FAILED", null);
             snapshot.Devices = snapshot.Devices.OrderBy(value => value.Id, StringComparer.Ordinal).ToList();
             snapshot.Plcs = snapshot.Plcs.OrderBy(value => value.Id, StringComparer.Ordinal).ToList();
             foreach (var device in snapshot.Devices)
