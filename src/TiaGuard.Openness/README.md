@@ -21,6 +21,11 @@ dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.cspro
 dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- info open-copy C:\path\to\project.ap21
 dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- snapshot open-copy C:\path\to\project.ap21
 dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- snapshot open-copy C:\path\to\project.ap21 --block-export-dir C:\outside\exports
+dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- roundtrip open-copy C:\path\to\project.ap21 C:\outside\canonical-tree
+dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- validate-build-input C:\outside\canonical-tree C:\outside\new-project
+dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- build C:\outside\canonical-tree C:\outside\new-project
 ```
+
+The `build` command reads only the canonical tree, requires an unused output directory, stages on the destination volume, and publishes the new `.ap21` only after saving and compiling with zero errors. It never opens the original source project.
 
 Exit code `3` means the current Windows logon token lacks effective `Siemens TIA Openness` membership. Account membership alone is insufficient until a new token is issued. Exit code `2` means another failure. The harness resolves the installed V21 PublicAPI assemblies at runtime; Siemens DLLs are neither copied into build output nor committed.

@@ -19,6 +19,21 @@ namespace TiaGuard.Openness.Smoke
             {
                 if (args.Length == 1 && args[0] == "probe") return Probe();
                 if (args.Length == 1 && args[0] == "self-test") return SelfTest();
+                if (args.Length == 3 && args[0] == "validate-build-input")
+                {
+                    var input = RoundTripBuildInput.Load(args[1], args[2]);
+                    Console.WriteLine("validated=" + input.Manifest.Project.Name);
+                    return 0;
+                }
+                if (args.Length == 3 && args[0] == "build")
+                {
+                    var result = RoundTripBuilder.Build(args[1], args[2],
+                        stage => Console.Error.WriteLine("stage=" + stage));
+                    Console.WriteLine("projectFile=" + result.ProjectFile);
+                    Console.WriteLine("compileErrors=" + result.CompileErrors);
+                    Console.WriteLine("compileWarnings=" + result.CompileWarnings);
+                    return 0;
+                }
                 if (args.Length < 2 || (args[0] != "info" && args[0] != "snapshot" && args[0] != "roundtrip"))
                     return Usage();
 
@@ -130,7 +145,7 @@ namespace TiaGuard.Openness.Smoke
                 Name = "PLC_1", Type = "System:Device.S71200", EngineeringPath = "PLC_1" });
             var plc = new SnapshotPlc { Id = plcId, Name = "PLC_1", DeviceId = deviceId };
             var blockArtifact = "blocks/self-test.xml";
-            var blockXml = "<Document><DocumentInfo><Created>2026-09-27T00:00:00Z</Created><ExportSetting>WithDefaults</ExportSetting></DocumentInfo><SW.Blocks.OB ID=\"0\"><AttributeList><Name>Main</Name></AttributeList></SW.Blocks.OB></Document>\n";
+            var blockXml = "<Document><DocumentInfo><Created>2026-09-27T00:00:00Z</Created><ExportSetting>WithDefaults</ExportSetting></DocumentInfo><SW.Blocks.OB ID=\"0\"><AttributeList><Name>Main</Name><Number>1</Number><ProgrammingLanguage>LAD</ProgrammingLanguage></AttributeList></SW.Blocks.OB></Document>\n";
             var selfTestRoot = Path.Combine(Path.GetTempPath(), "TiaGuard.RoundTrip.SelfTest",
                 Guid.NewGuid().ToString("N"));
             var blockRoot = Path.Combine(selfTestRoot, "exports");
@@ -138,7 +153,7 @@ namespace TiaGuard.Openness.Smoke
             File.WriteAllText(Path.Combine(blockRoot, "blocks", "self-test.xml"), blockXml, new UTF8Encoding(false));
             var blockHash = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
             plc.Blocks.Add(new SnapshotBlock { Id = "block:PLC_1/Program%20blocks/Main",
-                ScopePath = "Program%20blocks", Name = "Main", Kind = "OB", Number = 1,
+                ScopePath = "PLC_1/PLC_1/PLC_1/Program%20blocks", Name = "Main", Kind = "OB", Number = 1,
                 Language = "LAD", Protection = "none", Export = new SnapshotExport
                 {
                     Status = "exported", Format = "SimaticML", Artifact = blockArtifact, Sha256 = blockHash,
@@ -183,7 +198,7 @@ namespace TiaGuard.Openness.Smoke
                     Hardware = new RoundTripHardwareBuildIdentity
                     {
                         DeviceName = "PLC_1",
-                        CpuItemName = "CPU_1",
+                        CpuItemName = "PLC_1",
                         CreateTypeIdentifier = "OrderNumber:6ES7 212-1AE40-0XB0/V4.6",
                         OrderNumber = "6ES7 212-1AE40-0XB0",
                         Firmware = "V4.6",
@@ -195,13 +210,13 @@ namespace TiaGuard.Openness.Smoke
                         {
                             PlcName = "PLC_1",
                             Name = "Default",
-                            ScopePath = "PLC_1/CPU/PLC_1/PLC%20tags/Default"
+                            ScopePath = "PLC_1/PLC_1/PLC_1/PLC%20tags/Default"
                         },
                         new RoundTripTagTableHint
                         {
                             PlcName = "PLC_1",
                             Name = "Empty",
-                            ScopePath = "PLC_1/CPU/PLC_1/PLC%20tags/Empty"
+                            ScopePath = "PLC_1/PLC_1/PLC_1/PLC%20tags/Empty"
                         }
                     }
                 };
@@ -218,6 +233,39 @@ namespace TiaGuard.Openness.Smoke
                 if (!firstManifest.RoundTripReady || !secondManifest.RoundTripReady)
                     throw new InvalidOperationException("Round-trip source self-test did not become ready.");
                 AssertTreesEqual(firstOutput, secondOutput);
+                var unusedBuildOutput = Path.Combine(selfTestRoot, "new-project");
+                var buildInput = RoundTripBuildInput.Load(firstOutput, unusedBuildOutput);
+                if (buildInput.TagTables.Count != 2 || buildInput.Plc.Name != "PLC_1")
+                    throw new InvalidOperationException("Build input rejected the valid canonical tree.");
+
+                var invalidHash = Path.Combine(selfTestRoot, "invalid-hash");
+                CopyTree(firstOutput, invalidHash);
+                var invalidSource = Directory.GetFiles(invalidHash, "source.xml",
+                    SearchOption.AllDirectories).Single();
+                File.AppendAllText(invalidSource, "tampered");
+                AssertInvalidBuildInput(invalidHash, unusedBuildOutput);
+
+                var invalidPath = Path.Combine(selfTestRoot, "invalid-path");
+                CopyTree(firstOutput, invalidPath);
+                var invalidManifestPath = Path.Combine(invalidPath, "tia-guard.json");
+                var invalidManifestText = File.ReadAllText(invalidManifestPath);
+                File.WriteAllText(invalidManifestPath,
+                    invalidManifestText.Replace("tia\\/hardware\\/", "..\\/hardware\\/"),
+                    new UTF8Encoding(false));
+                AssertInvalidBuildInput(invalidPath, unusedBuildOutput);
+
+                var invalidCapability = Path.Combine(selfTestRoot, "invalid-capability");
+                CopyTree(firstOutput, invalidCapability);
+                var invalidCapabilityPath = Path.Combine(invalidCapability, "tia-guard.json");
+                File.WriteAllText(invalidCapabilityPath,
+                    File.ReadAllText(invalidCapabilityPath).Replace(
+                        "supported-round-trip", "export-only"), new UTF8Encoding(false));
+                AssertInvalidBuildInput(invalidCapability, unusedBuildOutput);
+
+                var extraFile = Path.Combine(selfTestRoot, "extra-file");
+                CopyTree(firstOutput, extraFile);
+                File.WriteAllText(Path.Combine(extraFile, "unexpected.txt"), "unexpected");
+                AssertInvalidBuildInput(extraFile, unusedBuildOutput);
                 var canonicalSource = Directory.GetFiles(
                     firstOutput, "source.xml", SearchOption.AllDirectories).Single();
                 var canonicalSourceText = File.ReadAllText(canonicalSource);
@@ -486,9 +534,34 @@ namespace TiaGuard.Openness.Smoke
             }
         }
 
+        private static void CopyTree(string source, string destination)
+        {
+            Directory.CreateDirectory(destination);
+            foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+            {
+                var relative = file.Substring(source.Length).TrimStart(Path.DirectorySeparatorChar);
+                var target = Path.Combine(destination, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(target));
+                File.Copy(file, target);
+            }
+        }
+
+        private static void AssertInvalidBuildInput(string source, string output)
+        {
+            try
+            {
+                RoundTripBuildInput.Load(source, output);
+            }
+            catch (InvalidDataException)
+            {
+                return;
+            }
+            throw new InvalidOperationException("Unsafe canonical build input was accepted.");
+        }
+
         private static int Usage()
         {
-            Console.Error.WriteLine("Usage: probe | self-test | info|snapshot attach [pid] | info|snapshot open-copy <project.ap21> [--block-export-dir <outside-project-dir>] | roundtrip open-copy <project.ap21> <repo-dir>");
+            Console.Error.WriteLine("Usage: probe | self-test | info|snapshot attach [pid] | info|snapshot open-copy <project.ap21> [--block-export-dir <outside-project-dir>] | roundtrip open-copy <project.ap21> <repo-dir> | validate-build-input|build <repo-dir> <new-output-dir>");
             return 2;
         }
     }

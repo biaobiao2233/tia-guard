@@ -1,31 +1,20 @@
 # TIA-Guard
 
-**Traceable engineering evidence and deterministic review for Siemens TIA Portal projects.**
+**Reproducible Git engineering source for a bounded Siemens TIA Portal V21 subset.**
 
-TIA-Guard is an independent pre-alpha project focused on a narrow problem: make evidence from an existing TIA Portal project reviewable outside TIA, then run bounded deterministic checks and produce Git/GitHub-friendly reports. AI is optional and explains evidence; it is not the source of engineering truth.
+TIA-Guard is an independent pre-alpha project. The Core path exports an existing V21 project to a canonical Git tree, builds a fresh project from that tree, then verifies supported engineering semantics. Snapshot, deterministic checks, reporting and optional AI review remain supporting layers.
 
 The project is designed around the locally installed **TIA Portal Openness API**. It does not redistribute Siemens software, DLLs, licenses, or TIA project binaries.
 
 ## v0.1 objective
 
-Prove one reproducible end-to-end loop on **TIA Portal V21**:
+Prove one reproducible loop on **TIA Portal V21**:
 
-1. open a **specified offline project copy** through Openness;
-2. collect a traceable Snapshot with explicit completeness/failure state;
-3. serialize the same engineering content deterministically;
-4. run 3-5 bounded deterministic checks whose scope and false-positive boundaries are documented;
-5. show a small before/after engineering diff;
-6. emit JSON/Markdown and one **real GitHub-validated SARIF** workflow.
+1. export the supported single S7-1200 / PLC / Main OB1 LAD project from an owned offline copy to a deterministic Git tree;
+2. validate that tree and build a fresh disposable V21 project from it alone;
+3. compare the supported engineering semantics of the source and rebuilt project.
 
-Planned CLI surface:
-
-    tia-guard info
-    tia-guard snapshot
-    tia-guard doctor
-    tia-guard diff
-    tia-guard review --ai   # optional experiment, not a v0.1 release gate
-
-Status: pre-alpha. The Snapshot contract is still **draft** until it has been validated against a real sanitized TIA V21 project.
+The export slice is accepted; build and semantic verification are active Core work. The contracts remain versioned draft v1 formats.
 
 ## Design principle
 
@@ -54,8 +43,8 @@ Initial candidates are intentionally narrow:
 
 - v0.1 targets **specified offline project copies** first.
 - No online PLC writes.
-- No automatic save, upgrade, import, property changes, protection unlock, controller state changes, or session shutdown.
-- No active compile by default.
+- The original project is never saved, upgraded or imported into. An explicit build creates, imports into, saves and compiles only a fresh disposable project.
+- Export may compile only its owned offline copy when Siemens requires consistency before SimaticML export.
 - Partial/unsupported/protected data is reported explicitly.
 - AI never receives local paths, credentials, or raw customer project data by default.
 
