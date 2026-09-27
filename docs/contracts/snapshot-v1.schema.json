@@ -1,17 +1,40 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.invalid/tia-guard/snapshot-v1.schema.json",
-  "title": "TIA-Guard Snapshot v1",
+  "title": "TIA-Guard Snapshot v1 (draft)",
   "type": "object",
-  "required": ["schemaVersion", "project", "tia", "devices", "plcs"],
+  "required": [
+    "schemaVersion",
+    "contractStatus",
+    "collector",
+    "project",
+    "tia",
+    "capture",
+    "devices",
+    "plcs",
+    "diagnostics"
+  ],
   "properties": {
     "schemaVersion": { "const": "1.0" },
+    "contractStatus": { "const": "draft" },
+    "collector": {
+      "type": "object",
+      "required": ["name", "version", "normalizationVersion"],
+      "properties": {
+        "name": { "const": "TIA-Guard" },
+        "version": { "type": "string", "minLength": 1 },
+        "normalizationVersion": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "project": {
       "type": "object",
-      "required": ["name"],
+      "required": ["name", "sourceKind"],
       "properties": {
-        "name": { "type": "string" },
-        "path": { "type": ["string", "null"] }
+        "name": { "type": "string", "minLength": 1 },
+        "sourceKind": { "enum": ["offline-copy", "attached-session"] },
+        "projectVersion": { "type": ["string", "null"] },
+        "contentId": { "type": ["string", "null"] }
       },
       "additionalProperties": false
     },
@@ -19,8 +42,18 @@
       "type": "object",
       "required": ["version"],
       "properties": {
-        "version": { "type": "string" },
-        "processId": { "type": ["integer", "null"] }
+        "version": { "type": "string", "minLength": 1 },
+        "build": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "capture": {
+      "type": "object",
+      "required": ["status", "capturedAtUtc", "mode"],
+      "properties": {
+        "status": { "enum": ["complete", "partial", "failed"] },
+        "capturedAtUtc": { "type": "string", "format": "date-time" },
+        "mode": { "enum": ["offline-copy", "attached-session"] }
       },
       "additionalProperties": false
     },
@@ -28,10 +61,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "type"],
+        "required": ["id", "name", "type"],
         "properties": {
-          "name": { "type": "string" },
-          "type": { "type": "string" },
+          "id": { "type": "string", "minLength": 1 },
+          "parentId": { "type": ["string", "null"] },
+          "plcId": { "type": ["string", "null"] },
+          "name": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "engineeringPath": { "type": ["string", "null"] },
           "orderNumber": { "type": ["string", "null"] },
           "firmware": { "type": ["string", "null"] }
         },
@@ -42,18 +79,46 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "blocks", "tags"],
+        "required": ["id", "name", "deviceId", "blocks", "tags", "compile"],
         "properties": {
-          "name": { "type": "string" },
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "deviceId": { "type": "string", "minLength": 1 },
           "blocks": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["name", "kind"],
+              "required": ["id", "name", "kind", "protection", "export"],
               "properties": {
-                "name": { "type": "string" },
-                "kind": { "type": "string" },
-                "language": { "type": ["string", "null"] }
+                "id": { "type": "string", "minLength": 1 },
+                "scopePath": { "type": ["string", "null"] },
+                "name": { "type": "string", "minLength": 1 },
+                "kind": { "type": "string", "minLength": 1 },
+                "number": { "type": ["integer", "null"], "minimum": 0 },
+                "language": { "type": ["string", "null"] },
+                "protection": { "enum": ["none", "know-how", "unknown"] },
+                "isConsistent": { "type": ["boolean", "null"] },
+                "modifiedAtUtc": { "type": ["string", "null"], "format": "date-time" },
+                "export": {
+                  "type": "object",
+                  "required": ["status"],
+                  "properties": {
+                    "status": { "enum": ["exported", "protected", "unsupported", "failed", "not-attempted"] },
+                    "format": { "type": ["string", "null"] },
+                    "artifact": { "type": ["string", "null"] },
+                    "sha256": {
+                      "type": ["string", "null"],
+                      "pattern": "^[A-Fa-f0-9]{64}$"
+                    },
+                    "contentSha256": {
+                      "type": ["string", "null"],
+                      "pattern": "^[A-Fa-f0-9]{64}$"
+                    },
+                    "contentNormalizationVersion": { "type": ["string", "null"] },
+                    "diagnosticCode": { "type": ["string", "null"] }
+                  },
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             }
@@ -62,25 +127,64 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["name", "dataType"],
+              "required": ["id", "scopePath", "name", "dataType", "address", "comment"],
               "properties": {
-                "name": { "type": "string" },
-                "dataType": { "type": "string" },
-                "address": { "type": ["string", "null"] },
-                "comment": { "type": ["string", "null"] }
+                "id": { "type": "string", "minLength": 1 },
+                "scopePath": { "type": "string", "minLength": 1 },
+                "name": { "type": "string", "minLength": 1 },
+                "dataType": { "type": "string", "minLength": 1 },
+                "address": {
+                  "type": "object",
+                  "required": ["raw", "parseStatus"],
+                  "properties": {
+                    "raw": { "type": ["string", "null"] },
+                    "parseStatus": { "enum": ["parsed", "unsupported", "missing"] },
+                    "area": { "type": ["string", "null"] },
+                    "byteOffset": { "type": ["integer", "null"], "minimum": 0 },
+                    "bitOffset": { "type": ["integer", "null"], "minimum": 0, "maximum": 7 },
+                    "bitWidth": { "type": ["integer", "null"], "minimum": 1 }
+                  },
+                  "additionalProperties": false
+                },
+                "comment": {
+                  "type": "object",
+                  "required": ["status", "text"],
+                  "properties": {
+                    "status": { "enum": ["present", "missing", "multiple", "unavailable", "read-failed"] },
+                    "text": { "type": ["string", "null"] }
+                  },
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             }
           },
           "compile": {
-            "type": ["object", "null"],
+            "type": "object",
+            "required": ["mode", "status", "errors", "warnings"],
             "properties": {
-              "errors": { "type": "integer", "minimum": 0 },
-              "warnings": { "type": "integer", "minimum": 0 }
+              "mode": { "enum": ["not-observed", "consistency-only", "active-compile"] },
+              "status": { "enum": ["unknown", "clean", "issues", "failed"] },
+              "observedAtUtc": { "type": ["string", "null"], "format": "date-time" },
+              "errors": { "type": ["integer", "null"], "minimum": 0 },
+              "warnings": { "type": ["integer", "null"], "minimum": 0 }
             },
-            "required": ["errors", "warnings"],
             "additionalProperties": false
           }
+        },
+        "additionalProperties": false
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "severity", "message"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "severity": { "enum": ["info", "warning", "error"] },
+          "message": { "type": "string", "minLength": 1 },
+          "objectId": { "type": ["string", "null"] }
         },
         "additionalProperties": false
       }

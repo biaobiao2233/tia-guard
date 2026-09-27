@@ -1,26 +1,109 @@
 {
   "schemaVersion": "1.0",
-  "project": { "name": "S7-1200-Motor-Reversing-Control", "path": null },
-  "tia": { "version": "V21", "processId": null },
+  "contractStatus": "draft",
+  "collector": {
+    "name": "TIA-Guard",
+    "version": "0.1.0-dev",
+    "normalizationVersion": "1"
+  },
+  "project": {
+    "name": "S7-1200-Motor-Reversing-Control",
+    "sourceKind": "offline-copy",
+    "projectVersion": null,
+    "contentId": null
+  },
+  "tia": {
+    "version": "V21",
+    "build": null
+  },
+  "capture": {
+    "status": "complete",
+    "capturedAtUtc": "2026-09-27T00:00:00Z",
+    "mode": "offline-copy"
+  },
   "devices": [
     {
+      "id": "device:plc_1",
+      "parentId": null,
+      "plcId": "plc:plc_1",
       "name": "PLC_1",
       "type": "CPU 1212C DC/DC/DC",
+      "engineeringPath": "PLC_1",
       "orderNumber": "6ES7 212-1AE40-0XB0",
       "firmware": "V4.7"
     }
   ],
   "plcs": [
     {
+      "id": "plc:plc_1",
       "name": "PLC_1",
+      "deviceId": "device:plc_1",
       "blocks": [
-        { "name": "Main", "kind": "OB", "language": "LAD" }
+        {
+          "id": "block:plc_1/main",
+          "scopePath": "Program blocks",
+          "name": "Main",
+          "kind": "OB",
+          "number": 1,
+          "language": "LAD",
+          "protection": "none",
+          "isConsistent": null,
+          "modifiedAtUtc": null,
+          "export": {
+            "status": "not-attempted",
+            "format": null,
+            "artifact": null,
+            "sha256": null,
+            "diagnosticCode": null
+          }
+        }
       ],
       "tags": [
-        { "name": "Start_PB", "dataType": "Bool", "address": "%I0.0", "comment": "Start push button" },
-        { "name": "KM_Forward", "dataType": "Bool", "address": "%Q0.0", "comment": "Forward contactor" }
+        {
+          "id": "tag:plc_1/default/start_pb",
+          "scopePath": "PLC tags/Default tag table",
+          "name": "Start_PB",
+          "dataType": "Bool",
+          "address": {
+            "raw": "%I0.0",
+            "parseStatus": "parsed",
+            "area": "I",
+            "byteOffset": 0,
+            "bitOffset": 0,
+            "bitWidth": 1
+          },
+          "comment": {
+            "status": "present",
+            "text": "Start push button"
+          }
+        },
+        {
+          "id": "tag:plc_1/default/km_forward",
+          "scopePath": "PLC tags/Default tag table",
+          "name": "KM_Forward",
+          "dataType": "Bool",
+          "address": {
+            "raw": "%Q0.0",
+            "parseStatus": "parsed",
+            "area": "Q",
+            "byteOffset": 0,
+            "bitOffset": 0,
+            "bitWidth": 1
+          },
+          "comment": {
+            "status": "present",
+            "text": "Forward contactor"
+          }
+        }
       ],
-      "compile": null
+      "compile": {
+        "mode": "not-observed",
+        "status": "unknown",
+        "observedAtUtc": null,
+        "errors": null,
+        "warnings": null
+      }
     }
-  ]
+  ],
+  "diagnostics": []
 }

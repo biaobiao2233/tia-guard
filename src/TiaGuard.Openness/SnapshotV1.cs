@@ -40,7 +40,7 @@ namespace TiaGuard.Openness
         [DataMember(Name = "version", Order = 1)]
         public string Version { get; set; } = "0.1.0-dev";
         [DataMember(Name = "normalizationVersion", Order = 2)]
-        public string NormalizationVersion { get; set; } = "1";
+        public string NormalizationVersion { get; set; } = "2";
     }
 
     [DataContract]
@@ -150,7 +150,11 @@ namespace TiaGuard.Openness
         public string Artifact { get; set; }
         [DataMember(Name = "sha256", Order = 3)]
         public string Sha256 { get; set; }
-        [DataMember(Name = "diagnosticCode", Order = 4)]
+        [DataMember(Name = "contentSha256", Order = 4)]
+        public string ContentSha256 { get; set; }
+        [DataMember(Name = "contentNormalizationVersion", Order = 5)]
+        public string ContentNormalizationVersion { get; set; }
+        [DataMember(Name = "diagnosticCode", Order = 6)]
         public string DiagnosticCode { get; set; }
     }
 
