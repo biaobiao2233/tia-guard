@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization.Json;
+using System.Security.Cryptography;
 using System.Text;
 using TiaGuard.Openness;
 
@@ -16,19 +19,34 @@ namespace TiaGuard.Openness.Smoke
             {
                 if (args.Length == 1 && args[0] == "probe") return Probe();
                 if (args.Length == 1 && args[0] == "self-test") return SelfTest();
-                if (args.Length < 2 || (args[0] != "info" && args[0] != "snapshot"))
+                if (args.Length < 2 || (args[0] != "info" && args[0] != "snapshot" && args[0] != "roundtrip"))
                     return Usage();
 
                 TiaProjectSession session;
-                if (args[1] == "attach" && args.Length <= 3)
+                string roundTripOutput = null;
+                if (args[1] == "attach")
                 {
+                    if (args[0] == "roundtrip" || args.Length > 3) return Usage();
                     int pid = 0;
                     if (args.Length == 3 && !int.TryParse(args[2], out pid)) return Usage();
                     session = TiaProjectSession.Attach(args.Length == 3 ? (int?)pid : null);
                 }
-                else if (args[1] == "open-copy" && (args.Length == 3 ||
-                    (args[0] == "snapshot" && args.Length == 5 && args[3] == "--block-export-dir")))
-                    session = TiaProjectSession.OpenOfflineCopy(args[2]);
+                else if (args[1] == "open-copy")
+                {
+                    if (args[0] == "roundtrip")
+                    {
+                        if (args.Length != 4) return Usage();
+                        roundTripOutput = args[3];
+                        Console.Error.WriteLine("stage=session-open");
+                        session = TiaProjectSession.OpenOfflineCopy(args[2]);
+                        Console.Error.WriteLine("stage=session-opened");
+                    }
+                    else if (args.Length == 3 ||
+                        (args[0] == "snapshot" && args.Length == 5 && args[3] == "--block-export-dir"))
+                        session = TiaProjectSession.OpenOfflineCopy(args[2]);
+                    else
+                        return Usage();
+                }
                 else
                     return Usage();
 
@@ -44,6 +62,12 @@ namespace TiaGuard.Openness.Smoke
                         Console.WriteLine("projectVersion=" + (info.ProjectVersion ?? "null"));
                         Console.WriteLine("sourceKind=" + info.SourceKind);
                         Console.WriteLine("processId=" + (info.ProcessId?.ToString() ?? "null"));
+                    }
+                    else if (args[0] == "roundtrip")
+                    {
+                        Console.WriteLine(RoundTripJson.Serialize(session.ExportRoundTripSource(
+                            roundTripOutput,
+                            stage => Console.Error.WriteLine("stage=" + stage))));
                     }
                     else
                     {
@@ -105,9 +129,20 @@ namespace TiaGuard.Openness.Smoke
             sample.Devices.Add(new SnapshotDevice { Id = deviceId, PlcId = plcId,
                 Name = "PLC_1", Type = "CPU", EngineeringPath = "PLC_1" });
             var plc = new SnapshotPlc { Id = plcId, Name = "PLC_1", DeviceId = deviceId };
+            var blockArtifact = "blocks/self-test.xml";
+            var blockXml = "<Document><DocumentInfo><Created>2026-09-27T00:00:00Z</Created><ExportSetting>WithDefaults</ExportSetting></DocumentInfo><SW.Blocks.OB ID=\"0\"><AttributeList><Name>Main</Name></AttributeList></SW.Blocks.OB></Document>\n";
+            var selfTestRoot = Path.Combine(Path.GetTempPath(), "TiaGuard.RoundTrip.SelfTest",
+                Guid.NewGuid().ToString("N"));
+            var blockRoot = Path.Combine(selfTestRoot, "exports");
+            Directory.CreateDirectory(Path.Combine(blockRoot, "blocks"));
+            File.WriteAllText(Path.Combine(blockRoot, "blocks", "self-test.xml"), blockXml, new UTF8Encoding(false));
+            var blockHash = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
             plc.Blocks.Add(new SnapshotBlock { Id = "block:PLC_1/Program%20blocks/Main",
-                ScopePath = "Program%20blocks", Name = "Main", Kind = "OB",
-                Language = "LAD", Protection = "none" });
+                ScopePath = "Program%20blocks", Name = "Main", Kind = "OB", Number = 1,
+                Language = "LAD", Protection = "none", Export = new SnapshotExport
+                {
+                    Status = "exported", Format = "SimaticML", Artifact = blockArtifact, Sha256 = blockHash
+                } });
             plc.Tags.Add(new SnapshotTag { Id = "tag:PLC_1/Start", ScopePath = "PLC%20tags/Default",
                 Name = "Start", DataType = "Bool", Address = SnapshotAddressParser.Parse("%I0.0"),
                 Comment = new SnapshotComment { Status = "missing" } });
@@ -137,13 +172,129 @@ namespace TiaGuard.Openness.Smoke
             sample.Plcs[0].Tags[0].Address = SnapshotAddressParser.Parse("%I0.1");
             if (SnapshotNormalization.ComputeContentId(sample) == firstContentId)
                 throw new InvalidOperationException("Engineering content change did not change content ID.");
+
+            try
+            {
+                var hints = new RoundTripExtractionHints
+                {
+                    Hardware = new RoundTripHardwareBuildIdentity
+                    {
+                        DeviceName = "PLC_1",
+                        CpuItemName = "CPU_1",
+                        CreateTypeIdentifier = "OrderNumber:6ES7 212-1AE40-0XB0/V4.6",
+                        OrderNumber = "6ES7 212-1AE40-0XB0",
+                        Firmware = "V4.6",
+                        State = RoundTripCapabilityStates.SupportedRoundTrip
+                    },
+                    TagTables = new List<RoundTripTagTableHint>
+                    {
+                        new RoundTripTagTableHint
+                        {
+                            PlcName = "PLC_1",
+                            Name = "Default",
+                            ScopePath = "PLC_1/CPU/PLC_1/PLC%20tags/Default"
+                        },
+                        new RoundTripTagTableHint
+                        {
+                            PlcName = "PLC_1",
+                            Name = "Empty",
+                            ScopePath = "PLC_1/CPU/PLC_1/PLC%20tags/Empty"
+                        }
+                    }
+                };
+                sample.Plcs[0].Tags[0].ScopePath = hints.TagTables[0].ScopePath;
+                var firstOutput = Path.Combine(selfTestRoot, "first");
+                var secondOutput = Path.Combine(selfTestRoot, "second");
+                var firstManifest = RoundTripSourceMaterializer.Write(sample, hints, blockRoot, firstOutput);
+                var secondRawBlockXml = blockXml.Replace(
+                    "2026-09-27T00:00:00Z", "2026-09-28T00:00:00Z");
+                File.WriteAllText(Path.Combine(blockRoot, "blocks", "self-test.xml"),
+                    secondRawBlockXml, new UTF8Encoding(false));
+                plc.Blocks[0].Export.Sha256 = Sha256(Path.Combine(blockRoot, "blocks", "self-test.xml"));
+                var secondManifest = RoundTripSourceMaterializer.Write(sample, hints, blockRoot, secondOutput);
+                if (!firstManifest.RoundTripReady || !secondManifest.RoundTripReady)
+                    throw new InvalidOperationException("Round-trip source self-test did not become ready.");
+                AssertTreesEqual(firstOutput, secondOutput);
+                var canonicalSource = Directory.GetFiles(
+                    firstOutput, "source.xml", SearchOption.AllDirectories).Single();
+                var canonicalSourceText = File.ReadAllText(canonicalSource);
+                if (!canonicalSourceText.Contains("<Created>1970-01-01T00:00:00Z</Created>") ||
+                    canonicalSourceText.Contains("2026-09-27T00:00:00Z"))
+                    throw new InvalidOperationException("SimaticML volatile Created timestamp was not normalized.");
+                var blockDescriptorText = File.ReadAllText(Directory.GetFiles(
+                    firstOutput, "block.json", SearchOption.AllDirectories).Single());
+                if (!blockDescriptorText.Contains("\"normalizationVersion\":\"simaticml-v1\""))
+                    throw new InvalidOperationException("SimaticML normalization version is missing.");
+                if (!File.Exists(Path.Combine(firstOutput, "tia-guard.json")) ||
+                    Directory.GetFiles(firstOutput, "source.xml", SearchOption.AllDirectories).Length != 1 ||
+                    Directory.GetFiles(firstOutput, "tag-table-*.json", SearchOption.AllDirectories).Length != 2)
+                    throw new InvalidOperationException("Round-trip source tree is incomplete or dropped an empty tag table.");
+
+                foreach (var canonicalJson in Directory.GetFiles(firstOutput, "*.json", SearchOption.AllDirectories))
+                {
+                    var text = File.ReadAllText(canonicalJson);
+                    if (text.Contains(selfTestRoot) || text.Contains("2026-09-28T00:00:00Z"))
+                        throw new InvalidOperationException("Operational path/timestamp leaked into canonical source.");
+                }
+
+                var blockedOutput = Path.Combine(selfTestRoot, "blocked");
+                var blockedHints = new RoundTripExtractionHints
+                {
+                    Hardware = new RoundTripHardwareBuildIdentity
+                    {
+                        DeviceName = "PLC_1",
+                        CpuItemName = "CPU_1",
+                        State = RoundTripCapabilityStates.Failed,
+                        Reason = "Synthetic missing TypeIdentifier."
+                    },
+                    TagTables = hints.TagTables
+                };
+                var blocked = RoundTripSourceMaterializer.Write(sample, blockedHints, blockRoot, blockedOutput);
+                if (blocked.RoundTripReady ||
+                    !blocked.Capabilities.Any(value => value.ObjectKind == "hardware" &&
+                        value.State == RoundTripCapabilityStates.Failed))
+                    throw new InvalidOperationException("Missing build-grade CPU identity did not fail closed.");
+            }
+            finally
+            {
+                if (Directory.Exists(selfTestRoot)) Directory.Delete(selfTestRoot, recursive: true);
+            }
+
             Console.WriteLine(json);
             return 0;
         }
 
+        private static string Sha256(string path)
+        {
+            using (var stream = File.OpenRead(path))
+            using (var sha = SHA256.Create())
+                return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", string.Empty).ToLowerInvariant();
+        }
+
+        private static void AssertTreesEqual(string left, string right)
+        {
+            var leftFiles = Directory.GetFiles(left, "*", SearchOption.AllDirectories)
+                .Select(path => path.Substring(left.Length).TrimStart(Path.DirectorySeparatorChar)
+                    .Replace(Path.DirectorySeparatorChar, '/'))
+                .OrderBy(path => path, StringComparer.Ordinal).ToArray();
+            var rightFiles = Directory.GetFiles(right, "*", SearchOption.AllDirectories)
+                .Select(path => path.Substring(right.Length).TrimStart(Path.DirectorySeparatorChar)
+                    .Replace(Path.DirectorySeparatorChar, '/'))
+                .OrderBy(path => path, StringComparer.Ordinal).ToArray();
+            if (!leftFiles.SequenceEqual(rightFiles, StringComparer.Ordinal))
+                throw new InvalidOperationException("Round-trip source file sets are unstable.");
+            foreach (var relative in leftFiles)
+            {
+                var leftBytes = File.ReadAllBytes(Path.Combine(left, relative.Replace('/', Path.DirectorySeparatorChar)));
+                var rightBytes = File.ReadAllBytes(Path.Combine(right, relative.Replace('/', Path.DirectorySeparatorChar)));
+                if (!leftBytes.SequenceEqual(rightBytes))
+                    throw new InvalidOperationException("Round-trip source bytes are unstable: " + relative);
+            }
+        }
+
         private static int Usage()
         {
-            Console.Error.WriteLine("Usage: probe | self-test | info|snapshot attach [pid] | info|snapshot open-copy <project.ap21> [--block-export-dir <outside-project-dir>]");
+            Console.Error.WriteLine("Usage: probe | self-test | info|snapshot attach [pid] | info|snapshot open-copy <project.ap21> [--block-export-dir <outside-project-dir>] | roundtrip open-copy <project.ap21> <repo-dir>");
             return 2;
         }
     }
