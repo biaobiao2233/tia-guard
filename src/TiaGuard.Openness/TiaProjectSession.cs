@@ -309,7 +309,7 @@ namespace TiaGuard.Openness
             if (!string.Equals(Path.GetDirectoryName(full), parent, StringComparison.OrdinalIgnoreCase) ||
                 !Guid.TryParseExact(Path.GetFileName(full), "N", out _))
                 throw new InvalidOperationException("Refusing to remove an unexpected scratch directory.");
-            if (Directory.Exists(full)) Directory.Delete(full, recursive: true);
+            FileSystemSafety.DeleteOwnedTree(full);
         }
     }
 }

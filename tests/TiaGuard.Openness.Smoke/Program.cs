@@ -207,9 +207,9 @@ namespace TiaGuard.Openness.Smoke
                     {
                         DeviceName = "PLC_1",
                         CpuItemName = "PLC_1",
-                        CreateTypeIdentifier = "OrderNumber:6ES7 212-1AE40-0XB0/V4.6",
+                        CreateTypeIdentifier = "OrderNumber:6ES7 212-1AE40-0XB0/V4.7",
                         OrderNumber = "6ES7 212-1AE40-0XB0",
-                        Firmware = "V4.6",
+                        Firmware = "V4.7",
                         State = RoundTripCapabilityStates.SupportedRoundTrip
                     },
                     TagTables = new List<RoundTripTagTableHint>
@@ -292,7 +292,8 @@ namespace TiaGuard.Openness.Smoke
                         File.ReadAllText(path).Contains("\"dataType\":\"Bool\""));
                 var originalTableText = File.ReadAllText(changedTable);
                 var changedTableText = originalTableText.Replace(
-                    "\"dataType\":\"Bool\"", "\"dataType\":\"Int\"");
+                    "\"dataType\":\"Bool\"", "\"dataType\":\"Int\"")
+                    .Replace("\"address\":\"%I0.1\"", "\"address\":\"%IW0\"");
                 if (changedTableText == originalTableText)
                     throw new InvalidOperationException("Tag mismatch fixture did not change.");
                 File.WriteAllText(changedTable, changedTableText, new UTF8Encoding(false));

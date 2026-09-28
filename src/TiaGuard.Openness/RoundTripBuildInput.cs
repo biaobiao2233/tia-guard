@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Json;
+using System.Runtime.Serialization;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web.Script.Serialization;
@@ -21,6 +23,27 @@ namespace TiaGuard.Openness
         public RoundTripBlockV1 Block { get; private set; }
         public IReadOnlyList<RoundTripTagTableV1> TagTables { get; private set; }
         public string BlockSourcePath { get; private set; }
+        private byte[] _blockSourceBytes;
+
+        // Import a private copy of the exact bytes validated during LoadSource.
+        // The held handle allows Siemens to read, but prevents writes/deletion.
+        internal FileStream OpenValidatedBlockSource(string ownedDirectory)
+        {
+            RequireNoReparseAncestors(ownedDirectory);
+            var path = Path.Combine(ownedDirectory, "validated-source.xml");
+            using (var writer = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                writer.Write(_blockSourceBytes, 0, _blockSourceBytes.Length);
+            var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            try
+            {
+                using (var sha = SHA256.Create())
+                    Require(sha.ComputeHash(stream).SequenceEqual(sha.ComputeHash(_blockSourceBytes)),
+                        "The private import artifact changed before it could be locked.");
+                stream.Position = 0;
+                return stream;
+            }
+            catch { stream.Dispose(); throw; }
+        }
 
         public static RoundTripBuildInput Load(string sourceRoot, string outputDirectory)
         {
@@ -72,13 +95,12 @@ namespace TiaGuard.Openness
             var hardware = ReadJson<RoundTripHardwareV1>(Take(root, manifest.Hardware[0], expected));
             Require(hardware.SchemaVersion == "1.0" &&
                     hardware.Capability == RoundTripCapabilityStates.SupportedRoundTrip &&
-                    SafeId(hardware.Id) && hardware.Name != null &&
+                    SafeId(hardware.Id) && !string.IsNullOrWhiteSpace(hardware.Name) &&
                     hardware.DeviceTypeIdentifier == "System:Device.S71200" &&
                     hardware.EngineeringPath ==
                         Uri.EscapeDataString(hardware.Name.Normalize(NormalizationForm.FormC)) &&
                     !string.IsNullOrWhiteSpace(hardware.CreateItemName) &&
-                    !string.IsNullOrWhiteSpace(hardware.CreateTypeIdentifier) &&
-                    hardware.CreateTypeIdentifier.StartsWith("OrderNumber:", StringComparison.Ordinal) &&
+                    RoundTripProfile.SupportsCpu(hardware.CreateTypeIdentifier) &&
                     manifest.Hardware[0] == "tia/hardware/" + hardware.Id + ".json",
                 "The hardware descriptor is not a supported build identity.");
 
@@ -97,8 +119,8 @@ namespace TiaGuard.Openness
                     block.Name == "Main" && block.Kind == "OB" && block.Number == 1 &&
                     block.Language == "LAD" && block.Source != null &&
                     block.ScopePath == hardware.EngineeringPath + "/" +
-                        Uri.EscapeDataString(hardware.CreateItemName) + "/" +
-                        Uri.EscapeDataString(plc.Name) + "/Program%20blocks" &&
+                        RoundTripProfile.Segment(hardware.CreateItemName) + "/" +
+                        RoundTripProfile.Segment(plc.Name) + "/Program%20blocks" &&
                     block.Source.Format == "SimaticML" &&
                     block.Source.NormalizationVersion == "simaticml-v1" &&
                     plc.Blocks[0] == "tia/plc/" + plc.Id + "/blocks/" + block.Id + "/block.json" &&
@@ -114,6 +136,7 @@ namespace TiaGuard.Openness
             var tables = new List<RoundTripTagTableV1>();
             var tagIds = new List<string>();
             var tableNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var tagNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var objectIds = new HashSet<string>(StringComparer.Ordinal);
             objectIds.Add(hardware.Id);
             Require(objectIds.Add(plc.Id) && objectIds.Add(block.Id),
@@ -125,18 +148,17 @@ namespace TiaGuard.Openness
                         table.Capability == RoundTripCapabilityStates.SupportedRoundTrip &&
                         SafeId(table.Id) && !string.IsNullOrWhiteSpace(table.Name) &&
                         table.ScopePath == hardware.EngineeringPath + "/" +
-                            Uri.EscapeDataString(hardware.CreateItemName) + "/" +
-                            Uri.EscapeDataString(plc.Name) + "/PLC%20tags/" +
+                            RoundTripProfile.Segment(hardware.CreateItemName) + "/" +
+                            RoundTripProfile.Segment(plc.Name) + "/PLC%20tags/" +
                             Uri.EscapeDataString(table.Name.Normalize(NormalizationForm.FormC)) &&
                         tableRef == "tia/plc/" + plc.Id + "/tags/" + table.Id + ".json" &&
                         tableNames.Add(table.Name) && objectIds.Add(table.Id) &&
                         table.Tags != null, "A tag table is invalid or duplicated.");
-                var tagNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var tag in table.Tags)
                 {
                     Require(SafeId(tag.Id) && objectIds.Add(tag.Id) &&
                             !string.IsNullOrWhiteSpace(tag.Name) && tagNames.Add(tag.Name) &&
-                            !string.IsNullOrWhiteSpace(tag.DataType) &&
+                            RoundTripProfile.SupportsTag(tag.DataType, tag.Address) &&
                             tag.Capability == RoundTripCapabilityStates.SupportedRoundTrip &&
                             ((tag.CommentStatus == "missing" && string.IsNullOrEmpty(tag.Comment)) ||
                              (tag.CommentStatus == "present" && !string.IsNullOrWhiteSpace(tag.Comment))),
@@ -166,7 +188,7 @@ namespace TiaGuard.Openness
             {
                 SourceRoot = root, Manifest = manifest,
                 Hardware = hardware, Plc = plc, Block = block, TagTables = tables,
-                BlockSourcePath = sourcePath
+                BlockSourcePath = sourcePath, _blockSourceBytes = sourceBytes
             };
         }
 
@@ -195,6 +217,7 @@ namespace TiaGuard.Openness
                 RecursionLimit = 64
             };
             var root = Object(parser.DeserializeObject(text));
+            ValidateMemberTypes(root, typeof(T));
             if (typeof(T) == typeof(RoundTripManifestV1))
             {
                 Keys(root, "schemaVersion", "contractStatus", "tiaVersion", "project",
@@ -244,6 +267,34 @@ namespace TiaGuard.Openness
             return dictionary;
         }
 
+        private static void ValidateMemberTypes(object value, Type type)
+        {
+            var nullable = Nullable.GetUnderlyingType(type);
+            if (value == null)
+            {
+                Require(!type.IsValueType || nullable != null, "A required JSON value is null.");
+                return;
+            }
+            if (nullable != null) type = nullable;
+            if (type == typeof(string) || type == typeof(bool) || type == typeof(int))
+            {
+                Require(value.GetType() == type, "A canonical JSON value has the wrong type.");
+                return;
+            }
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
+            {
+                foreach (var item in Array(value)) ValidateMemberTypes(item, type.GetGenericArguments()[0]);
+                return;
+            }
+            var members = Object(value);
+            foreach (var property in type.GetProperties())
+            {
+                var member = property.GetCustomAttribute<DataMemberAttribute>();
+                if (member != null && members.TryGetValue(member.Name, out var item))
+                    ValidateMemberTypes(item, property.PropertyType);
+            }
+        }
+
         private static object[] Array(object value)
         {
             var array = value as object[];
@@ -264,8 +315,7 @@ namespace TiaGuard.Openness
                     relative.IndexOf('\\') < 0 && relative.IndexOf(':') < 0 &&
                     !Path.IsPathRooted(relative), "An artifact path is not repository-relative.");
             var segments = relative.Split('/');
-            Require(segments.All(value => value.Length != 0 && value != "." && value != ".." &&
-                value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0),
+            Require(segments.All(RoundTripProfile.SafeFileName),
                 "An artifact path contains an unsafe component.");
             var full = Path.GetFullPath(Path.Combine(root,
                 relative.Replace('/', Path.DirectorySeparatorChar)));
@@ -301,22 +351,27 @@ namespace TiaGuard.Openness
 
         private static void ValidateMainXml(byte[] bytes)
         {
-            var offset = bytes.Length >= 3 && bytes[0] == 0xef && bytes[1] == 0xbb && bytes[2] == 0xbf
-                ? 3 : 0;
-            var text = new UTF8Encoding(false, true).GetString(bytes, offset, bytes.Length - offset);
-            var document = new XmlDocument { PreserveWhitespace = true, XmlResolver = null };
-            var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
-            using (var reader = XmlReader.Create(new StringReader(text), settings))
-                document.Load(reader);
+            var document = SimaticMlContentHasher.ReadDocument(bytes);
             Require(document.DocumentElement?.Name == "Document" &&
                     document.DocumentElement.NamespaceURI.Length == 0 &&
                     document.SelectNodes("/Document/SW.Blocks.OB").Count == 1 &&
-                    document.SelectSingleNode("/Document/DocumentInfo/Created")?.InnerText ==
-                        "1970-01-01T00:00:00Z" &&
-                    document.SelectSingleNode("/Document/SW.Blocks.OB/AttributeList/Name")?.InnerText == "Main" &&
-                    document.SelectSingleNode("/Document/SW.Blocks.OB/AttributeList/Number")?.InnerText == "1" &&
-                    document.SelectSingleNode("/Document/SW.Blocks.OB/AttributeList/ProgrammingLanguage")?.InnerText == "LAD",
+                    document.DocumentElement.ChildNodes.OfType<XmlElement>()
+                        .Where(node => node.LocalName.StartsWith("SW.Blocks.", StringComparison.Ordinal))
+                        .All(node => node.Name == "SW.Blocks.OB" && node.NamespaceURI.Length == 0) &&
+                    document.SelectNodes("/Document/SW.Blocks.OB/AttributeList").Count == 1 &&
+                    UniqueText(document, "/Document/DocumentInfo/Created", "1970-01-01T00:00:00Z") &&
+                    UniqueText(document, "/Document/SW.Blocks.OB/AttributeList/Name", "Main") &&
+                    UniqueText(document, "/Document/SW.Blocks.OB/AttributeList/Number", "1") &&
+                    UniqueText(document, "/Document/SW.Blocks.OB/AttributeList/ProgrammingLanguage", "LAD"),
                 "The canonical SimaticML does not describe Main / OB1 / LAD.");
+        }
+
+        private static bool UniqueText(XmlDocument document, string xpath, string expected)
+        {
+            var nodes = document.SelectNodes(xpath);
+            return nodes.Count == 1 && nodes[0] is XmlElement element && !element.HasAttributes &&
+                element.ChildNodes.Count == 1 && element.FirstChild.NodeType == XmlNodeType.Text &&
+                element.InnerText == expected;
         }
 
         private static string Sha256(byte[] bytes)
@@ -328,16 +383,12 @@ namespace TiaGuard.Openness
 
         private static bool SafeId(string value)
         {
-            return !string.IsNullOrWhiteSpace(value) &&
-                   value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 &&
-                   value.IndexOfAny(new[] { '/', '\\', ':' }) < 0;
+            return RoundTripProfile.SafeFileName(value);
         }
 
         private static bool SafeProjectName(string value)
         {
-            return !string.IsNullOrWhiteSpace(value) && value == value.Trim() &&
-                   value != "." && value != ".." &&
-                   value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
+            return RoundTripProfile.SafeFileName(value);
         }
 
         private static bool InsideOrEqual(string path, string directory)

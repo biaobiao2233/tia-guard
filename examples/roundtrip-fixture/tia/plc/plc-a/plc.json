@@ -1,0 +1,1 @@
+{"schemaVersion":"1.0","id":"plc-a","name":"PLC","deviceId":"station-a","capability":"supported-round-trip","tagTables":["tia/plc/plc-a/tags/table-a.json"],"blocks":["tia/plc/plc-a/blocks/block-a/block.json"]}

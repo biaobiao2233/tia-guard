@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
+    <Reference Include="System.Web.Extensions" />
+    <!-- Compile the production pure-source boundary, without any Siemens dependency. -->
+    <Compile Include="../../src/TiaGuard.Openness/RoundTripBuildInput.cs" Link="Core/RoundTripBuildInput.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/RoundTripSourceV1.cs" Link="Core/RoundTripSourceV1.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/RoundTripSourceMaterializer.cs" Link="Core/RoundTripSourceMaterializer.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/RoundTripVerifier.Compare.cs" Link="Core/RoundTripVerifier.Compare.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/RoundTripProfile.cs" Link="Core/RoundTripProfile.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SnapshotV1.cs" Link="Core/SnapshotV1.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SnapshotNormalization.cs" Link="Core/SnapshotNormalization.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SnapshotAddressParser.cs" Link="Core/SnapshotAddressParser.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SimaticMlContentHasher.cs" Link="Core/SimaticMlContentHasher.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/UnsupportedInventory.cs" Link="Core/UnsupportedInventory.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/FileSystemSafety.cs" Link="Core/FileSystemSafety.cs" />
+  </ItemGroup>
+</Project>

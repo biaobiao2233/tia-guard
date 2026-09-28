@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TIA-Guard Round-trip Source v1 descriptor syntax",
+  "description": "Descriptor syntax for ready and diagnostic exports. Cross-file identity, exact capability inventory, profile, XML and filesystem validation are enforced by RoundTripBuildInput.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/hardware"
+    },
+    {
+      "$ref": "#/$defs/plc"
+    },
+    {
+      "$ref": "#/$defs/tagTable"
+    },
+    {
+      "$ref": "#/$defs/block"
+    }
+  ],
+  "$defs": {
+    "hardware": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "id",
+        "name",
+        "engineeringPath",
+        "deviceTypeIdentifier",
+        "createTypeIdentifier",
+        "createItemName",
+        "orderNumber",
+        "firmware",
+        "capability"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "engineeringPath": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deviceTypeIdentifier": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createTypeIdentifier": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "createItemName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "orderNumber": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "firmware": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "capability": {
+          "enum": [
+            "supported-round-trip",
+            "export-only",
+            "opaque",
+            "unsupported",
+            "failed"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "plc": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "id",
+        "name",
+        "deviceId",
+        "capability",
+        "tagTables",
+        "blocks"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "deviceId": {
+          "type": "string"
+        },
+        "capability": {
+          "enum": [
+            "supported-round-trip",
+            "export-only",
+            "opaque",
+            "unsupported",
+            "failed"
+          ]
+        },
+        "tagTables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tagTable": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "id",
+        "name",
+        "scopePath",
+        "capability",
+        "tags"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "scopePath": {
+          "type": "string"
+        },
+        "capability": {
+          "enum": [
+            "supported-round-trip",
+            "export-only",
+            "opaque",
+            "unsupported",
+            "failed"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "dataType",
+              "address",
+              "commentStatus",
+              "comment",
+              "capability"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "dataType": {
+                "type": "string"
+              },
+              "address": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "commentStatus": {
+                "type": "string"
+              },
+              "comment": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "capability": {
+                "enum": [
+                  "supported-round-trip",
+                  "export-only",
+                  "opaque",
+                  "unsupported",
+                  "failed"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "block": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "id",
+        "name",
+        "scopePath",
+        "kind",
+        "number",
+        "language",
+        "capability",
+        "source"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "scopePath": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "capability": {
+          "enum": [
+            "supported-round-trip",
+            "export-only",
+            "opaque",
+            "unsupported",
+            "failed"
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "format",
+                "artifact",
+                "sha256",
+                "normalizationVersion"
+              ],
+              "properties": {
+                "format": {
+                  "type": "string"
+                },
+                "artifact": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "normalizationVersion": {
+                  "const": "simaticml-v1"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

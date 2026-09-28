@@ -39,6 +39,7 @@ namespace TiaGuard.Openness
             var parent = Path.GetDirectoryName(input.OutputDirectory);
             var stage = Path.Combine(parent, "." + Path.GetFileName(input.OutputDirectory) +
                 ".tia-guard-" + Guid.NewGuid().ToString("N"));
+            FileSystemSafety.RequirePlainAncestors(parent);
             Directory.CreateDirectory(stage);
             TiaPortal portal = null;
             Project project = null;
@@ -65,12 +66,15 @@ namespace TiaGuard.Openness
                 CreateTagTables(plc, input.TagTables);
 
                 progress?.Invoke("import-ob1");
-                var imported = plc.BlockGroup.Blocks.Import(
-                    new FileInfo(input.BlockSourcePath), ImportOptions.Override);
-                if (imported == null || imported.Count != 1 ||
-                    imported[0].Name != input.Block.Name)
-                    throw new InvalidOperationException(
-                        "SimaticML import did not produce exactly Main / OB1.");
+                string importPath;
+                using (var source = input.OpenValidatedBlockSource(stage))
+                {
+                    importPath = source.Name;
+                    var imported = plc.BlockGroup.Blocks.Import(new FileInfo(importPath), ImportOptions.Override);
+                    if (imported == null || imported.Count != 1 || imported[0].Name != input.Block.Name)
+                        throw new InvalidOperationException("SimaticML import did not produce exactly Main / OB1.");
+                }
+                File.Delete(importPath);
 
                 progress?.Invoke("save");
                 project.Save();
@@ -169,7 +173,7 @@ namespace TiaGuard.Openness
                 !name.StartsWith(prefix, StringComparison.Ordinal) ||
                 !Guid.TryParseExact(name.Substring(prefix.Length), "N", out _))
                 throw new InvalidOperationException("Refusing to remove an unowned build stage.");
-            if (Directory.Exists(full)) Directory.Delete(full, recursive: true);
+            FileSystemSafety.DeleteOwnedTree(full);
         }
     }
 }

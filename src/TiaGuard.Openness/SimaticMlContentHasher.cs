@@ -14,7 +14,17 @@ namespace TiaGuard.Openness
         // after removing only the proven volatile root Created timestamp.
         public static string ComputeSha256(string source)
         {
-            var bytes = File.ReadAllBytes(source);
+            var document = ReadDocument(File.ReadAllBytes(source));
+            document.DocumentElement["DocumentInfo"]["Created"].InnerText = "1970-01-01T00:00:00Z";
+            using (var sha = SHA256.Create())
+            {
+                var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(document.OuterXml));
+                return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+            }
+        }
+
+        internal static XmlDocument ReadDocument(byte[] bytes)
+        {
             var offset = bytes.Length >= 3 && bytes[0] == 0xef && bytes[1] == 0xbb && bytes[2] == 0xbf
                 ? 3 : 0;
             XmlDocument document;
@@ -63,12 +73,7 @@ namespace TiaGuard.Openness
                 created.FirstChild.NodeType != XmlNodeType.Text)
                 throw new InvalidDataException("Unexpected root Created shape.");
 
-            created.InnerText = "1970-01-01T00:00:00Z";
-            using (var sha = SHA256.Create())
-            {
-                var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(document.OuterXml));
-                return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
-            }
+            return document;
         }
     }
 }

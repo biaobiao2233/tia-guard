@@ -114,7 +114,19 @@ If Siemens export contains proven volatile fields, a future versioned normalizer
 
 The builder validates the complete tree and artifact SHA-256 before starting TIA. It requires v1/V21, `roundTripReady=true`, exactly one supported station and PLC, exactly one Main/OB1/LAD artifact, and a capability ledger that matches every descriptor. Missing, extra, duplicate, escaping or reparse-point paths fail closed. The bounded builder accepts root PLC tag tables and the single-comment tag model.
 
+The evidenced CPU profile is exactly `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`; an `OrderNumber:` prefix alone is not sufficient. Primitive tags are restricted to Bool, Byte, Char, SInt, USInt, Word, Int, UInt, DWord, DInt, UDInt and Real with a parsed I/Q/M address of the matching width. Null/empty addresses, user-defined types, duplicate PLC-wide tag names and nested tag/block scopes are rejected. The populated-tag profile has synthetic tests; the accepted real demo has an empty tag table.
+
+Before publishing any `roundTripReady=true` export, the materializer runs this same complete-tree validator. Validation failure produces a diagnostic export with readiness false and a failed source-validation capability. Unsupported inventory scans check user constants, PLC types/type documents, external sources, technology objects, watch/force tables, user alarm text lists and user folders; unreadable/null collections are not treated as empty. Built-in system alarm texts and hardware parameter values are not covered engineering-source equality inputs. This is a named bounded inventory, not a claim to discover every future Openness object class.
+
+JSON primitive types are checked before deserialization; serializers may not coerce numbers or strings into different field types. The manifest syntax schema requires emitted nullable members explicitly. `roundtrip-descriptors-v1.schema.json` covers descriptor syntax for both ready and diagnostic exports; cross-file relationships, exact profile support, XML cardinality and filesystem safety remain runtime gates. Schema validity alone is not build readiness.
+
+Canonical XML must have unique root DocumentInfo/Created and unique Main Name/Number/ProgrammingLanguage fields. Additional top-level block objects are rejected. Unknown non-block content remains preserved and hash-significant.
+
 The builder creates a fresh project in a destination-volume staging folder, uses the hardware descriptor's exact `createTypeIdentifier` with `CreateWithItem`, recreates tag tables/tags, imports canonical SimaticML, saves and compiles the PLC. The new project folder is published to the requested unused output path only after zero compile errors. It never reads the original source `.ap21` or downloads/writes to a PLC.
+
+The imported XML is a private copy of the exact bytes validated at preflight. It is hash-checked and held with a read-only sharing handle during import, so later edits to the supplied source.xml do not change the build. Owned cleanup rejects reparse-point ancestors/children. These path checks are not a sandbox against a hostile same-account process racing directory replacement; use an exclusively owned workspace.
+
+One observed system default is implicit: a single `Force table` with zero entries, created automatically by the fresh V21 CPU. Its name and entry count are checked; additional/renamed tables or any force entries block readiness. This does not permit online forcing.
 
 ## Verify boundary
 
