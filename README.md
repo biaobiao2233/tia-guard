@@ -16,6 +16,15 @@ Prove one reproducible loop on **TIA Portal V21**:
 
 The bounded export, fresh-project build, and semantic Verify slices are accepted for the self-authored V21 demo. The contracts remain versioned draft v1 formats; arbitrary TIA projects and runtime behavior are outside this proof.
 
+Build a fresh V21 project from a validated canonical Round-trip Source v1 tree:
+
+```powershell
+dotnet build src/TiaGuard.Cli/TiaGuard.Cli.csproj -c Release
+& .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe build C:\path\to\canonical-tree --output C:\path\to\new-project
+```
+
+The output directory must not exist. Keep its path short enough for TIA Portal V21's 143-character staged project-folder limit; the command checks this before starting TIA Portal. It checks the complete source tree, then creates a separate headless V21 project, saves and compiles it, and publishes it only with zero compile errors. It does not accept an original `.ap21` as input or connect to a PLC.
+
 ## Design principle
 
 **Deterministic facts stay deterministic; AI handles interpretation.**
@@ -61,10 +70,10 @@ Openness V21 is a **.NET Framework 4.8** integration boundary. Modern .NET compo
 ## Repository layout
 
     src/TiaGuard.Openness   Siemens Openness collector / evidence adapter
+    src/TiaGuard.Cli        V21 build command
     src/TiaGuard.Analysis   deterministic checks
     src/TiaGuard.Reporting  Markdown/JSON/SARIF
     src/TiaGuard.AI         optional advisory layer
-    src/TiaGuard.Cli        CLI composition
     docs/contracts          draft shared evidence/finding contracts
     examples                sanitized fixtures only
 
