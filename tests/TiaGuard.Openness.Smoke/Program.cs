@@ -247,6 +247,18 @@ namespace TiaGuard.Openness.Smoke
                     throw new InvalidOperationException("Build input rejected the valid canonical tree.");
                 if (RoundTripVerifier.CompareSources(firstOutput, secondOutput).Verdict != "pass")
                     throw new InvalidOperationException("Equal canonical source trees did not verify PASS.");
+                var verifyStubOriginal = Path.Combine(selfTestRoot, "verify-original.ap21");
+                var verifyStubRebuilt = Path.Combine(selfTestRoot, "verify-rebuilt.ap21");
+                File.WriteAllText(verifyStubOriginal, "stub");
+                File.WriteAllText(verifyStubRebuilt, "stub");
+                var verifyFailure = RoundTripVerifier.VerifyProjects(
+                    verifyStubOriginal, verifyStubRebuilt,
+                    stage => { throw new IOException("private-machine-path"); });
+                if (verifyFailure.Verdict != "blocked" ||
+                    verifyFailure.BlockedCode != "ORIGINAL_EXPORT_FAILED" ||
+                    RoundTripJson.Serialize(verifyFailure).Contains("private-machine-path"))
+                    throw new InvalidOperationException(
+                        "A Verify stage failure escaped or exposed its exception text.");
 
                 var changedLad = Path.Combine(selfTestRoot, "changed-lad");
                 CopyTree(firstOutput, changedLad);
