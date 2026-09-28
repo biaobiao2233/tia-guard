@@ -7,21 +7,47 @@ namespace TiaGuard.Cli
     {
         private static int Main(string[] args)
         {
-            if (args.Length != 4 || args[0] != "build" || args[2] != "--output" ||
-                string.IsNullOrWhiteSpace(args[1]) || string.IsNullOrWhiteSpace(args[3]))
+            if (args != null && args.Length == 1 &&
+                (args[0] == "--help" || args[0] == "-h" || args[0] == "help"))
             {
-                Console.Error.WriteLine("Usage: tia-guard build <repo-dir> --output <new-output-dir>");
+                Console.WriteLine(CliCommandLine.Usage);
+                return 0;
+            }
+
+            if (!CliCommandLine.TryParse(args, out var invocation))
+            {
+                Console.Error.WriteLine(CliCommandLine.Usage);
                 return 2;
             }
 
             try
             {
-                var result = RoundTripBuilder.Build(args[1], args[3],
+                if (invocation.Command == "export")
+                {
+                    using (var session = TiaProjectSession.OpenOfflineCopy(invocation.Source))
+                    {
+                        var manifest = session.ExportRoundTripSource(invocation.Target,
+                            stage => Console.Error.WriteLine("stage=" + stage));
+                        Console.Write(RoundTripJson.Serialize(manifest));
+                        return manifest.RoundTripReady ? 0 : 5;
+                    }
+                }
+
+                if (invocation.Command == "build")
+                {
+                    var result = RoundTripBuilder.Build(invocation.Source, invocation.Target,
+                        stage => Console.Error.WriteLine("stage=" + stage));
+                    Console.WriteLine("projectFile=" + result.ProjectFile);
+                    Console.WriteLine("compileErrors=" + result.CompileErrors);
+                    Console.WriteLine("compileWarnings=" + result.CompileWarnings);
+                    return 0;
+                }
+
+                var verify = RoundTripVerifier.VerifyProjects(invocation.Source, invocation.Target,
                     stage => Console.Error.WriteLine("stage=" + stage));
-                Console.WriteLine("projectFile=" + result.ProjectFile);
-                Console.WriteLine("compileErrors=" + result.CompileErrors);
-                Console.WriteLine("compileWarnings=" + result.CompileWarnings);
-                return 0;
+                Console.Write(RoundTripJson.Serialize(verify));
+                return verify.Verdict == "pass" ? 0 :
+                    verify.Verdict == "mismatch" ? 4 : 5;
             }
             catch (OpennessAccessException error)
             {

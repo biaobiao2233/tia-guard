@@ -18,16 +18,30 @@ The bounded export, fresh-project build, and semantic Verify slices are accepted
 
 That historical acceptance covers CPU `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`, its observed Chinese-locale integrated item tree, and an empty tag table. The current validator explicitly limits the CPU profile; populated primitive tags have deterministic contract tests, not the same real-project acceptance evidence. See [architecture and coverage](docs/ARCHITECTURE.md).
 
-The product CLI currently exposes **build**. Export and Verify are available through the library and [Openness Smoke harness](src/TiaGuard.Openness/README.md); they are not yet `tia-guard export` / `tia-guard verify` product commands.
-
-Build a fresh V21 project from a validated canonical Round-trip Source v1 tree:
+The product CLI exposes the complete bounded loop:
 
 ```powershell
 dotnet build src/TiaGuard.Cli/TiaGuard.Cli.csproj -c Release
+
+# Existing V21 project -> canonical Git engineering tree
+& .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe export C:\path\to\project.ap21 C:\path\to\canonical-tree
+
+# Canonical Git engineering tree -> fresh V21 project
 & .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe build C:\path\to\canonical-tree --output C:\path\to\new-project
+
+# Original vs rebuilt supported engineering semantics
+& .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe verify C:\path\to\project.ap21 C:\path\to\new-project\Demo.ap21
 ```
 
-The output directory must not exist. Keep its path short enough for TIA Portal V21's 143-character staged project-folder limit; the command checks this before starting TIA Portal. It checks the complete source tree, then creates a separate headless V21 project, saves and compiles it, and publishes it only with zero compile errors. It does not accept an original `.ap21` as input or connect to a PLC.
+`export` opens only an owned offline copy and prints the Round-trip Source v1 manifest as JSON. Exit code `0` means the exported tree is round-trip ready; `5` means an export was produced but the bounded profile is blocked. `build` reads only the canonical tree, requires an unused output directory, creates a separate headless V21 project, saves and compiles it, and publishes it only with zero compile errors. Keep the output path short enough for TIA Portal V21's 143-character staged project-folder limit. `verify` returns JSON with verdict `pass`, `mismatch`, or `blocked` and exit codes `0`, `4`, or `5`.
+
+For a small local/demo Windows package:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package-cli.ps1
+```
+
+The package contains only TIA-Guard binaries and a short usage note. It deliberately excludes Siemens DLLs, licenses, and TIA project binaries; the target machine must already have TIA Portal V21 and Openness installed.
 
 ## Design principle
 
@@ -74,7 +88,7 @@ Openness V21 is a **.NET Framework 4.8** integration boundary. Modern .NET compo
 ## Repository layout
 
     src/TiaGuard.Openness   Siemens Openness collector / evidence adapter
-    src/TiaGuard.Cli        V21 build command
+    src/TiaGuard.Cli        V21 export / build / verify CLI
     tests/TiaGuard.Contracts.Tests  pure contract tests, no Siemens dependency
     tests/TiaGuard.Openness.Smoke   local V21 integration harness
     docs/contracts          draft shared evidence/finding contracts

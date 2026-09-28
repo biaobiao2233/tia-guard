@@ -12,6 +12,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
     <Reference Include="System.Web.Extensions" />
     <!-- Compile the production pure-source boundary, without any Siemens dependency. -->
+    <Compile Include="../../src/TiaGuard.Cli/CliCommandLine.cs" Link="Core/CliCommandLine.cs" />
     <Compile Include="../../src/TiaGuard.Openness/RoundTripBuildInput.cs" Link="Core/RoundTripBuildInput.cs" />
     <Compile Include="../../src/TiaGuard.Openness/RoundTripSourceV1.cs" Link="Core/RoundTripSourceV1.cs" />
     <Compile Include="../../src/TiaGuard.Openness/RoundTripSourceMaterializer.cs" Link="Core/RoundTripSourceMaterializer.cs" />
