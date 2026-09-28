@@ -18,7 +18,14 @@ The bounded export, fresh-project build, and semantic Verify slices are accepted
 
 That historical acceptance covers CPU `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`, its observed Chinese-locale integrated item tree, and an empty tag table. The current validator explicitly limits the CPU profile; populated primitive tags have deterministic contract tests, not the same real-project acceptance evidence. See [architecture and coverage](docs/ARCHITECTURE.md).
 
-The product CLI exposes the complete bounded loop:
+For human use, the Windows GUI exposes the same bounded workflow without requiring command-line knowledge. It is a thin WPF front end over the same `TiaGuard.Openness` core, with a read-only environment check, one-click Export → Build → Verify, individual operations, human-readable PASS/BLOCKED/ERROR states, and a technical log.
+
+```powershell
+dotnet build src/TiaGuard.Gui/TiaGuard.Gui.csproj -c Release
+& .\src\TiaGuard.Gui\bin\Release\net48\TiaGuard.exe
+```
+
+The product CLI remains the automation / AI surface and exposes the complete bounded loop:
 
 ```powershell
 dotnet build src/TiaGuard.Cli/TiaGuard.Cli.csproj -c Release
@@ -41,13 +48,13 @@ dotnet build src/TiaGuard.Cli/TiaGuard.Cli.csproj -c Release
 
 `export` opens only an owned offline copy and prints the Round-trip Source v1 manifest as JSON. Exit code `0` means the exported tree is round-trip ready; `5` means an export was produced but the bounded profile is blocked. `build` reads only the canonical tree, requires an unused output directory, creates a separate headless V21 project, saves and compiles it, and publishes it only with zero compile errors. Keep the output path short enough for TIA Portal V21's 143-character staged project-folder limit. `verify` returns JSON with verdict `pass`, `mismatch`, or `blocked` and exit codes `0`, `4`, or `5`.
 
-For a small local/demo Windows package:
+For a combined human + automation Windows package:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\package-cli.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1
 ```
 
-The package contains only TIA-Guard binaries and a short usage note. It deliberately excludes Siemens DLLs, licenses, and TIA project binaries; the target machine must already have TIA Portal V21 and Openness installed.
+The combined package contains `TiaGuard.exe` for the GUI, `tia-guard.exe` for CLI/AI automation, the shared TIA-Guard core, and a short usage note. The CLI-only package remains available through `scripts/package-cli.ps1`. Neither package redistributes Siemens DLLs, licenses, or TIA project binaries; the target machine must already have TIA Portal V21 and Openness installed.
 
 ## Design principle
 
@@ -95,6 +102,7 @@ Openness V21 is a **.NET Framework 4.8** integration boundary. Modern .NET compo
 
     src/TiaGuard.Openness   Siemens Openness collector / evidence adapter
     src/TiaGuard.Cli        V21 export / build / verify CLI
+    src/TiaGuard.Gui        WPF human UI over the same bounded workflow
     tests/TiaGuard.Contracts.Tests  pure contract tests, no Siemens dependency
     tests/TiaGuard.Openness.Smoke   local V21 integration harness
     docs/contracts          draft shared evidence/finding contracts

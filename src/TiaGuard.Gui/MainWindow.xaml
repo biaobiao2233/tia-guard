@@ -1,0 +1,355 @@
+<Window x:Class="TiaGuard.Gui.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TIA-Guard"
+        Width="1200"
+        Height="800"
+        MinWidth="1040"
+        MinHeight="680"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource CanvasBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="18"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock Text="TIA-GUARD" FontSize="36" FontWeight="Black"/>
+                <TextBlock Text="PLC PROJECT  ↔  GIT SOURCE" FontSize="12" FontWeight="Bold"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Style="{StaticResource BadgeBorder}" Background="{StaticResource YellowBrush}" Margin="0,0,8,0">
+                    <TextBlock Text="TIA V21" FontWeight="Black"/>
+                </Border>
+                <Border Style="{StaticResource BadgeBorder}" Background="{StaticResource CyanBrush}" Margin="0,0,8,0">
+                    <TextBlock Text="S7-1200" FontWeight="Black"/>
+                </Border>
+                <Border Style="{StaticResource BadgeBorder}" Background="{StaticResource PaperBrush}">
+                    <TextBlock x:Name="VersionText" Text="v0.1.0" FontWeight="Black"/>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="440"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer Grid.Column="0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="ActionsPanel" Margin="0,0,8,8">
+                    <Border Style="{StaticResource CardBorder}" Margin="0,0,0,18">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Eyebrow}" Text="ENVIRONMENT / 环境"/>
+                                    <TextBlock Style="{StaticResource SectionTitle}" Text="运行环境"/>
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Content="重新检测"
+                                        Click="OnRefreshDoctorClick"/>
+                            </Grid>
+
+                            <Border x:Name="DoctorStatusBorder"
+                                    Style="{StaticResource BadgeBorder}"
+                                    Background="{StaticResource YellowBrush}"
+                                    Margin="0,10,0,8"
+                                    HorizontalAlignment="Left">
+                                <TextBlock x:Name="DoctorStatusText"
+                                           Text="正在检测…"
+                                           FontWeight="Black"/>
+                            </Border>
+                            <TextBlock x:Name="DoctorIssueText"
+                                       Text="检查 TIA Portal V21、Openness PublicAPI、x64 与当前登录权限。"
+                                       TextWrapping="Wrap"
+                                       FontSize="12"
+                                       Foreground="{StaticResource MutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource CardBorder}" Margin="0,0,0,18" Background="#FFF3B0">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Eyebrow}" Text="ONE CLICK / 一键"/>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="完整往返验证"/>
+                            <TextBlock Text="AP21 → Git Source → Fresh AP21 → Verify"
+                                       FontWeight="SemiBold"
+                                       Margin="0,0,0,14"/>
+
+                            <TextBlock Text="原始 TIA 工程 (.ap21)" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="FullProjectTextBox" Style="{StaticResource PathTextBox}"/>
+                                <Button Grid.Column="2"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Content="浏览"
+                                        Click="OnBrowseFullProject"/>
+                            </Grid>
+
+                            <TextBlock Text="工作目录" FontWeight="Bold" Margin="0,12,0,5"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="FullWorkspaceTextBox" Style="{StaticResource PathTextBox}"/>
+                                <Button Grid.Column="2"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Content="浏览"
+                                        Click="OnBrowseFullWorkspace"/>
+                            </Grid>
+
+                            <Button Style="{StaticResource BrutalButton}"
+                                    Background="{StaticResource YellowBrush}"
+                                    Content="开始完整往返 →"
+                                    Margin="0,16,0,0"
+                                    Click="OnFullRoundTripClick"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource CardBorder}" Margin="0,0,0,18">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Eyebrow}" Text="MANUAL / 单步"/>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="单独执行"/>
+
+                            <Expander Header="① 导出工程到 Git Source" IsExpanded="True" Margin="0,8,0,0">
+                                <StackPanel Margin="0,10,0,6">
+                                    <TextBlock Text="TIA 工程 (.ap21)" FontWeight="Bold"/>
+                                    <Grid Margin="0,4,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="ExportProjectTextBox" Style="{StaticResource PathTextBox}"/>
+                                        <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="浏览" Click="OnBrowseExportProject"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Git Source 输出目录" FontWeight="Bold"/>
+                                    <Grid Margin="0,4,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="ExportTargetTextBox" Style="{StaticResource PathTextBox}"/>
+                                        <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="浏览" Click="OnBrowseExportTarget"/>
+                                    </Grid>
+                                    <Button Style="{StaticResource BrutalButton}" Background="{StaticResource CyanBrush}" Content="导出工程" Click="OnExportClick"/>
+                                </StackPanel>
+                            </Expander>
+
+                            <Expander Header="② 从 Git Source 重建" Margin="0,8,0,0">
+                                <StackPanel Margin="0,10,0,6">
+                                    <TextBlock Text="Git Source 目录" FontWeight="Bold"/>
+                                    <Grid Margin="0,4,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="BuildSourceTextBox" Style="{StaticResource PathTextBox}"/>
+                                        <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="浏览" Click="OnBrowseBuildSource"/>
+                                    </Grid>
+
+                                    <TextBlock Text="新工程输出目录" FontWeight="Bold"/>
+                                    <Grid Margin="0,4,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="BuildTargetTextBox" Style="{StaticResource PathTextBox}"/>
+                                        <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="浏览" Click="OnBrowseBuildTarget"/>
+                                    </Grid>
+                                    <Button Style="{StaticResource BrutalButton}" Background="{StaticResource PurpleBrush}" Content="重建工程" Click="OnBuildClick"/>
+                                </StackPanel>
+                            </Expander>
+
+                            <Expander Header="③ 验证原工程与重建工程" Margin="0,8,0,0">
+                                <StackPanel Margin="0,10,0,6">
+                                    <TextBlock Text="原工程" FontWeight="Bold"/>
+                                    <Grid Margin="0,4,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="VerifyOriginalTextBox" Style="{StaticResource PathTextBox}"/>
+                                        <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="浏览" Click="OnBrowseVerifyOriginal"/>
+                                    </Grid>
+
+                                    <TextBlock Text="重建工程" FontWeight="Bold"/>
+                                    <Grid Margin="0,4,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="VerifyRebuiltTextBox" Style="{StaticResource PathTextBox}"/>
+                                        <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="浏览" Click="OnBrowseVerifyRebuilt"/>
+                                    </Grid>
+                                    <Button Style="{StaticResource BrutalButton}" Background="{StaticResource GreenBrush}" Content="开始验证" Click="OnVerifyClick"/>
+                                </StackPanel>
+                            </Expander>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="18"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Style="{StaticResource CardBorder}" Background="{StaticResource CyanBrush}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Eyebrow}" Text="CURRENT TASK / 当前任务"/>
+                                <TextBlock x:Name="ResultTitleText"
+                                           Text="等待操作"
+                                           FontSize="28"
+                                           FontWeight="Black"/>
+                            </StackPanel>
+                            <Border x:Name="ResultBadgeBorder"
+                                    Grid.Column="1"
+                                    Style="{StaticResource BadgeBorder}"
+                                    Background="{StaticResource PaperBrush}"
+                                    VerticalAlignment="Top"
+                                    Margin="12,0,0,0">
+                                <TextBlock x:Name="ResultBadgeText" Text="READY" FontWeight="Black"/>
+                            </Border>
+                        </Grid>
+
+                        <TextBlock x:Name="ResultDetailText"
+                                   Text="选择左侧操作。TIA-Guard 不会修改原工程。"
+                                   Margin="0,10,0,14"
+                                   FontSize="14"
+                                   TextWrapping="Wrap"/>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="ExportStepBorder" Style="{StaticResource StepBorder}">
+                                <TextBlock x:Name="ExportStepText" Text="EXPORT · 待命" FontWeight="Black"/>
+                            </Border>
+                            <Border x:Name="BuildStepBorder" Style="{StaticResource StepBorder}">
+                                <TextBlock x:Name="BuildStepText" Text="BUILD · 待命" FontWeight="Black"/>
+                            </Border>
+                            <Border x:Name="VerifyStepBorder" Style="{StaticResource StepBorder}">
+                                <TextBlock x:Name="VerifyStepText" Text="VERIFY · 待命" FontWeight="Black"/>
+                            </Border>
+                        </StackPanel>
+
+                        <ProgressBar x:Name="BusyProgress"
+                                     Height="10"
+                                     Margin="0,16,0,0"
+                                     IsIndeterminate="True"
+                                     Visibility="Collapsed"
+                                     Foreground="{StaticResource InkBrush}"
+                                     Background="White"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="2" Style="{StaticResource CardBorder}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Eyebrow}" Text="OUTPUT / 输出"/>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="结果与日志"/>
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    x:Name="OpenOutputButton"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Content="打开输出目录"
+                                    Click="OnOpenOutputClick"
+                                    IsEnabled="False"/>
+                        </Grid>
+
+                        <Border Grid.Row="1"
+                                BorderBrush="{StaticResource InkBrush}"
+                                BorderThickness="2"
+                                Background="#FAF7EF"
+                                Padding="12"
+                                Margin="0,10,0,0">
+                            <StackPanel>
+                                <TextBlock Text="最近输出" FontWeight="Black"/>
+                                <TextBlock x:Name="OutputPathText"
+                                           Text="—"
+                                           FontFamily="Consolas"
+                                           FontSize="12"
+                                           Margin="0,5,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Grid Grid.Row="3">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="TECHNICAL LOG / 技术日志"
+                                       FontWeight="Black"
+                                       FontSize="11"
+                                       Margin="0,0,0,8"/>
+                            <TextBox x:Name="LogTextBox"
+                                     Grid.Row="1"
+                                     IsReadOnly="True"
+                                     AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     TextWrapping="NoWrap"
+                                     FontFamily="Consolas"
+                                     FontSize="12"
+                                     Background="#181818"
+                                     Foreground="#F7F1E7"
+                                     BorderBrush="{StaticResource InkBrush}"
+                                     BorderThickness="2"
+                                     Padding="12"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
