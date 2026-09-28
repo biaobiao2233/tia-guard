@@ -24,8 +24,11 @@ dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.cspro
 dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- roundtrip open-copy C:\path\to\project.ap21 C:\outside\canonical-tree
 dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- validate-build-input C:\outside\canonical-tree C:\outside\new-project
 dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- build C:\outside\canonical-tree C:\outside\new-project
+dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- verify C:\path\to\original.ap21 C:\path\to\rebuilt.ap21
 ```
 
 The `build` command reads only the canonical tree, requires an unused output directory, stages on the destination volume, and publishes the new `.ap21` only after saving and compiling with zero errors. It never opens the original source project.
+
+The `verify` command opens each supplied `.ap21` only through a disposable offline copy. It actively compiles the rebuilt copy, requires zero errors, exports both copies through the same Round-trip Source v1 contract, validates both complete trees, and compares supported station/PLC/tag/OB1/LAD semantics plus the complete canonical SimaticML SHA-256. The JSON verdict is `pass`, `mismatch`, or `blocked`; `differences` contains stable object and field names without local paths or source text. Exit codes are `0` for pass, `4` for mismatch, and `5` for blocked. Verification scratch exports are removed after the result is produced.
 
 Exit code `3` means the current Windows logon token lacks effective `Siemens TIA Openness` membership. Account membership alone is insufficient until a new token is issued. Exit code `2` means another failure. The harness resolves the installed V21 PublicAPI assemblies at runtime; Siemens DLLs are neither copied into build output nor committed.

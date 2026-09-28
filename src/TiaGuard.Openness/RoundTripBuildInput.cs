@@ -24,21 +24,30 @@ namespace TiaGuard.Openness
 
         public static RoundTripBuildInput Load(string sourceRoot, string outputDirectory)
         {
-            if (string.IsNullOrWhiteSpace(sourceRoot) || string.IsNullOrWhiteSpace(outputDirectory))
-                throw new ArgumentException("Source tree and new output directory are required.");
-            var root = Path.GetFullPath(sourceRoot).TrimEnd(Path.DirectorySeparatorChar);
+            if (string.IsNullOrWhiteSpace(outputDirectory))
+                throw new ArgumentException("A new output directory is required.", nameof(outputDirectory));
             var output = Path.GetFullPath(outputDirectory).TrimEnd(Path.DirectorySeparatorChar);
-            if (!Directory.Exists(root))
-                throw new DirectoryNotFoundException("The canonical source tree does not exist.");
             if (Directory.Exists(output) || File.Exists(output))
                 throw new IOException("The build output path already exists.");
             var outputParent = Path.GetDirectoryName(output);
             if (string.IsNullOrEmpty(outputParent) || !Directory.Exists(outputParent))
                 throw new DirectoryNotFoundException("The build output parent directory does not exist.");
-            RequireNoReparseAncestors(root);
             RequireNoReparseAncestors(outputParent);
-            if (InsideOrEqual(output, root) || InsideOrEqual(root, output))
+            var input = LoadSource(sourceRoot);
+            if (InsideOrEqual(output, input.SourceRoot) || InsideOrEqual(input.SourceRoot, output))
                 throw new IOException("The build output and canonical source tree overlap.");
+            input.OutputDirectory = output;
+            return input;
+        }
+
+        public static RoundTripBuildInput LoadSource(string sourceRoot)
+        {
+            if (string.IsNullOrWhiteSpace(sourceRoot))
+                throw new ArgumentException("A canonical source tree is required.", nameof(sourceRoot));
+            var root = Path.GetFullPath(sourceRoot).TrimEnd(Path.DirectorySeparatorChar);
+            if (!Directory.Exists(root))
+                throw new DirectoryNotFoundException("The canonical source tree does not exist.");
+            RequireNoReparseAncestors(root);
 
             var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var manifest = ReadJson<RoundTripManifestV1>(Take(root, "tia-guard.json", expected));
@@ -147,7 +156,7 @@ namespace TiaGuard.Openness
 
             return new RoundTripBuildInput
             {
-                SourceRoot = root, OutputDirectory = output, Manifest = manifest,
+                SourceRoot = root, Manifest = manifest,
                 Hardware = hardware, Plc = plc, Block = block, TagTables = tables,
                 BlockSourcePath = sourcePath
             };

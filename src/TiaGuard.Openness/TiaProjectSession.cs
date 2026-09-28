@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Siemens.Engineering;
+using Siemens.Engineering.Compiler;
 
 namespace TiaGuard.Openness
 {
@@ -21,6 +22,12 @@ namespace TiaGuard.Openness
     {
         // Optional and explicit. Null leaves all block exports not attempted.
         public string BlockExportDirectory { get; set; }
+    }
+
+    public sealed class PlcCompileObservation
+    {
+        public int Errors { get; internal set; }
+        public int Warnings { get; internal set; }
     }
 
     public sealed class TiaProjectSession : IDisposable
@@ -186,6 +193,26 @@ namespace TiaGuard.Openness
                 throw new InvalidOperationException("Round-trip output must be outside the TIA project folder.");
 
             return RoundTripSourceExporter.Export(_project, ReadProjectInfo(), target, progress);
+        }
+
+        // Verification actively compiles only its owned disposable project copy.
+        public PlcCompileObservation CompilePlcForVerification()
+        {
+            ThrowIfDisposed();
+            if (_scratchDirectory == null)
+                throw new InvalidOperationException("Verification compile requires an offline project copy.");
+            var softwares = RoundTripSourceExporter.FindPlcSoftware(_project);
+            if (softwares.Count != 1)
+                throw new InvalidOperationException("Verification requires exactly one PLC software object.");
+            var compiler = softwares[0].GetService<ICompilable>();
+            if (compiler == null)
+                throw new InvalidOperationException("PLC compile service is unavailable.");
+            var result = compiler.Compile();
+            return new PlcCompileObservation
+            {
+                Errors = result.ErrorCount,
+                Warnings = result.WarningCount
+            };
         }
 
         public void Dispose()
