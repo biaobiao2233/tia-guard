@@ -241,10 +241,14 @@ namespace TiaGuard.Openness.Smoke
                 if (!firstManifest.RoundTripReady || !secondManifest.RoundTripReady)
                     throw new InvalidOperationException("Round-trip source self-test did not become ready.");
                 AssertTreesEqual(firstOutput, secondOutput);
-                var unusedBuildOutput = Path.Combine(selfTestRoot, "new-project");
+                var shortOutputParent = Path.GetPathRoot(selfTestRoot);
+                var unusedBuildOutput = Path.Combine(shortOutputParent,
+                    "tg-" + Guid.NewGuid().ToString("N").Substring(0, 8));
                 var buildInput = RoundTripBuildInput.Load(firstOutput, unusedBuildOutput);
                 if (buildInput.TagTables.Count != 2 || buildInput.Plc.Name != "PLC_1")
                     throw new InvalidOperationException("Build input rejected the valid canonical tree.");
+                AssertInvalidBuildInput(firstOutput,
+                    Path.Combine(shortOutputParent, new string('x', 120)));
                 if (RoundTripVerifier.CompareSources(firstOutput, secondOutput).Verdict != "pass")
                     throw new InvalidOperationException("Equal canonical source trees did not verify PASS.");
                 var verifyStubOriginal = Path.Combine(selfTestRoot, "verify-original.ap21");
