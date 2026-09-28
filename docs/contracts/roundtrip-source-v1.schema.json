@@ -14,35 +14,71 @@
     "diagnostics"
   ],
   "properties": {
-    "schemaVersion": { "const": "1.0" },
-    "contractStatus": { "const": "draft" },
-    "tiaVersion": { "type": "string" },
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "contractStatus": {
+      "const": "draft"
+    },
+    "tiaVersion": {
+      "type": "string"
+    },
     "project": {
       "type": "object",
-      "required": ["name"],
+      "required": [
+        "name",
+        "projectVersion"
+      ],
       "properties": {
-        "name": { "type": "string", "minLength": 1 },
-        "projectVersion": { "type": ["string", "null"] }
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projectVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       },
       "additionalProperties": false
     },
-    "roundTripReady": { "type": "boolean" },
+    "roundTripReady": {
+      "type": "boolean"
+    },
     "hardware": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^tia/hardware/.+\\.json$" }
+      "items": {
+        "type": "string",
+        "pattern": "^tia/hardware/.+\\.json$"
+      }
     },
     "plcs": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^tia/plc/.+/plc\\.json$" }
+      "items": {
+        "type": "string",
+        "pattern": "^tia/plc/.+/plc\\.json$"
+      }
     },
     "capabilities": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["objectKind", "objectRef", "state"],
+        "required": [
+          "objectKind",
+          "objectRef",
+          "state",
+          "reason"
+        ],
         "properties": {
-          "objectKind": { "type": "string", "minLength": 1 },
-          "objectRef": { "type": "string", "minLength": 1 },
+          "objectKind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "objectRef": {
+            "type": "string",
+            "minLength": 1
+          },
           "state": {
             "enum": [
               "supported-round-trip",
@@ -52,7 +88,12 @@
               "failed"
             ]
           },
-          "reason": { "type": ["string", "null"] }
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         },
         "additionalProperties": false
       }
@@ -61,15 +102,69 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["code", "message"],
+        "required": [
+          "code",
+          "message",
+          "objectRef"
+        ],
         "properties": {
-          "code": { "type": "string", "minLength": 1 },
-          "message": { "type": "string", "minLength": 1 },
-          "objectRef": { "type": ["string", "null"] }
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "objectRef": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         },
         "additionalProperties": false
       }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "roundTripReady": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "tiaVersion": {
+            "const": "V21"
+          },
+          "hardware": {
+            "minItems": 1,
+            "maxItems": 1
+          },
+          "plcs": {
+            "minItems": 1,
+            "maxItems": 1
+          },
+          "diagnostics": {
+            "maxItems": 0
+          },
+          "capabilities": {
+            "minItems": 3,
+            "items": {
+              "properties": {
+                "state": {
+                  "const": "supported-round-trip"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

@@ -1,0 +1,21 @@
+name: Source contract tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Test the production pure-source boundary (no Siemens DLLs)
+        run: dotnet test tests/TiaGuard.Contracts.Tests/TiaGuard.Contracts.Tests.csproj -c Release --logger "trx;LogFileName=contracts.trx"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install jsonschema==4.26.0
+      - run: python scripts/test-contract-schemas.py

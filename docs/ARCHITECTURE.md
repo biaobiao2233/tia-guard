@@ -1,168 +1,54 @@
 # Architecture
 
-## Problem
+TIA-Guard is a bounded engineering-source round-trip prototype for TIA Portal V21.
+It does not replace Siemens engineering tools or establish control-logic correctness.
 
-TIA Portal already has vendor-supported engineering, version-control and testing capabilities. TIA-Guard does not claim to make TIA "Git-capable" for the first time.
+## Mainline path
 
-The narrower problem is **reviewable evidence**:
+1. Export an existing project through an owned offline copy to canonical JSON and full SimaticML.
+2. Validate the complete source tree, object capabilities, paths, JSON types and XML identity.
+3. Build a fresh project using the evidenced CPU identity, root tags and Main/OB1/LAD.
+4. Save and compile the fresh PLC software; publish only after zero compile errors.
+5. Verify two owned project copies by actively compiling the rebuilt copy, exporting both, validating both complete trees and comparing covered engineering-source fields.
 
-- extract a bounded, traceable representation from an existing TIA project;
-- make collection completeness and unsupported/protected data explicit;
-- run deterministic checks with documented coverage;
-- produce a low-noise before/after review artifact that can be consumed without every reviewer having TIA installed;
-- optionally let an LLM explain already-grounded evidence.
+`tia-guard build` is the product CLI entry. Export, Snapshot and Verify are library/Smoke-harness entry points. Snapshot is intermediate evidence; it is not the canonical build input. There is no original `.ap21` argument in the builder.
 
-## v0.1 architecture
+## Responsibilities
 
-    specified offline TIA Portal V21 project copy
-                    |
-                    | Openness / .NET Framework 4.8
-                    v
-             TiaGuard.Openness
-             collector + diagnostics
-                    |
-                    | Draft Snapshot v1
-                    v
-          +---------+----------+
-          |                    |
-          v                    v
-    TiaGuard.Analysis     TiaGuard.Diff
-    deterministic          bounded evidence diff
-          |                    |
-          +---------+----------+
-                    v
-             Finding contract
-                    |
-                    v
-             TiaGuard.Reporting
-          JSON / Markdown / SARIF
-                    |
-                    v
-               TiaGuard.Cli
+- `SnapshotExtractor`: Siemens traversal and explicit incomplete/unsupported diagnostics. User constants, types, external sources, technology objects, watch/force tables, user alarm text lists and user folders cannot silently disappear as empty collections.
+- `RoundTripSourceExporter`: offline-copy export preparation, exact CPU/topology observations and completed tag-table scans.
+- `RoundTripSourceMaterializer`: deterministic JSON and preserved XML; a ready tree must pass `RoundTripBuildInput.LoadSource` before publication.
+- `RoundTripBuildInput` / `RoundTripProfile`: shared ready profile, descriptor relationships, primitive JSON types, capability inventory, exact file set, path safety, hash and XML checks. The CPU allowlist currently contains only `6ES7 212-1AE40-0XB0/V4.7`.
+- `RoundTripBuilder`: fresh disposable project, locked private copy of preflight-validated XML, reconstruction, save/compile and publication.
+- `RoundTripVerifier.Compare`: pure engineering-source comparison; `RoundTripVerifier` supplies the separate live project/copy/compile lifecycle. Invalid sources are blocked, unequal covered fields mismatch, and only valid equal sources pass.
+- `FileSystemSafety`: refuse reparse-point traversal and redirected cleanup; individual callers retain ownership checks.
 
-          Optional experiment:
-             TiaGuard.AI
-        consumes Snapshot + Findings
-        and returns advisory output
+## Meaning and limits of equality
 
-## Contracts
+Covered fields are project name/V21, station/PLC identity, CPU create identifier, root tables and primitive tags with matching-width raw I/Q/M addresses and single comment text, Main/OB1/LAD identity and the complete canonical SimaticML digest.
 
-### Snapshot
+The SimaticML normalizer changes only the validated root `DocumentInfo/Created` field. Unknown XML remains comparison-significant. Hash validity is necessary but does not replace object shape validation. Descriptor schemas describe syntax; cross-file consistency and the supported profile are runtime checks.
 
-Snapshot is an evidence package, not just an inventory. It must encode:
+This does not cover hardware IP/parameter configuration, built-in system alarm text, language identity of a single comment, runtime behavior, binary project equality, HMI, Safety, drives, multiple PLCs or arbitrary Openness content. User folders and the named unsupported collections above block readiness. Future object classes require explicit discovery and evidence before any support claim.
 
-- stable object identity/association where available;
-- PLC/device/scope relationships;
-- collection status (complete / partial / failed);
-- unsupported/protected/read-failed diagnostics;
-- block export state and content hash when export evidence exists;
-- parsed address semantics only for supported forms;
-- compile evidence mode/source/freshness;
-- collector/TIA/schema versions;
-- deterministic normalization rules.
+The historical real acceptance is one self-authored CPU/profile with Chinese-locale integrated item names and an empty tag table. Populated primitive tags have synthetic contract coverage. The topology check is intentionally specific; different firmware, locale or devices require a new evidence gate.
 
-Runtime noise such as process IDs and absolute local paths must not participate in stable engineering-content hashes.
+A fresh V21 CPU automatically contains one empty `Force table`. Only this observed name with zero entries is an implicit default; additional/renamed force tables or any force entries are rejected. No force operation is ever executed.
 
-### Finding
+## Safety and privacy
 
-Analysis emits a separate Finding model. Reporting and AI must not invent findings independently.
+Original projects and user Portal sessions remain untouched. Build writes only its new output; Export/Verify work on complete owned offline copies. Compile is local PLC-software compilation, never PLC download or online control. Permission failures remain blocked.
 
-A finding contains at minimum:
+Source XML is frozen at validation and copied into a private stage for import with a held read-only sharing handle. Source/output overlap, unsafe path components and reparse points are rejected. Cleanup checks parent/GUID ownership and refuses redirected ancestors/children. Exclusive workspace ownership is still required; this is not a hostile-process sandbox.
 
-- stable ruleId;
-- severity;
-- message;
-- object/evidence references;
-- applicability/coverage information;
-- optional artifact location for SARIF.
+Operational paths may appear in local CLI output. Canonical output does not add local runtime paths/PIDs, but preserves engineering comments/XML; content containing customer data is not automatically anonymized. Main has no AI/network review pipeline. Siemens assemblies resolve from the user's local installation and are not redistributed.
 
-## Boundaries
+## Evidence and tests
 
-### Openness collector
+The pure net48 xUnit project compiles the exact production source boundary without Siemens dependencies. Windows CI runs those tests and JSON Schema fixtures. The local Smoke harness checks the installed V21 boundary and integration behavior. Real creation/import/compile/export evidence must remain separately identified, with disposable-resource ownership and source revision recorded.
 
-Owns all Siemens-specific API access.
+Pure test success does not establish runtime compatibility. A historic accepted commit is not automatic acceptance of a changed implementation, nor does a technical review under one GitHub account constitute approval by another account.
 
-v0.1 prioritizes a **specified offline project copy**. It must not silently select the first process/project.
+## Supporting work
 
-It may collect/export evidence, but by default it does **not**:
-
-- save or upgrade the project;
-- import or modify engineering objects;
-- unlock protected content;
-- compile the project;
-- change PLC RUN/STOP or online state;
-- close the user's TIA session.
-
-Read failures, protected blocks, unsupported objects and partial traversal are evidence, not empty success.
-
-### Analysis
-
-Runs deterministic checks only against evidence the Snapshot says was actually collected.
-
-Initial rule semantics:
-
-- address overlaps are reported only for supported parsed address forms and are not automatically declared errors;
-- M-area tag declarations are inventory/info, not proof of direct program use;
-- duplicate names are evaluated within an explicit scope;
-- comment checks distinguish empty/missing from unavailable/failed reads;
-- compile findings identify whether they came from consistency observation or an explicit compile action.
-
-### Diff
-
-v0.1 diff is intentionally limited to evidence with stable normalization:
-
-- object add/remove;
-- supported tag address/type/comment changes;
-- block export hash change only when valid export evidence exists.
-
-Behavioral/semantic equivalence is out of scope.
-
-### AI review
-
-AI is optional and not a v0.1 release gate.
-
-It may:
-
-- explain deterministic findings;
-- summarize evidence-backed changes;
-- propose questions for an engineer to confirm.
-
-It must not claim control-logic correctness from missing evidence. Every engineering statement should cite a Snapshot object, Finding, or exported artifact.
-
-### Reporting / SARIF
-
-SARIF is an output adapter, not the internal domain model.
-
-GitHub-facing SARIF must use real repository-relative artifacts/locations when possible. A schema-valid SARIF file is not accepted until GitHub upload, location rendering, rerun stability, and resolved-finding behavior have been demonstrated.
-
-## Runtime boundary
-
-TIA Portal V21 Openness is treated as a **.NET Framework 4.8 collector boundary**. If the CLI uses modern .NET, the collector may be an isolated net48 process exchanging versioned JSON with the rest of the tool. Do not assume .NET SDK 8 alone proves Openness compatibility.
-
-## CI boundary
-
-GitHub-hosted CI can validate:
-
-- Snapshot/Finding schema;
-- deterministic normalization;
-- rules;
-- serializers/reporters;
-- fixture-based diff/AI behavior.
-
-It cannot prove:
-
-- local V21 assembly loading;
-- Openness group permissions;
-- traversal completeness;
-- compatibility with installed TIA updates/device catalogs.
-
-Those require local integration evidence tied to a commit.
-
-## v0.1 acceptance
-
-1. One self-authored real TIA V21 project is collected and manually cross-checked.
-2. Repeated unchanged collection yields identical normalized engineering content.
-3. One known modification yields the expected bounded diff.
-4. Supported rules have positive and legitimate-exception fixtures.
-5. Partial/protected collection cannot produce a false clean result.
-6. One real GitHub SARIF workflow is demonstrated end-to-end.
+Doctor/rules, Finding-based Markdown/JSON/SARIF and optional advisory AI exist as separate unmerged proposals. They need current-contract reconciliation and their own tests. GitHub SARIF upload/display behavior and AI privacy/value gates are not fulfilled by core source comparison. They do not block repairing core truth boundaries and are not present mainline features.

@@ -14,6 +14,10 @@ Tag addresses preserve their raw form. Only common `%I/%Q/%M` bit, byte, word, a
 
 The focused harness is in `tests/TiaGuard.Openness.Smoke`:
 
+Round-trip readiness is narrower than successful collection. The adapter checks unsupported PLC types, external sources, technology objects, user constants, user folders, watch/force tables and user alarm text lists. Nonempty or unreadable inventories block readiness. The sole implicit force-table exception is one empty table named `Force table`, observed on the supported fresh CPU. Every ready export must also pass the same strict source validator used by Build and Verify. See the [bounded contract](../../docs/contracts/roundtrip-source-v1.md) for the exact CPU and content limits.
+
+Pure contract and filesystem regression tests are in `tests/TiaGuard.Contracts.Tests`; they require no Siemens assemblies. They validate source acceptance, negative cases and junction handling, not TIA import or compilation. Real integration tests require the local V21 installation and its Openness access approval for the exact executable; do not change machine permissions to bypass a blocked run.
+
 ```powershell
 dotnet build tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release
 dotnet run --project tests/TiaGuard.Openness.Smoke/TiaGuard.Openness.Smoke.csproj -c Release -- self-test

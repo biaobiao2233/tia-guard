@@ -1,0 +1,1 @@
+{"schemaVersion":"1.0","id":"block-a","name":"Main","scopePath":"Station/PLC/PLC/Program%20blocks","kind":"OB","number":1,"language":"LAD","capability":"supported-round-trip","source":{"format":"SimaticML","artifact":"tia/plc/plc-a/blocks/block-a/source.xml","sha256":"003edd62801df36dfa597ef99b6a5e50e40e77e734ca5c916cddb3c096e38ee4","normalizationVersion":"simaticml-v1"}}

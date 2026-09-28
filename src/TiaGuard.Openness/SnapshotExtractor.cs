@@ -134,6 +134,7 @@ namespace TiaGuard.Openness
                 var plc = new SnapshotPlc { Id = SnapshotNormalization.MakeId("plc", softwarePath),
                     Name = Required(name, "unnamed-software"), DeviceId = device.Id };
                 snapshot.Plcs.Add(plc);
+                CheckUnsupportedPlcContent(software, plc, snapshot);
                 var blockRoot = Read(() => software.BlockGroup, snapshot, "BLOCK_ROOT_READ_FAILED", plc.Id);
                 if (blockRoot != null)
                 {
@@ -159,9 +160,38 @@ namespace TiaGuard.Openness
                 snapshot, "DEVICE_ITEM_CHILDREN_READ_FAILED", itemId);
         }
 
+        private static void CheckUnsupportedPlcContent(PlcSoftware software, SnapshotPlc plc,
+            SnapshotV1 snapshot)
+        {
+            UnsupportedInventory.Check(() => software.TypeGroup.Types, snapshot, "PLC_TYPES", plc.Id);
+            UnsupportedInventory.Check(() => software.TypeGroup.Groups, snapshot, "PLC_TYPE_FOLDERS", plc.Id);
+            UnsupportedInventory.Check(() => software.TypeGroup.Documents, snapshot, "PLC_TYPE_DOCUMENTS", plc.Id);
+            UnsupportedInventory.Check(() => software.ExternalSourceGroup.ExternalSources,
+                snapshot, "EXTERNAL_SOURCES", plc.Id);
+            UnsupportedInventory.Check(() => software.ExternalSourceGroup.Groups,
+                snapshot, "EXTERNAL_SOURCE_FOLDERS", plc.Id);
+            UnsupportedInventory.Check(() => software.TechnologicalObjectGroup.TechnologicalObjects,
+                snapshot, "TECHNOLOGY_OBJECTS", plc.Id);
+            UnsupportedInventory.Check(() => software.TechnologicalObjectGroup.Groups,
+                snapshot, "TECHNOLOGY_FOLDERS", plc.Id);
+            UnsupportedInventory.Check(() => software.WatchAndForceTableGroup.WatchTables,
+                snapshot, "WATCH_TABLES", plc.Id);
+            UnsupportedInventory.Check(() =>
+            {
+                var tables = software.WatchAndForceTableGroup.ForceTables.ToList();
+                return tables.Where(table => tables.Count != 1 ||
+                    !RoundTripProfile.IsDefaultForceTable(table.Name, table.Entries.Count));
+            }, snapshot, "FORCE_TABLES", plc.Id);
+            UnsupportedInventory.Check(() => software.WatchAndForceTableGroup.Groups,
+                snapshot, "WATCH_FOLDERS", plc.Id);
+            UnsupportedInventory.Check(() => software.PlcAlarmTextlistGroup.PlcAlarmUserTextlists,
+                snapshot, "USER_ALARM_TEXTLISTS", plc.Id);
+        }
+
         private static void AppendBlocks(PlcBlockGroup group, List<string> path, SnapshotPlc plc,
             SnapshotV1 snapshot, SnapshotCollectionOptions options)
         {
+            UnsupportedInventory.Check(() => group.Groups, snapshot, "BLOCK_FOLDERS", plc.Id);
             Collect(() => group.Blocks, block => AppendBlock(block, path, plc, snapshot, options),
                 snapshot, "BLOCKS_READ_FAILED", SnapshotNormalization.MakeId("block-group", path));
             Collect(() => group.Groups, child =>
@@ -271,11 +301,14 @@ namespace TiaGuard.Openness
 
         private static void AppendTags(PlcTagTableGroup group, List<string> path, SnapshotPlc plc, SnapshotV1 snapshot)
         {
+            UnsupportedInventory.Check(() => group.Groups, snapshot, "TAG_FOLDERS", plc.Id);
             Collect(() => group.TagTables, table =>
             {
                 var name = RequiredName(Read(() => table.Name, snapshot, "TAG_TABLE_NAME_READ_FAILED", plc.Id),
                     "unnamed-table", snapshot, "TAG_TABLE_NAME_MISSING", plc.Id);
                 var tablePath = Extend(path, name);
+                UnsupportedInventory.Check(() => table.UserConstants, snapshot, "USER_CONSTANTS",
+                    SnapshotNormalization.MakeId("tag-table", tablePath));
                 Collect(() => table.Tags, tag => AppendTag(tag, tablePath, plc, snapshot),
                     snapshot, "TAGS_READ_FAILED", SnapshotNormalization.MakeId("tag-table", tablePath));
             }, snapshot, "TAG_TABLES_READ_FAILED", plc.Id);

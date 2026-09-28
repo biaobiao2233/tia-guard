@@ -25,6 +25,8 @@ namespace TiaGuard.Openness
                 throw new ArgumentException("An output directory is required.", nameof(outputDirectory));
 
             var outputRoot = Path.GetFullPath(outputDirectory);
+            FileSystemSafety.RequirePlainAncestors(outputRoot);
+            FileSystemSafety.RequirePlainAncestors(Path.GetFullPath(blockExportDirectory));
             if (Directory.Exists(outputRoot) || File.Exists(outputRoot))
                 throw new IOException("Round-trip output already exists; refusing to overwrite it.");
 
@@ -40,12 +42,32 @@ namespace TiaGuard.Openness
             {
                 var manifest = Build(snapshot, hints, Path.GetFullPath(blockExportDirectory), stagingRoot);
                 WriteJson(Path.Combine(stagingRoot, "tia-guard.json"), manifest);
+                // The same gate defines ready export, build acceptance and Verify.
+                // Preserve diagnostic exports, but never publish an unbuildable tree as ready.
+                if (manifest.RoundTripReady)
+                {
+                    try { RoundTripBuildInput.LoadSource(stagingRoot); }
+                    catch (Exception error) when (error is InvalidDataException ||
+                                                 error is System.Runtime.Serialization.SerializationException)
+                    {
+                        manifest.RoundTripReady = false;
+                        AddCapability(manifest, "source-validation", "project/source-validation",
+                            RoundTripCapabilityStates.Failed, "Canonical source validation failed.");
+                        AddDiagnostic(manifest, "CANONICAL_SOURCE_INVALID",
+                            "The exported tree does not satisfy the bounded build profile.", "project");
+                        manifest.Capabilities = manifest.Capabilities.OrderBy(value => value.ObjectKind, StringComparer.Ordinal)
+                            .ThenBy(value => value.ObjectRef, StringComparer.Ordinal).ToList();
+                        manifest.Diagnostics = manifest.Diagnostics.OrderBy(value => value.ObjectRef, StringComparer.Ordinal)
+                            .ThenBy(value => value.Code, StringComparer.Ordinal).ToList();
+                        WriteJson(Path.Combine(stagingRoot, "tia-guard.json"), manifest);
+                    }
+                }
                 Directory.Move(stagingRoot, outputRoot);
                 return manifest;
             }
             catch
             {
-                if (Directory.Exists(stagingRoot)) Directory.Delete(stagingRoot, recursive: true);
+                FileSystemSafety.DeleteOwnedTree(stagingRoot);
                 throw;
             }
         }
@@ -202,11 +224,10 @@ namespace TiaGuard.Openness
                 reason = "The build identity could not be bound unambiguously to the exported station.";
             }
             if (state == RoundTripCapabilityStates.SupportedRoundTrip &&
-                (string.IsNullOrWhiteSpace(identity.CreateTypeIdentifier) ||
-                 !identity.CreateTypeIdentifier.StartsWith("OrderNumber:", StringComparison.Ordinal)))
+                !RoundTripProfile.SupportsCpu(identity.CreateTypeIdentifier))
             {
                 state = RoundTripCapabilityStates.Failed;
-                reason = "The CPU DeviceItem does not expose a build-grade OrderNumber TypeIdentifier.";
+                reason = "The CPU TypeIdentifier is outside the evidenced V21 demo profile.";
             }
 
             var id = SafeId("station", device.Id);
@@ -484,6 +505,11 @@ namespace TiaGuard.Openness
                 reason = "v0.1 requires the raw PLC tag address.";
                 return RoundTripCapabilityStates.Unsupported;
             }
+            if (!RoundTripProfile.SupportsTag(tag.DataType, tag.Address.Raw))
+            {
+                reason = "The tag data type/address pair is outside the primitive v0.1 profile.";
+                return RoundTripCapabilityStates.Unsupported;
+            }
             if (tag.Comment == null || tag.Comment.Status == "read-failed")
             {
                 reason = "Tag comment evidence could not be read.";
@@ -562,6 +588,8 @@ namespace TiaGuard.Openness
             var full = Path.GetFullPath(Path.Combine(fullRoot, ToSystemPath(relative ?? string.Empty)));
             if (!full.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 throw new IOException("Artifact path escapes the block export directory.");
+            FileSystemSafety.RequirePlainAncestors(Path.GetDirectoryName(full));
+            if (File.Exists(full)) FileSystemSafety.RequirePlainFile(full);
             return full;
         }
 

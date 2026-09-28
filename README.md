@@ -16,6 +16,10 @@ Prove one reproducible loop on **TIA Portal V21**:
 
 The bounded export, fresh-project build, and semantic Verify slices are accepted for the self-authored V21 demo. The contracts remain versioned draft v1 formats; arbitrary TIA projects and runtime behavior are outside this proof.
 
+That historical acceptance covers CPU `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`, its observed Chinese-locale integrated item tree, and an empty tag table. The current validator explicitly limits the CPU profile; populated primitive tags have deterministic contract tests, not the same real-project acceptance evidence. See [architecture and coverage](docs/ARCHITECTURE.md).
+
+The product CLI currently exposes **build**. Export and Verify are available through the library and [Openness Smoke harness](src/TiaGuard.Openness/README.md); they are not yet `tia-guard export` / `tia-guard verify` product commands.
+
 Build a fresh V21 project from a validated canonical Round-trip Source v1 tree:
 
 ```powershell
@@ -55,7 +59,7 @@ Initial candidates are intentionally narrow:
 - The original project is never saved, upgraded or imported into. An explicit build creates, imports into, saves and compiles only a fresh disposable project.
 - Export may compile only its owned offline copy when Siemens requires consistency before SimaticML export.
 - Partial/unsupported/protected data is reported explicitly.
-- AI never receives local paths, credentials, or raw customer project data by default.
+- Main has no AI/network review path. Preserved engineering XML/comments may themselves contain sensitive text; canonical export is not automatic anonymization.
 
 ## Development environment
 
@@ -71,11 +75,22 @@ Openness V21 is a **.NET Framework 4.8** integration boundary. Modern .NET compo
 
     src/TiaGuard.Openness   Siemens Openness collector / evidence adapter
     src/TiaGuard.Cli        V21 build command
-    src/TiaGuard.Analysis   deterministic checks
-    src/TiaGuard.Reporting  Markdown/JSON/SARIF
-    src/TiaGuard.AI         optional advisory layer
+    tests/TiaGuard.Contracts.Tests  pure contract tests, no Siemens dependency
+    tests/TiaGuard.Openness.Smoke   local V21 integration harness
     docs/contracts          draft shared evidence/finding contracts
     examples                sanitized fixtures only
+
+Analysis/Reporting/AI remain unmerged supporting-layer proposals, not installed mainline modules. `examples/roundtrip-fixture` is synthetic validation input, not a Siemens-importable demo or proof of compilation.
+
+## Safe automated checks
+
+```powershell
+dotnet test tests/TiaGuard.Contracts.Tests/TiaGuard.Contracts.Tests.csproj -c Release
+python -m pip install jsonschema==4.26.0
+python scripts/test-contract-schemas.py
+```
+
+These checks run on Windows without TIA or Siemens DLLs. The GitHub workflow runs this pure boundary only; it does not claim TIA runtime compatibility or PLC verification.
 
 ## Release gates for v0.1
 

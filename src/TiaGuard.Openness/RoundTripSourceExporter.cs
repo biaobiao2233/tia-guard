@@ -27,6 +27,7 @@ namespace TiaGuard.Openness
 
             var blockExportDirectory = Path.Combine(
                 Path.GetTempPath(), "TiaGuard.RoundTripBlocks", Guid.NewGuid().ToString("N"));
+            FileSystemSafety.RequirePlainAncestors(blockExportDirectory);
             try
             {
                 progress?.Invoke("preflight-read");
@@ -210,11 +211,10 @@ namespace TiaGuard.Openness
                 identity.State = RoundTripCapabilityStates.Failed;
                 identity.Reason = "CPU DeviceItem TypeIdentifier is unavailable.";
             }
-            else if (!identity.CreateTypeIdentifier.StartsWith("OrderNumber:", StringComparison.Ordinal))
+            else if (!RoundTripProfile.SupportsCpu(identity.CreateTypeIdentifier))
             {
                 identity.State = RoundTripCapabilityStates.Unsupported;
-                identity.Reason = "v0.1 S7-1200 rebuild requires an OrderNumber CPU TypeIdentifier; observed '" +
-                    identity.CreateTypeIdentifier + "'.";
+                identity.Reason = "The CPU TypeIdentifier is outside the evidenced V21 demo profile.";
             }
             else
             {
@@ -430,7 +430,7 @@ namespace TiaGuard.Openness
             if (!string.Equals(Path.GetDirectoryName(full), parent, StringComparison.OrdinalIgnoreCase) ||
                 !Guid.TryParseExact(Path.GetFileName(full), "N", out _))
                 throw new InvalidOperationException("Refusing to remove an unexpected block export directory.");
-            if (Directory.Exists(full)) Directory.Delete(full, recursive: true);
+            FileSystemSafety.DeleteOwnedTree(full);
         }
     }
 }

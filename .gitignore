@@ -2,6 +2,8 @@
 bin/
 obj/
 artifacts/
+TestResults/
+*.trx
 packages/
 *.user
 *.suo
@@ -31,6 +33,15 @@ appsettings.local.json
 *.zal*
 *.am*
 *.tsproj
+*.plf
+*.s7dcl
+*.dll
+*.exe
+*.pdb
+*.pfx
+*.p12
+*.key
+*.lic
 
 # Runtime/export scratch
 out/
