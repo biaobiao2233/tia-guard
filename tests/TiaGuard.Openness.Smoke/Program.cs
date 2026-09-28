@@ -34,6 +34,14 @@ namespace TiaGuard.Openness.Smoke
                     Console.WriteLine("compileWarnings=" + result.CompileWarnings);
                     return 0;
                 }
+                if (args.Length == 3 && args[0] == "verify")
+                {
+                    var result = RoundTripVerifier.VerifyProjects(args[1], args[2],
+                        stage => Console.Error.WriteLine("stage=" + stage));
+                    Console.Write(RoundTripJson.Serialize(result));
+                    return result.Verdict == "pass" ? 0 :
+                        result.Verdict == "mismatch" ? 4 : 5;
+                }
                 if (args.Length < 2 || (args[0] != "info" && args[0] != "snapshot" && args[0] != "roundtrip"))
                     return Usage();
 
@@ -237,6 +245,57 @@ namespace TiaGuard.Openness.Smoke
                 var buildInput = RoundTripBuildInput.Load(firstOutput, unusedBuildOutput);
                 if (buildInput.TagTables.Count != 2 || buildInput.Plc.Name != "PLC_1")
                     throw new InvalidOperationException("Build input rejected the valid canonical tree.");
+                if (RoundTripVerifier.CompareSources(firstOutput, secondOutput).Verdict != "pass")
+                    throw new InvalidOperationException("Equal canonical source trees did not verify PASS.");
+                var verifyStubOriginal = Path.Combine(selfTestRoot, "verify-original.ap21");
+                var verifyStubRebuilt = Path.Combine(selfTestRoot, "verify-rebuilt.ap21");
+                File.WriteAllText(verifyStubOriginal, "stub");
+                File.WriteAllText(verifyStubRebuilt, "stub");
+                var verifyFailure = RoundTripVerifier.VerifyProjects(
+                    verifyStubOriginal, verifyStubRebuilt,
+                    stage => { throw new IOException("private-machine-path"); });
+                if (verifyFailure.Verdict != "blocked" ||
+                    verifyFailure.BlockedCode != "ORIGINAL_EXPORT_FAILED" ||
+                    RoundTripJson.Serialize(verifyFailure).Contains("private-machine-path"))
+                    throw new InvalidOperationException(
+                        "A Verify stage failure escaped or exposed its exception text.");
+
+                var changedLad = Path.Combine(selfTestRoot, "changed-lad");
+                CopyTree(firstOutput, changedLad);
+                var changedXml = Directory.GetFiles(changedLad, "source.xml",
+                    SearchOption.AllDirectories).Single();
+                var originalXmlHash = Sha256(changedXml);
+                var changedXmlText = File.ReadAllText(changedXml).Replace(
+                    "<ExportSetting>WithDefaults</ExportSetting>",
+                    "<ExportSetting>WithoutDefaults</ExportSetting>");
+                File.WriteAllText(changedXml, changedXmlText, new UTF8Encoding(false));
+                if (Sha256(changedXml) == originalXmlHash)
+                    throw new InvalidOperationException("LAD mismatch fixture did not change.");
+                var changedBlock = Directory.GetFiles(changedLad, "block.json",
+                    SearchOption.AllDirectories).Single();
+                File.WriteAllText(changedBlock,
+                    File.ReadAllText(changedBlock).Replace(originalXmlHash, Sha256(changedXml)),
+                    new UTF8Encoding(false));
+                var ladMismatch = RoundTripVerifier.CompareSources(firstOutput, changedLad);
+                if (ladMismatch.Verdict != "mismatch" || !ladMismatch.Differences.Any(value =>
+                        value.ObjectRef == "block" && value.Field == "source.sha256"))
+                    throw new InvalidOperationException("A changed canonical LAD artifact passed verification.");
+
+                var changedTag = Path.Combine(selfTestRoot, "changed-tag");
+                CopyTree(firstOutput, changedTag);
+                var changedTable = Directory.GetFiles(changedTag, "tag-table-*.json",
+                    SearchOption.AllDirectories).Single(path =>
+                        File.ReadAllText(path).Contains("\"dataType\":\"Bool\""));
+                var originalTableText = File.ReadAllText(changedTable);
+                var changedTableText = originalTableText.Replace(
+                    "\"dataType\":\"Bool\"", "\"dataType\":\"Int\"");
+                if (changedTableText == originalTableText)
+                    throw new InvalidOperationException("Tag mismatch fixture did not change.");
+                File.WriteAllText(changedTable, changedTableText, new UTF8Encoding(false));
+                var tagMismatch = RoundTripVerifier.CompareSources(firstOutput, changedTag);
+                if (tagMismatch.Verdict != "mismatch" || !tagMismatch.Differences.Any(value =>
+                        value.Field == "dataType"))
+                    throw new InvalidOperationException("A changed tag declaration passed verification.");
 
                 var invalidHash = Path.Combine(selfTestRoot, "invalid-hash");
                 CopyTree(firstOutput, invalidHash);
@@ -244,6 +303,8 @@ namespace TiaGuard.Openness.Smoke
                     SearchOption.AllDirectories).Single();
                 File.AppendAllText(invalidSource, "tampered");
                 AssertInvalidBuildInput(invalidHash, unusedBuildOutput);
+                if (RoundTripVerifier.CompareSources(firstOutput, invalidHash).Verdict != "blocked")
+                    throw new InvalidOperationException("An invalid source tree did not block verification.");
 
                 var invalidPath = Path.Combine(selfTestRoot, "invalid-path");
                 CopyTree(firstOutput, invalidPath);
@@ -561,7 +622,7 @@ namespace TiaGuard.Openness.Smoke
 
         private static int Usage()
         {
-            Console.Error.WriteLine("Usage: probe | self-test | info|snapshot attach [pid] | info|snapshot open-copy <project.ap21> [--block-export-dir <outside-project-dir>] | roundtrip open-copy <project.ap21> <repo-dir> | validate-build-input|build <repo-dir> <new-output-dir>");
+            Console.Error.WriteLine("Usage: probe | self-test | info|snapshot attach [pid] | info|snapshot open-copy <project.ap21> [--block-export-dir <outside-project-dir>] | roundtrip open-copy <project.ap21> <repo-dir> | validate-build-input|build <repo-dir> <new-output-dir> | verify <original.ap21> <rebuilt.ap21> (exit 0=pass, 4=mismatch, 5=blocked)");
             return 2;
         }
     }

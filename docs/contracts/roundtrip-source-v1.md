@@ -115,3 +115,11 @@ If Siemens export contains proven volatile fields, a future versioned normalizer
 The builder validates the complete tree and artifact SHA-256 before starting TIA. It requires v1/V21, `roundTripReady=true`, exactly one supported station and PLC, exactly one Main/OB1/LAD artifact, and a capability ledger that matches every descriptor. Missing, extra, duplicate, escaping or reparse-point paths fail closed. The bounded builder accepts root PLC tag tables and the single-comment tag model.
 
 The builder creates a fresh project in a destination-volume staging folder, uses the hardware descriptor's exact `createTypeIdentifier` with `CreateWithItem`, recreates tag tables/tags, imports canonical SimaticML, saves and compiles the PLC. The new project folder is published to the requested unused output path only after zero compile errors. It never reads the original source `.ap21` or downloads/writes to a PLC.
+
+## Verify boundary
+
+`verify <original.ap21> <rebuilt.ap21>` opens two separate owned offline copies. It actively compiles the rebuilt copy and requires zero errors, then exports each project through this same v1 contract. Both complete trees must pass the builder's strict descriptor, capability, path, and artifact-hash validation before comparison. An invalid or incomplete capture is `blocked`, never an empty PASS.
+
+The bounded comparison includes project name and V21, station identity and exact CPU create identifier, PLC identity/name, root tag tables and tags (name, data type, raw address and single-comment text), Main/OB1/LAD identity, and the SHA-256 of the full canonical SimaticML artifact. The hash includes all unknown XML nodes; only the versioned `simaticml-v1` normalization of root `/Document/DocumentInfo/Created` is excluded. Project version, binary bytes, capture time, local paths, PIDs, and TIA runtime object IDs are not equality inputs.
+
+The result reports `pass`, `mismatch`, or `blocked`, with stable object/field differences and observed rebuilt-copy compile counts. It does not include project file paths or raw engineering source text. This is engineering-source equivalence for the stated v0.1 subset, not runtime or arbitrary-project equivalence.

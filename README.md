@@ -14,7 +14,7 @@ Prove one reproducible loop on **TIA Portal V21**:
 2. validate that tree and build a fresh disposable V21 project from it alone;
 3. compare the supported engineering semantics of the source and rebuilt project.
 
-The export slice is accepted; build and semantic verification are active Core work. The contracts remain versioned draft v1 formats.
+The export and fresh-project build slices are accepted. Semantic verification is the active Core slice. The contracts remain versioned draft v1 formats.
 
 ## Design principle
 

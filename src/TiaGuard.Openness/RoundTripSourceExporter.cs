@@ -105,7 +105,7 @@ namespace TiaGuard.Openness
             return preparation;
         }
 
-        private static List<PlcSoftware> FindPlcSoftware(Project project)
+        internal static List<PlcSoftware> FindPlcSoftware(Project project)
         {
             var result = new List<PlcSoftware>();
             foreach (var device in project.Devices)
