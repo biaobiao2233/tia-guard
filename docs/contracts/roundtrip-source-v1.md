@@ -1,6 +1,6 @@
 # TIA-Guard Round-trip Source v1
 
-Status: **draft implementation contract for Core #14**
+Status: **versioned draft v1 contract; export Slice 1 accepted in Core #14**
 
 This contract defines the canonical Git engineering source for the bounded TIA-Guard v0.1 round-trip subset. Snapshot v1 remains an observation/intermediate format; files defined here are build inputs.
 
@@ -110,6 +110,8 @@ Two exports of an unchanged project must produce:
 
 If Siemens export contains proven volatile fields, a future versioned normalizer may remove only explicitly classified non-semantic fields. v0.1 must not silently discard unknown XML.
 
-## Build boundary inherited by the next slice
+## Build boundary
 
-The future builder must validate this tree and all hashes first, then fail closed unless `roundTripReady=true`. It will create only a fresh disposable V21 project; it must never download/write to a PLC.
+The builder validates the complete tree and artifact SHA-256 before starting TIA. It requires v1/V21, `roundTripReady=true`, exactly one supported station and PLC, exactly one Main/OB1/LAD artifact, and a capability ledger that matches every descriptor. Missing, extra, duplicate, escaping or reparse-point paths fail closed. The bounded builder accepts root PLC tag tables and the single-comment tag model.
+
+The builder creates a fresh project in a destination-volume staging folder, uses the hardware descriptor's exact `createTypeIdentifier` with `CreateWithItem`, recreates tag tables/tags, imports canonical SimaticML, saves and compiles the PLC. The new project folder is published to the requested unused output path only after zero compile errors. It never reads the original source `.ap21` or downloads/writes to a PLC.
