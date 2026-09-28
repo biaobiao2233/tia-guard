@@ -1,6 +1,6 @@
 # TIA-Guard Round-trip Source v1
 
-Status: **versioned draft v1 contract; export Slice 1 accepted in Core #14**
+Status: **versioned draft v1 contract; bounded Export #14, Build #16, and Verify #23 slices accepted**
 
 This contract defines the canonical Git engineering source for the bounded TIA-Guard v0.1 round-trip subset. Snapshot v1 remains an observation/intermediate format; files defined here are build inputs.
 
