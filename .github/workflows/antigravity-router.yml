@@ -1,0 +1,147 @@
+name: Antigravity event router
+
+on:
+  pull_request:
+    types: [ready_for_review, synchronize]
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+  workflow_run:
+    workflows: ["Copilot"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      route:
+        description: "Local smoke route"
+        required: true
+        type: choice
+        options: [review, triage]
+      number:
+        description: "Existing PR or Issue number"
+        required: true
+        type: number
+      head_sha:
+        description: "Exact PR head SHA for review"
+        required: false
+        type: string
+      event_id:
+        description: "Stable test event ID (reuse to verify dedup)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  enqueue:
+    if: >-
+      (github.event_name == 'pull_request' &&
+       (github.event.action == 'ready_for_review' ||
+        github.event.action == 'synchronize')) ||
+      (github.event_name == 'issues' && github.event.label.name == 'agent-ready') ||
+      (github.event_name == 'issue_comment' &&
+       (github.event.comment.body == '/agy review' ||
+        github.event.comment.body == '/agy triage' ||
+        github.event.comment.body == '/agy queue')) ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure') ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, Windows, X64, antigravity-router]
+    timeout-minutes: 5
+    steps:
+      - name: Write event envelope to durable inbox
+        shell: powershell
+        env:
+          ROUTER_EVENT_ID: ${{ inputs.event_id }}
+          ROUTER_ROUTE: ${{ inputs.route }}
+          ROUTER_NUMBER: ${{ inputs.number }}
+          ROUTER_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Get-Content -LiteralPath $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          $repository = $env:GITHUB_REPOSITORY
+          if ($repository -ne 'biaobiao2233/tia-guard') { throw 'Unexpected repository' }
+          $event = $env:GITHUB_EVENT_NAME
+          $action = [string]$source.action
+          $number = $null
+          $head = $null
+          $base = $null
+          $draft = $false
+          $labels = @()
+          $command = $null
+          $url = $env:GITHUB_SERVER_URL + '/' + $repository
+          $actor = $env:GITHUB_ACTOR
+          $targetType = $null
+          $conclusion = $null
+          switch ($event) {
+            'pull_request' {
+              $number = [int]$source.pull_request.number
+              $head = [string]$source.pull_request.head.sha
+              $base = [string]$source.pull_request.base.sha
+              $draft = [bool]$source.pull_request.draft
+              $labels = @($source.pull_request.labels | ForEach-Object { $_.name })
+              $url = [string]$source.pull_request.html_url
+              $targetType = 'pull_request'
+              $delivery = "pr:$number`:$action`:$head"
+            }
+            'issues' {
+              $number = [int]$source.issue.number
+              $labels = @($source.issue.labels | ForEach-Object { $_.name })
+              $url = [string]$source.issue.html_url
+              $targetType = 'issue'
+              $delivery = "issue:$number`:$action`:$($source.label.name)"
+            }
+            'issue_comment' {
+              $number = [int]$source.issue.number
+              $command = [string]$source.comment.body
+              if ($command -cnotin @('/agy review', '/agy triage', '/agy queue')) { return }
+              $actor = [string]$source.comment.user.login
+              $url = [string]$source.comment.html_url
+              $targetType = if ($source.issue.pull_request) { 'pull_request' } else { 'issue' }
+              $delivery = "comment:$($source.comment.id)"
+            }
+            'workflow_run' {
+              $conclusion = [string]$source.workflow_run.conclusion
+              if ($conclusion -ne 'failure') { return }
+              $head = [string]$source.workflow_run.head_sha
+              $url = [string]$source.workflow_run.html_url
+              $targetType = 'workflow_run'
+              $delivery = "workflow:$($source.workflow_run.id):$($source.workflow_run.run_attempt):failure"
+            }
+            'workflow_dispatch' {
+              $action = [string]$env:ROUTER_ROUTE
+              $number = [int]$env:ROUTER_NUMBER
+              $head = [string]$env:ROUTER_HEAD_SHA
+              $targetType = if ($action -eq 'review') { 'pull_request' } else { 'issue' }
+              $delivery = if ($env:ROUTER_EVENT_ID) { [string]$env:ROUTER_EVENT_ID } else { "dispatch:$($env:GITHUB_RUN_ID)" }
+              $url = if ($action -eq 'review') { "$url/pull/$number" } else { "$url/issues/$number" }
+            }
+            default { throw "Unsupported event: $event" }
+          }
+          $envelope = [ordered]@{
+            schemaVersion = 1
+            deliveryId = $delivery
+            repository = $repository
+            event = $event
+            action = $action
+            actor = $actor
+            number = $number
+            targetType = $targetType
+            headSha = $head
+            baseSha = $base
+            draft = $draft
+            labels = $labels
+            commentCommand = $command
+            conclusion = $conclusion
+            url = $url
+            timestamp = [DateTime]::UtcNow.ToString('o')
+          }
+          $inbox = 'E:\AGENT\Automation\TIA-Guard-Antigravity\inbox'
+          New-Item -ItemType Directory -Path $inbox -Force | Out-Null
+          $id = [guid]::NewGuid().ToString('N')
+          $tmp = Join-Path $inbox "$id.tmp"
+          $final = Join-Path $inbox "$id.json"
+          $json = $envelope | ConvertTo-Json -Depth 10 -Compress
+          [System.IO.File]::WriteAllText($tmp, $json, [System.Text.UTF8Encoding]::new($false))
+          [System.IO.File]::Move($tmp, $final)
+          Write-Output "Enqueued $delivery"
