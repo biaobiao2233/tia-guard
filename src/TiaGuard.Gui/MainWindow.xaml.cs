@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
 using TiaGuard.Openness;
@@ -47,6 +48,55 @@ namespace TiaGuard.Gui
                     ? "0.1.0"
                     : assemblyVersion.Major + "." + assemblyVersion.Minor + "." + assemblyVersion.Build;
             }
+        }
+
+        private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2)
+            {
+                ToggleMaximize();
+                return;
+            }
+
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                try
+                {
+                    DragMove();
+                }
+                catch (InvalidOperationException)
+                {
+                }
+            }
+        }
+
+        private void OnMinimizeClick(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void OnMaximizeClick(object sender, RoutedEventArgs e)
+        {
+            ToggleMaximize();
+        }
+
+        private void OnCloseClick(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void OnWindowStateChanged(object sender, EventArgs e)
+        {
+            if (MaximizeButton == null) return;
+            MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "□";
+            MaximizeButton.ToolTip = WindowState == WindowState.Maximized ? "还原" : "最大化";
+        }
+
+        private void ToggleMaximize()
+        {
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
         }
 
         private void OnRefreshDoctorClick(object sender, RoutedEventArgs e)

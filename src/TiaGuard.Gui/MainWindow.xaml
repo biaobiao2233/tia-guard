@@ -8,16 +8,99 @@
         MinHeight="680"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource CanvasBrush}"
+        WindowStyle="None"
+        ResizeMode="CanResize"
         UseLayoutRounding="True"
-        SnapsToDevicePixels="True">
-    <Grid Margin="24">
+        SnapsToDevicePixels="True"
+        StateChanged="OnWindowStateChanged">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0"
+                      ResizeBorderThickness="7"
+                      CornerRadius="8"
+                      GlassFrameThickness="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid Background="{StaticResource CanvasBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="18"/>
+            <RowDefinition Height="46"/>
+            <RowDefinition Height="1"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0">
+        <Grid Grid.Row="0" Background="{StaticResource CanvasBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    Background="Transparent"
+                    MouseLeftButtonDown="OnTitleBarMouseLeftButtonDown"
+                    Padding="18,0,0,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="18"
+                            Height="18"
+                            Background="{StaticResource YellowBrush}"
+                            BorderBrush="{StaticResource InkBrush}"
+                            BorderThickness="2"
+                            Margin="0,0,10,0">
+                        <Grid>
+                            <Border Height="3"
+                                    Background="{StaticResource InkBrush}"
+                                    VerticalAlignment="Top"
+                                    Margin="3,3,3,0"/>
+                            <Border Height="3"
+                                    Background="{StaticResource InkBrush}"
+                                    VerticalAlignment="Center"
+                                    Margin="3,0"/>
+                            <Border Height="3"
+                                    Background="{StaticResource InkBrush}"
+                                    VerticalAlignment="Bottom"
+                                    Margin="3,0,3,3"/>
+                        </Grid>
+                    </Border>
+                    <TextBlock Text="TIA-GUARD"
+                               FontWeight="Black"
+                               FontSize="12"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="  ·  ENGINEERING WORKBENCH"
+                               FontWeight="Bold"
+                               FontSize="10"
+                               Foreground="{StaticResource MutedBrush}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Stretch">
+                <Button Style="{StaticResource ChromeButton}"
+                        Content="—"
+                        ToolTip="最小化"
+                        Click="OnMinimizeClick"/>
+                <Button x:Name="MaximizeButton"
+                        Style="{StaticResource ChromeButton}"
+                        Content="□"
+                        ToolTip="最大化"
+                        Click="OnMaximizeClick"/>
+                <Button Style="{StaticResource CloseChromeButton}"
+                        Content="×"
+                        ToolTip="关闭"
+                        Click="OnCloseClick"/>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Background="#CFC5B5"/>
+
+        <Grid Grid.Row="2" Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="18"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -350,6 +433,7 @@
                     </Grid>
                 </Border>
             </Grid>
+        </Grid>
         </Grid>
     </Grid>
 </Window>
