@@ -17,7 +17,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $bin = Join-Path $repoRoot "src\TiaGuard.Cli\bin\$Configuration\net48"
-$packageName = "tia-guard-v0.1-win-x64"
+$packageName = "tia-guard-v0.1.0-win-x64"
 $stage = Join-Path $OutputDirectory $packageName
 $zip = Join-Path $OutputDirectory ($packageName + ".zip")
 
@@ -44,7 +44,7 @@ if (Get-ChildItem $stage -Filter "Siemens*.dll" -File) {
 }
 
 $readme = @"
-TIA-Guard bounded v0.1 demo package
+TIA-Guard bounded v0.1.0 demo package
 
 Requirements:
 - Windows x64
@@ -53,6 +53,8 @@ Requirements:
 - Current Windows logon token has effective Siemens TIA Openness group membership
 
 Commands:
+  tia-guard doctor
+  tia-guard --version
   tia-guard export <project.ap21> <repo-dir>
   tia-guard build <repo-dir> --output <new-output-dir>
   tia-guard verify <original.ap21> <rebuilt.ap21>

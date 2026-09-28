@@ -13,6 +13,8 @@ namespace TiaGuard.Cli
     {
         internal static string Usage =>
             "Usage:" + Environment.NewLine +
+            "  tia-guard doctor" + Environment.NewLine +
+            "  tia-guard --version" + Environment.NewLine +
             "  tia-guard export <project.ap21> <repo-dir>" + Environment.NewLine +
             "  tia-guard build <repo-dir> --output <new-output-dir>" + Environment.NewLine +
             "  tia-guard verify <original.ap21> <rebuilt.ap21>";
@@ -21,6 +23,15 @@ namespace TiaGuard.Cli
         {
             invocation = null;
             if (args == null) return false;
+
+            if (args.Length == 1 && args[0] == "doctor")
+            {
+                invocation = new CliInvocation
+                {
+                    Command = "doctor"
+                };
+                return true;
+            }
 
             if (args.Length == 3 && args[0] == "export" &&
                 Present(args[1]) && Present(args[2]))

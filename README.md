@@ -23,6 +23,10 @@ The product CLI exposes the complete bounded loop:
 ```powershell
 dotnet build src/TiaGuard.Cli/TiaGuard.Cli.csproj -c Release
 
+# Read-only prerequisite check and product version
+& .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe doctor
+& .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe --version
+
 # Existing V21 project -> canonical Git engineering tree
 & .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe export C:\path\to\project.ap21 C:\path\to\canonical-tree
 
@@ -32,6 +36,8 @@ dotnet build src/TiaGuard.Cli/TiaGuard.Cli.csproj -c Release
 # Original vs rebuilt supported engineering semantics
 & .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe verify C:\path\to\project.ap21 C:\path\to\new-project\Demo.ap21
 ```
+
+`doctor` is a read-only prerequisite check. It does not start TIA Portal or modify a project; it reports x64 process state, the V21 installation/PublicAPI presence, effective Siemens TIA Openness group membership, and exits `0` when ready or `5` when blocked. `--version` prints the packaged CLI version.
 
 `export` opens only an owned offline copy and prints the Round-trip Source v1 manifest as JSON. Exit code `0` means the exported tree is round-trip ready; `5` means an export was produced but the bounded profile is blocked. `build` reads only the canonical tree, requires an unused output directory, creates a separate headless V21 project, saves and compiles it, and publishes it only with zero compile errors. Keep the output path short enough for TIA Portal V21's 143-character staged project-folder limit. `verify` returns JSON with verdict `pass`, `mismatch`, or `blocked` and exit codes `0`, `4`, or `5`.
 

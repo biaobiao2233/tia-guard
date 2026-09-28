@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using TiaGuard.Openness;
 
 namespace TiaGuard.Cli
@@ -14,6 +15,13 @@ namespace TiaGuard.Cli
                 return 0;
             }
 
+            if (args != null && args.Length == 1 &&
+                (args[0] == "--version" || args[0] == "version"))
+            {
+                Console.WriteLine("tia-guard " + ProductVersion);
+                return 0;
+            }
+
             if (!CliCommandLine.TryParse(args, out var invocation))
             {
                 Console.Error.WriteLine(CliCommandLine.Usage);
@@ -22,6 +30,13 @@ namespace TiaGuard.Cli
 
             try
             {
+                if (invocation.Command == "doctor")
+                {
+                    var report = OpennessEnvironmentProbe.Inspect();
+                    Console.Write(RoundTripJson.Serialize(report));
+                    return report.Ready ? 0 : 5;
+                }
+
                 if (invocation.Command == "export")
                 {
                     using (var session = TiaProjectSession.OpenOfflineCopy(invocation.Source))
@@ -58,6 +73,26 @@ namespace TiaGuard.Cli
             {
                 Console.Error.WriteLine("error=" + error.Message);
                 return 2;
+            }
+        }
+
+        private static string ProductVersion
+        {
+            get
+            {
+                var attribute = typeof(Program).Assembly
+                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+                var version = attribute?.InformationalVersion;
+                if (!string.IsNullOrWhiteSpace(version))
+                {
+                    var metadata = version.IndexOf('+');
+                    return metadata >= 0 ? version.Substring(0, metadata) : version;
+                }
+
+                var assemblyVersion = typeof(Program).Assembly.GetName().Version;
+                return assemblyVersion == null
+                    ? "0.1.0"
+                    : assemblyVersion.Major + "." + assemblyVersion.Minor + "." + assemblyVersion.Build;
             }
         }
     }
