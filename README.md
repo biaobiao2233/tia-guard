@@ -1,8 +1,8 @@
 # TIA-Guard
 
-**Reproducible Git engineering source for a bounded Siemens TIA Portal V21 subset.**
+**Git-native, verifiable and AI-readable engineering source for a bounded Siemens TIA Portal V21 subset.**
 
-TIA-Guard is an independent pre-alpha project. The Core path exports an existing V21 project to a canonical Git tree, builds a fresh project from that tree, then verifies supported engineering semantics. Snapshot, deterministic checks, reporting and optional AI review remain supporting layers.
+TIA-Guard is an independent pre-alpha project. The Core path exports an existing V21 project to a canonical Git tree, builds a fresh project from that tree, then verifies supported engineering semantics. The next product direction adds a deterministic, derived AI-readable view on top of that trusted source so coding agents can understand the PLC project without treating raw Siemens project storage as their primary interface. Snapshot, deterministic checks, reporting and optional advisory AI remain supporting layers.
 
 The project is designed around the locally installed **TIA Portal Openness API**. It does not redistribute Siemens software, DLLs, licenses, or TIA project binaries.
 
@@ -17,6 +17,24 @@ Prove one reproducible loop on **TIA Portal V21**:
 The bounded export, fresh-project build, and semantic Verify slices are accepted for the self-authored V21 demo. The contracts remain versioned draft v1 formats; arbitrary TIA projects and runtime behavior are outside this proof.
 
 That historical acceptance covers CPU `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`, its observed Chinese-locale integrated item tree, and an empty tag table. The current validator explicitly limits the CPU profile; populated primitive tags have deterministic contract tests, not the same real-project acceptance evidence. See [architecture and coverage](docs/ARCHITECTURE.md).
+
+## Product direction: AI-readable engineering source
+
+The round-trip tree solves fidelity and reproducibility, but it is not yet optimized for a person or an AI agent opening the repository and asking “what does this PLC actually do?”. On the accepted self-authored V21 demo, the raw `.ap21` is at least partly XML and therefore technically readable, but useful engineering facts are mixed with Siemens framework metadata, internal identifiers/references and large embedded/base64 assets. Direct raw-project parsing is consequently token-heavy and a poor stable AI contract.
+
+TIA-Guard keeps the round-trip source and the AI view separate:
+
+```text
+.ap21
+  ↓  TIA Portal Openness / validated extraction
+tia-source/          authoritative build + Verify source
+  ↓  deterministic renderer
+ai/                  derived AI/human-readable view
+```
+
+The intended `ai/` layer may contain a concise project overview, structured project graph, hardware/symbol views and program/block views. It is replaceable output, not build input: editing generated Markdown must never silently change the PLC project. Future AI-assisted edits should go through a structured, validated patch path followed by Build → Compile → Verify.
+
+See [AI-readable engineering view](docs/AI-READABILITY.md) for the design constraints and next implementation question.
 
 For human use, the Windows GUI is a WPF workbench over the same `TiaGuard.Openness` core. Its product surface is Git-first: one Git repository may contain many independent TIA projects under `repo/tia-projects/<slot>/tia-source/`. Paste a Git URL and choose which project to rebuild, or choose an owned `.ap21` plus a Git URL and either update one existing project or add a new project slot. Each publish changes only the selected project's `tia-source/`; sibling projects and ordinary repository files are left untouched. The legacy single-project `repo/tia-source/` layout remains readable and updatable. TIA-Guard discovers projects directly from their manifests and does not require a separate root index file.
 

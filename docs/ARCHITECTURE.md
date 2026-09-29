@@ -13,6 +13,38 @@ It does not replace Siemens engineering tools or establish control-logic correct
 
 `tia-guard build` is the product CLI entry. Export, Snapshot and Verify are library/Smoke-harness entry points. Snapshot is intermediate evidence; it is not the canonical build input. There is no original `.ap21` argument in the builder.
 
+## Two-layer Git representation
+
+The engineering representation and the AI-readable representation have different trust roles.
+
+`tia-source/` is authoritative for the bounded round-trip. It is validated, used by Build and compared by Verify. It must preserve engineering detail even when that detail is verbose or inconvenient to read.
+
+A future `ai/` sibling is a deterministic derived view for coding agents and humans. It may reorganize canonical facts into concise Markdown and a stable machine-readable project graph, but it is not allowed to become an implicit second source of truth.
+
+```text
+validated .ap21 / Openness
+          ↓
+      tia-source/       authoritative
+          ↓
+ deterministic renderer
+          ↓
+         ai/            derived / replaceable
+```
+
+The current accepted demo also demonstrates why the distinction matters: its `.ap21` begins with readable XML but mixes engineering information with framework metadata, internal object/type identifiers and embedded/base64 payloads. Technically parseable storage is not the same thing as a compact, stable model interface.
+
+Initial AI-view invariants:
+
+- renderer input must already pass canonical source validation;
+- generation must not mutate `tia-source/`;
+- `ai/` must be safely regenerable/deletable;
+- Markdown/prose is not accepted as engineering truth merely because an AI produced it;
+- unsupported/incomplete coverage remains explicit rather than being summarized away;
+- Build and Verify continue to ignore `ai/`;
+- any future AI editing path must emit a structured patch accepted by deterministic validation before canonical data can change, then pass Build → Compile → Verify.
+
+The candidate shape and acceptance questions are documented in [AI-READABILITY.md](AI-READABILITY.md).
+
 ## Responsibilities
 
 - `SnapshotExtractor`: Siemens traversal and explicit incomplete/unsupported diagnostics. User constants, types, external sources, technology objects, watch/force tables, user alarm text lists and user folders cannot silently disappear as empty collections.
@@ -51,4 +83,4 @@ Pure test success does not establish runtime compatibility. A historic accepted 
 
 ## Supporting work
 
-Doctor/rules, Finding-based Markdown/JSON/SARIF and optional advisory AI exist as separate unmerged proposals. They need current-contract reconciliation and their own tests. GitHub SARIF upload/display behavior and AI privacy/value gates are not fulfilled by core source comparison. They do not block repairing core truth boundaries and are not present mainline features.
+Doctor/rules, Finding-based Markdown/JSON/SARIF and optional advisory AI exist as separate proposals or supporting surfaces. The new AI-readable engineering-view direction is distinct from advisory AI: it is intended to be a deterministic renderer of already-validated engineering facts, not a model-generated review verdict. Its first implementation still needs a bounded AI IR, deterministic renderer and tests. GitHub SARIF upload/display behavior and AI privacy/value gates are not fulfilled by core source comparison.
