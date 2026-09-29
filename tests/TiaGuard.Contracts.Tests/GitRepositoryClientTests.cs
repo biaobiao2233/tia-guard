@@ -88,6 +88,45 @@ namespace TiaGuard.Contracts.Tests
         }
 
         [Fact]
+        public void EmptyRepositoryMultiProjectPublishPushesOnlySelectedSlot()
+        {
+            using (var fixture = new CanonicalFixture())
+            {
+                var gitRoot = CreateGitRoot();
+                var remote = Path.Combine(gitRoot, "multi.git");
+                var verify = Path.Combine(gitRoot, "verify-multi");
+                Git(gitRoot, "init", "--bare", remote);
+
+                var client = new GitRepositoryClient();
+                var cache = client.PrepareRepository(RemoteUri(remote), null);
+                try
+                {
+                    Git(cache, "config", "user.name", "TIA-Guard Test");
+                    Git(cache, "config", "user.email", "tia-guard-test@example.invalid");
+                    RepositorySourceManager.AddProjectSource(cache, "motor", fixture.Root);
+                    var relative = RepositorySourceManager.RelativeManagedSourcePath("motor");
+
+                    Assert.True(client.CommitManagedSource(
+                        cache, relative, "first multi-project publish", null));
+                    client.Push(cache, null);
+
+                    Git(gitRoot, "clone", RemoteUri(remote), verify);
+                    var source = RepositorySourceManager.ProjectManagedSourcePath(
+                        verify, "motor");
+                    Assert.True(File.Exists(Path.Combine(source, "tia-guard.json")));
+                    Assert.False(Directory.Exists(Path.Combine(
+                        verify, RepositorySourceManager.ManagedDirectoryName)));
+                    RoundTripBuildInput.LoadSource(source);
+                }
+                finally
+                {
+                    TryDeleteGitRoot(cache);
+                    TryDeleteGitRoot(gitRoot);
+                }
+            }
+        }
+
+        [Fact]
         public void CommitIdentityCanBeConfiguredPerManagedRepository()
         {
             var gitRoot = CreateGitRoot();
@@ -107,6 +146,30 @@ namespace TiaGuard.Contracts.Tests
                 Assert.True(after.IsConfigured);
                 Assert.Equal("Example User", after.Name);
                 Assert.Equal("example@example.invalid", after.Email);
+            }
+            finally
+            {
+                TryDeleteGitRoot(gitRoot);
+            }
+        }
+
+        [Fact]
+        public void ManagedCommitPathCannotEscapeProjectLayout()
+        {
+            var gitRoot = CreateGitRoot();
+            var repository = Path.Combine(gitRoot, "repo");
+            Directory.CreateDirectory(repository);
+            Git(repository, "init");
+            Git(repository, "config", "user.name", "TIA-Guard Test");
+            Git(repository, "config", "user.email", "tia-guard-test@example.invalid");
+
+            try
+            {
+                var client = new GitRepositoryClient();
+                var error = Assert.Throws<GitOperationException>(() =>
+                    client.CommitManagedSource(
+                        repository, "../README.md", "bad", null));
+                Assert.Contains("拒绝提交", error.FriendlyMessage);
             }
             finally
             {

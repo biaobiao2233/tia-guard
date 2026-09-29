@@ -90,9 +90,12 @@ Requirements:
 - Current Windows logon token has effective Siemens TIA Openness group membership
 
 GUI product flows:
-- Git repository URL -> clone/pull -> repo/tia-source/ -> fresh compiled .ap21 -> automatic integrity check
-- owned .ap21 + Git repository URL -> safe Export staging -> repo/tia-source/ -> commit -> push
-- TIA-Guard never stores a GitHub token and manages only repo/tia-source/
+- one Git repository can contain many TIA projects under repo/tia-projects/<slot>/tia-source/
+- Git repository URL -> clone/pull -> choose project -> fresh compiled .ap21 -> automatic semantic + binary identity checks
+- owned .ap21 + Git repository URL -> choose existing project or add new slot -> safe Export staging -> commit -> push
+- each publish changes only the selected project's tia-source/; sibling projects and normal repository files are untouched
+- legacy repo/tia-source/ single-project repositories remain supported
+- TIA-Guard never stores GitHub passwords/tokens; it reuses the system Git/GitHub credential chain
 - Export / Build / Verify remain available under advanced diagnostics
 
 Scope:

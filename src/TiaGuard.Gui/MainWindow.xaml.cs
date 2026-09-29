@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Threading;
@@ -86,7 +87,7 @@ namespace TiaGuard.Gui
             var restoreCard = CreateProductCard(
                 "GITHUB → TIA",
                 "从 GitHub 还原 TIA 工程",
-                "粘贴仓库 URL，TIA-Guard 自动 clone / pull、校验 tia-source/、重建、编译并做完整性检查。",
+                "粘贴仓库 URL；仓库可包含多个 TIA 工程。选择指定工程后，TIA-Guard 只重建、编译并验证这一份。",
                 "YellowBrush");
             var restoreBody = (StackPanel)restoreCard.Child;
             RestoreGitUrlTextBox = AddTextField(
@@ -110,7 +111,7 @@ namespace TiaGuard.Gui
             var publishCard = CreateProductCard(
                 "TIA → GITHUB",
                 "发布 TIA 工程到 GitHub",
-                "选择自己的 .ap21，TIA-Guard 自动 Export、校验、安全更新 tia-source/、Commit 并 Push。",
+                "选择自己的 .ap21 和 Git 仓库；可更新仓库里的指定工程，或把它作为新工程加入同一个仓库。",
                 "CyanBrush");
             var publishBody = (StackPanel)publishCard.Child;
             PublishProjectTextBox = AddBrowseField(
@@ -121,7 +122,7 @@ namespace TiaGuard.Gui
                 publishBody, "Commit message", null);
             publishBody.Children.Add(new TextBlock
             {
-                Text = "只管理 repo/tia-source/。已有内容不是有效 TIA-Guard canonical source 时会 fail closed；不会强推远端历史。",
+                Text = "新布局：repo/tia-projects/<工程槽位>/tia-source/；只修改所选工程。旧版 repo/tia-source/ 仍可读取和更新。",
                 FontSize = 11,
                 Foreground = ResourceBrush("MutedBrush"),
                 TextWrapping = TextWrapping.Wrap,
@@ -383,14 +384,44 @@ namespace TiaGuard.Gui
                     _git.PrepareRepository(repositoryUrl, AppendLog));
                 SetStep(GitStepBorder, GitStepText, "GIT", "完成", "GreenBrush");
 
-                var sourceRoot = RepositorySourceManager.ManagedSourcePath(repository);
-                if (!Directory.Exists(sourceRoot))
+                var catalog = await Task.Run(() =>
+                    RepositorySourceManager.DiscoverProjects(repository));
+                LogProjectCatalogProblems(catalog);
+                if (catalog.Projects.Count == 0)
                 {
-                    SetBlocked("仓库缺少 tia-source/",
-                        "目标仓库中没有 TIA-Guard 管理的 tia-source/，无法安全还原工程。");
+                    SetBlocked("仓库中没有可还原的 TIA 工程",
+                        catalog.Problems.Count == 0
+                            ? "没有发现 tia-projects/<槽位>/tia-source/ 或旧版 tia-source/。"
+                            : "检测到了工程槽位，但都没有通过 canonical source 校验；详见技术日志。");
                     return;
                 }
 
+                RepositoryProjectSource selectedProject;
+                if (catalog.Projects.Count == 1)
+                {
+                    selectedProject = catalog.Projects[0];
+                }
+                else
+                {
+                    var picker = new ProjectPickerWindow(
+                        catalog, ProjectPickerPurpose.Restore)
+                    {
+                        Owner = this
+                    };
+                    if (picker.ShowDialog() != true)
+                    {
+                        SetBlocked("还原已取消", "没有选择要从仓库还原的 TIA 工程。");
+                        return;
+                    }
+                    selectedProject = picker.SelectedProject;
+                }
+
+                var sourceRoot = selectedProject.SourcePath;
+                AppendLog("repository project: " +
+                    (selectedProject.IsLegacy
+                        ? "legacy tia-source"
+                        : selectedProject.Slot) +
+                    " -> " + selectedProject.RelativeSourcePath);
                 var sourceInput = await Task.Run(() =>
                     RoundTripBuildInput.LoadSource(sourceRoot));
                 AppendLog("tia-source: canonical source validation PASS");
@@ -465,11 +496,29 @@ namespace TiaGuard.Gui
                     _git.PrepareRepository(repositoryUrl, AppendLog));
 
                 await Task.Run(() =>
-                {
-                    _git.EnsureCommitIdentityFromSystemGitHub(repository, AppendLog);
-                    RepositorySourceManager.ValidateExistingManagedSource(repository);
-                });
+                    _git.EnsureCommitIdentityFromSystemGitHub(repository, AppendLog));
+                var catalog = await Task.Run(() =>
+                    RepositorySourceManager.DiscoverProjects(repository));
+                LogProjectCatalogProblems(catalog);
                 SetStep(GitStepBorder, GitStepText, "GIT", "完成", "GreenBrush");
+
+                var picker = new ProjectPickerWindow(
+                    catalog,
+                    ProjectPickerPurpose.Publish,
+                    RepositorySourceManager.SuggestProjectSlot(
+                        Path.GetFileName(project)))
+                {
+                    Owner = this
+                };
+                if (picker.ShowDialog() != true)
+                {
+                    SetBlocked("发布已取消", "没有选择要更新的工程，也没有添加新工程。");
+                    return;
+                }
+
+                var existingTarget = picker.SelectedProject;
+                var createNew = picker.CreateNew;
+                var newSlot = picker.NewSlot;
 
                 exportStage = CreateExportStage();
                 var stagedSource = Path.Combine(exportStage,
@@ -492,21 +541,80 @@ namespace TiaGuard.Gui
                 await Task.Run(() => RoundTripBuildInput.LoadSource(stagedSource));
                 SetStep(ExportStepBorder, ExportStepText, "EXPORT", "完成", "GreenBrush");
 
-                AppendLog("tia-source: transactional update");
-                await Task.Run(() =>
-                    RepositorySourceManager.ReplaceManagedSource(repository, stagedSource));
+                string managedRelativePath;
+                string targetLabel;
+                if (createNew)
+                {
+                    var duplicate = catalog.Projects.FirstOrDefault(value =>
+                    {
+                        try
+                        {
+                            return RepositorySourceManager.IsSameProjectIdentity(
+                                value.SourcePath, stagedSource);
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    });
+                    if (duplicate != null)
+                    {
+                        SetBlocked("仓库里已经有这个工程",
+                            "检测到同一工程已经存在于 " +
+                            duplicate.RelativeSourcePath +
+                            "；请重新发布并选择“更新所选工程”，避免重复槽位。");
+                        return;
+                    }
+
+                    AppendLog("tia-source: add project slot " + newSlot);
+                    await Task.Run(() =>
+                        RepositorySourceManager.AddProjectSource(
+                            repository, newSlot, stagedSource));
+                    managedRelativePath =
+                        RepositorySourceManager.RelativeManagedSourcePath(newSlot);
+                    targetLabel = newSlot;
+                }
+                else
+                {
+                    await Task.Run(() =>
+                        RepositorySourceManager.EnsureSameProjectIdentity(
+                            existingTarget.SourcePath, stagedSource));
+
+                    if (existingTarget.IsLegacy)
+                    {
+                        AppendLog("tia-source: update legacy single-project source");
+                        await Task.Run(() =>
+                            RepositorySourceManager.ReplaceManagedSource(
+                                repository, stagedSource));
+                    }
+                    else
+                    {
+                        AppendLog("tia-source: update project slot " + existingTarget.Slot);
+                        await Task.Run(() =>
+                            RepositorySourceManager.ReplaceProjectSource(
+                                repository, existingTarget.Slot, stagedSource));
+                    }
+
+                    managedRelativePath = existingTarget.RelativeSourcePath;
+                    targetLabel = existingTarget.IsLegacy
+                        ? "旧版单工程 tia-source"
+                        : existingTarget.Slot;
+                }
 
                 SetStep(PushStepBorder, PushStepText, "PUSH", "COMMIT", "PurpleBrush");
                 var committed = await Task.Run(() =>
-                    _git.CommitManagedSource(repository, message, AppendLog));
+                    _git.CommitManagedSource(
+                        repository, managedRelativePath, message, AppendLog));
                 SetStep(PushStepBorder, PushStepText, "PUSH", "上传中", "CyanBrush");
                 await Task.Run(() => _git.Push(repository, AppendLog));
                 SetStep(PushStepBorder, PushStepText, "PUSH", "完成", "GreenBrush");
 
                 SetOutput(repository);
                 SetSuccess("发布完成", committed
-                    ? "tia-source/ 已安全更新、提交并通过系统 Git 凭据推送到远端。"
-                    : "tia-source/ 没有新的源码差异；已确认现有本地提交可以正常 push/sync。");
+                    ? "工程“" + targetLabel +
+                      "”的 tia-source/ 已安全更新、提交并推送到远端；其他工程未修改。"
+                    : "工程“" + targetLabel +
+                      "”没有新的源码差异；其他工程未修改。");
             }
             catch (OpennessAccessException error)
             {
@@ -957,6 +1065,16 @@ namespace TiaGuard.Gui
             return elapsed.ToString(@"mm\:ss");
         }
 
+        private void LogProjectCatalogProblems(RepositoryProjectCatalog catalog)
+        {
+            if (catalog == null || catalog.Problems.Count == 0) return;
+            foreach (var problem in catalog.Problems)
+            {
+                AppendLog("repository project problem: " +
+                    problem.RelativePath + " [" + problem.ProblemType + "]");
+            }
+        }
+
         private string VerifyRestoredFileIdentity(
             RoundTripProjectV1 project, string restoredProjectFile)
         {
@@ -1025,7 +1143,7 @@ namespace TiaGuard.Gui
             if (error.Message.IndexOf("tia-source", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 error.Message.IndexOf("canonical source", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 error.Message.IndexOf("canonical source tree", StringComparison.OrdinalIgnoreCase) >= 0)
-                return "仓库中的 tia-source/ 不是可安全替换的 TIA-Guard canonical source，已停止以避免覆盖未知内容。";
+                return "所选工程的 tia-source/ 不是可安全使用的 TIA-Guard canonical source，已停止以避免覆盖未知内容。";
 
             if (error is IOException &&
                 error.Message.IndexOf("already exists", StringComparison.OrdinalIgnoreCase) >= 0)

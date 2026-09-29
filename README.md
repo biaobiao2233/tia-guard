@@ -18,7 +18,19 @@ The bounded export, fresh-project build, and semantic Verify slices are accepted
 
 That historical acceptance covers CPU `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`, its observed Chinese-locale integrated item tree, and an empty tag table. The current validator explicitly limits the CPU profile; populated primitive tags have deterministic contract tests, not the same real-project acceptance evidence. See [architecture and coverage](docs/ARCHITECTURE.md).
 
-For human use, the Windows GUI is a WPF workbench over the same `TiaGuard.Openness` core. Its product surface is Git-first: paste a Git URL to clone/pull `repo/tia-source/` and rebuild a fresh `.ap21`, or choose an owned `.ap21` plus a Git URL to export, safely replace only `tia-source/`, commit, and push. It uses the installed system Git and existing GitHub/Git credential chain; TIA-Guard does not store GitHub passwords or tokens. Long-running TIA stages show the current phase and elapsed time. New exports also record the original project file name, byte length, and SHA-256 (never the absolute local path); restores preserve the file name and explicitly check those values after semantic Verify. Export / Build / Verify remain available as background integrity checks and advanced diagnostics.
+For human use, the Windows GUI is a WPF workbench over the same `TiaGuard.Openness` core. Its product surface is Git-first: one Git repository may contain many independent TIA projects under `repo/tia-projects/<slot>/tia-source/`. Paste a Git URL and choose which project to rebuild, or choose an owned `.ap21` plus a Git URL and either update one existing project or add a new project slot. Each publish changes only the selected project's `tia-source/`; sibling projects and ordinary repository files are left untouched. The legacy single-project `repo/tia-source/` layout remains readable and updatable. TIA-Guard discovers projects directly from their manifests and does not require a separate root index file.
+
+It uses the installed system Git and existing GitHub/Git credential chain; TIA-Guard does not store GitHub passwords or tokens. Long-running TIA stages show the current phase and elapsed time. New exports also record the original project file name, byte length, and SHA-256 (never the absolute local path); restores preserve the file name and explicitly check those values after semantic Verify. Export / Build / Verify remain available as background integrity checks and advanced diagnostics.
+
+```text
+repo/
+├─ README.md
+└─ tia-projects/
+   ├─ motor-reversing/
+   │  └─ tia-source/
+   └─ conveyor-control/
+      └─ tia-source/
+```
 
 ```powershell
 dotnet build src/TiaGuard.Gui/TiaGuard.Gui.csproj -c Release

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using TiaGuard.Openness;
 
 namespace TiaGuard.Gui
 {
@@ -169,16 +170,30 @@ namespace TiaGuard.Gui
         internal bool CommitManagedSource(
             string repositoryRoot, string message, Action<string> log)
         {
+            return CommitManagedSource(
+                repositoryRoot,
+                RepositorySourceManager.ManagedDirectoryName,
+                message,
+                log);
+        }
+
+        internal bool CommitManagedSource(
+            string repositoryRoot,
+            string managedRelativePath,
+            string message,
+            Action<string> log)
+        {
             EnsureCommitIdentity(repositoryRoot);
-            log?.Invoke("git: add tia-source/");
+            var path = ValidateManagedRelativePath(managedRelativePath);
+            log?.Invoke("git: add " + path + "/");
             EnsureSuccess("add", Run(repositoryRoot,
-                new[] { "add", "--", "tia-source" }, false));
+                new[] { "add", "--", path }, false));
 
             var diff = Run(repositoryRoot,
-                new[] { "diff", "--cached", "--quiet", "--", "tia-source" }, true);
+                new[] { "diff", "--cached", "--quiet", "--", path }, true);
             if (diff.ExitCode == 0)
             {
-                log?.Invoke("git: tia-source/ 无变化，无需新 commit");
+                log?.Invoke("git: " + path + "/ 无变化，无需新 commit");
                 return false;
             }
             if (diff.ExitCode != 1) EnsureSuccess("diff", diff);
@@ -190,6 +205,27 @@ namespace TiaGuard.Gui
             EnsureSuccess("commit", Run(repositoryRoot,
                 new[] { "commit", "-m", commitMessage }, false));
             return true;
+        }
+
+        private static string ValidateManagedRelativePath(string value)
+        {
+            var path = (value ?? string.Empty).Trim().Replace('\\', '/');
+            if (string.Equals(path, RepositorySourceManager.ManagedDirectoryName,
+                    StringComparison.Ordinal))
+                return path;
+
+            var segments = path.Split('/');
+            if (segments.Length == 3 &&
+                string.Equals(segments[0], RepositorySourceManager.ProjectsDirectoryName,
+                    StringComparison.Ordinal) &&
+                RepositorySourceManager.IsSafeProjectSlot(segments[1]) &&
+                string.Equals(segments[2], RepositorySourceManager.ManagedDirectoryName,
+                    StringComparison.Ordinal))
+                return path;
+
+            throw new GitOperationException(
+                "TIA-Guard 拒绝提交不受管理的 Git 路径。",
+                "Managed Git path is outside the supported TIA-Guard project layout.");
         }
 
         internal void Push(string repositoryRoot, Action<string> log)
