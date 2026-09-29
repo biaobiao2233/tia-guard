@@ -18,14 +18,27 @@ namespace TiaGuard.Gui
     {
         private bool _busy;
         private string _lastOutputDirectory;
+        private readonly GitRepositoryClient _git = new GitRepositoryClient();
+        private TextBox RestoreGitUrlTextBox;
+        private TextBox RestoreOutputTextBox;
+        private TextBox PublishProjectTextBox;
+        private TextBox PublishGitUrlTextBox;
+        private TextBox PublishCommitTextBox;
+        private Border GitStepBorder;
+        private TextBlock GitStepText;
+        private Border PushStepBorder;
+        private TextBlock PushStepText;
 
         public MainWindow()
         {
             InitializeComponent();
+            InstallProductSurface();
             VersionText.Text = "v" + ProductVersion;
             FullWorkspaceTextBox.Text = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                 "TIA-Guard");
+            PublishCommitTextBox.Text = "Update TIA source " +
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm");
             AppendLog("TIA-Guard GUI started.");
             RefreshDoctor();
         }
@@ -48,6 +61,196 @@ namespace TiaGuard.Gui
                     ? "0.1.0"
                     : assemblyVersion.Major + "." + assemblyVersion.Minor + "." + assemblyVersion.Build;
             }
+        }
+
+        private void InstallProductSurface()
+        {
+            if (ActionsPanel.Children.Count < 3)
+                throw new InvalidOperationException("The GUI action surface is incomplete.");
+
+            var environmentCard = ActionsPanel.Children[0];
+            var oldRoundTripCard = ActionsPanel.Children[1];
+            var oldManualCard = ActionsPanel.Children[2];
+            ActionsPanel.Children.Clear();
+            ActionsPanel.Children.Add(environmentCard);
+
+            var restoreCard = CreateProductCard(
+                "GITHUB → TIA",
+                "从 GitHub 还原 TIA 工程",
+                "粘贴仓库 URL，TIA-Guard 自动 clone / pull、校验 tia-source/、重建、编译并做完整性检查。",
+                "YellowBrush");
+            var restoreBody = (StackPanel)restoreCard.Child;
+            RestoreGitUrlTextBox = AddTextField(
+                restoreBody, "Git 仓库 URL", "使用系统 Git 凭据；支持 HTTPS / SSH");
+            RestoreOutputTextBox = AddBrowseField(
+                restoreBody, "Fresh .ap21 输出目录", OnBrowseRestoreOutput);
+            restoreBody.Children.Add(new TextBlock
+            {
+                Text = "TIA 编译使用 TIA-Guard 自己控制的短内部 staging，最终工程再安全发布到你选择的位置。",
+                FontSize = 11,
+                Foreground = ResourceBrush("MutedBrush"),
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 8, 0, 0)
+            });
+            var restoreButton = CreatePrimaryButton(
+                "还原工程 →", "YellowBrush", OnRestoreFromGitClick);
+            restoreButton.Margin = new Thickness(0, 14, 0, 0);
+            restoreBody.Children.Add(restoreButton);
+            ActionsPanel.Children.Add(restoreCard);
+
+            var publishCard = CreateProductCard(
+                "TIA → GITHUB",
+                "发布 TIA 工程到 GitHub",
+                "选择自己的 .ap21，TIA-Guard 自动 Export、校验、安全更新 tia-source/、Commit 并 Push。",
+                "CyanBrush");
+            var publishBody = (StackPanel)publishCard.Child;
+            PublishProjectTextBox = AddBrowseField(
+                publishBody, "自己的 TIA 工程 (.ap21)", OnBrowsePublishProject);
+            PublishGitUrlTextBox = AddTextField(
+                publishBody, "Git 仓库 URL", "不保存 Token；使用 Git Credential Manager / SSH");
+            PublishCommitTextBox = AddTextField(
+                publishBody, "Commit message", null);
+            publishBody.Children.Add(new TextBlock
+            {
+                Text = "只管理 repo/tia-source/。已有内容不是有效 TIA-Guard canonical source 时会 fail closed；不会强推远端历史。",
+                FontSize = 11,
+                Foreground = ResourceBrush("MutedBrush"),
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 8, 0, 0)
+            });
+            var publishButton = CreatePrimaryButton(
+                "发布到 GitHub →", "CyanBrush", OnPublishToGitClick);
+            publishButton.Margin = new Thickness(0, 14, 0, 0);
+            publishBody.Children.Add(publishButton);
+            ActionsPanel.Children.Add(publishCard);
+
+            var advancedBody = new StackPanel();
+            advancedBody.Children.Add(oldRoundTripCard);
+            advancedBody.Children.Add(oldManualCard);
+            var advanced = new Expander
+            {
+                Header = "高级工具 / Export · Build · Verify",
+                IsExpanded = false,
+                Content = advancedBody,
+                Margin = new Thickness(0, 2, 0, 16)
+            };
+            ActionsPanel.Children.Add(advanced);
+
+            var stepPanel = ExportStepBorder.Parent as Panel;
+            if (stepPanel == null)
+                throw new InvalidOperationException("The task step panel is unavailable.");
+            GitStepBorder = CreateStepBorder(out GitStepText, "GIT · 待命");
+            PushStepBorder = CreateStepBorder(out PushStepText, "PUSH · 待命");
+            stepPanel.Children.Insert(0, GitStepBorder);
+            stepPanel.Children.Add(PushStepBorder);
+        }
+
+        private Border CreateProductCard(
+            string eyebrow, string title, string detail, string backgroundKey)
+        {
+            var body = new StackPanel();
+            body.Children.Add(new TextBlock
+            {
+                Text = eyebrow,
+                Style = (Style)FindResource("Eyebrow")
+            });
+            body.Children.Add(new TextBlock
+            {
+                Text = title,
+                FontSize = 24,
+                FontWeight = FontWeights.Black,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 2, 0, 5)
+            });
+            body.Children.Add(new TextBlock
+            {
+                Text = detail,
+                FontSize = 12,
+                FontWeight = FontWeights.SemiBold,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 14)
+            });
+
+            return new Border
+            {
+                Style = (Style)FindResource("CardBorder"),
+                Background = ResourceBrush(backgroundKey),
+                Margin = new Thickness(0, 0, 0, 18),
+                Child = body
+            };
+        }
+
+        private TextBox AddTextField(
+            Panel parent, string label, string toolTip)
+        {
+            parent.Children.Add(new TextBlock
+            {
+                Text = label,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 5)
+            });
+            var box = new TextBox
+            {
+                Style = (Style)FindResource("PathTextBox"),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            if (!string.IsNullOrWhiteSpace(toolTip)) box.ToolTip = toolTip;
+            parent.Children.Add(box);
+            return box;
+        }
+
+        private TextBox AddBrowseField(
+            Panel parent, string label, RoutedEventHandler browseHandler)
+        {
+            parent.Children.Add(new TextBlock
+            {
+                Text = label,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 5)
+            });
+            var grid = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition());
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var box = new TextBox { Style = (Style)FindResource("PathTextBox") };
+            var browse = new Button
+            {
+                Style = (Style)FindResource("SecondaryButton"),
+                Content = "浏览"
+            };
+            browse.Click += browseHandler;
+            Grid.SetColumn(browse, 2);
+            grid.Children.Add(box);
+            grid.Children.Add(browse);
+            parent.Children.Add(grid);
+            return box;
+        }
+
+        private Button CreatePrimaryButton(
+            string text, string backgroundKey, RoutedEventHandler handler)
+        {
+            var button = new Button
+            {
+                Style = (Style)FindResource("BrutalButton"),
+                Background = ResourceBrush(backgroundKey),
+                Content = text
+            };
+            button.Click += handler;
+            return button;
+        }
+
+        private Border CreateStepBorder(out TextBlock text, string value)
+        {
+            text = new TextBlock
+            {
+                Text = value,
+                FontWeight = FontWeights.Black
+            };
+            return new Border
+            {
+                Style = (Style)FindResource("StepBorder"),
+                Child = text
+            };
         }
 
         private void OnTitleBarMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -150,6 +353,152 @@ namespace TiaGuard.Gui
                 "环境未就绪",
                 "请先解决左侧运行环境中的阻塞项，再执行工程操作。");
             return false;
+        }
+
+        private async void OnRestoreFromGitClick(object sender, RoutedEventArgs e)
+        {
+            if (!RequireIdle() || !RequireEnvironment()) return;
+
+            var repositoryUrl = RestoreGitUrlTextBox.Text.Trim();
+            var output = RestoreOutputTextBox.Text.Trim();
+            if (!RequireGitUrl(repositoryUrl) ||
+                !RequireFolderValue(output, "请选择 fresh .ap21 工程的输出目录。"))
+                return;
+
+            BeginOperation("从 GitHub 还原 TIA 工程", "正在准备 Git 仓库并校验 tia-source/。");
+            ResetSteps();
+            try
+            {
+                SetStep(GitStepBorder, GitStepText, "GIT", "CLONE / PULL", "YellowBrush");
+                var repository = await Task.Run(() =>
+                    _git.PrepareRepository(repositoryUrl, AppendLog));
+                SetStep(GitStepBorder, GitStepText, "GIT", "完成", "GreenBrush");
+
+                var sourceRoot = RepositorySourceManager.ManagedSourcePath(repository);
+                if (!Directory.Exists(sourceRoot))
+                {
+                    SetBlocked("仓库缺少 tia-source/",
+                        "目标仓库中没有 TIA-Guard 管理的 tia-source/，无法安全还原工程。");
+                    return;
+                }
+
+                await Task.Run(() => RoundTripBuildInput.LoadSource(sourceRoot));
+                AppendLog("tia-source: canonical source validation PASS");
+
+                SetStep(BuildStepBorder, BuildStepText, "BUILD", "运行中", "PurpleBrush");
+                var build = await RunStaAsync(() =>
+                    RoundTripBuilder.Build(sourceRoot, output, ReportStage));
+                SetStep(BuildStepBorder, BuildStepText, "BUILD", "完成", "GreenBrush");
+                AppendLog("rebuilt project: " + build.ProjectFile);
+                AppendLog("compileErrors=" + build.CompileErrors);
+                AppendLog("compileWarnings=" + build.CompileWarnings);
+
+                SetStep(VerifyStepBorder, VerifyStepText, "VERIFY", "运行中", "CyanBrush");
+                var verify = await RunStaAsync(() =>
+                    RoundTripVerifier.VerifySourceAgainstProject(
+                        sourceRoot, build.ProjectFile, ReportStage));
+                AppendLog(RoundTripJson.Serialize(verify).Trim());
+                if (!string.Equals(verify.Verdict, "pass", StringComparison.OrdinalIgnoreCase))
+                {
+                    ApplyVerifyResult(verify);
+                    return;
+                }
+
+                SetStep(VerifyStepBorder, VerifyStepText, "VERIFY", "PASS", "GreenBrush");
+                SetOutput(Path.GetDirectoryName(build.ProjectFile));
+                SetSuccess("还原完成",
+                    "Fresh .ap21 已从 tia-source/ 重建、编译并通过 canonical source 完整性复核。");
+            }
+            catch (OpennessAccessException error)
+            {
+                SetBlocked("Openness 权限不可用", error.Message);
+            }
+            catch (Exception error)
+            {
+                SetError("还原 TIA 工程失败", error);
+            }
+            finally
+            {
+                EndOperation();
+            }
+        }
+
+        private async void OnPublishToGitClick(object sender, RoutedEventArgs e)
+        {
+            if (!RequireIdle() || !RequireEnvironment()) return;
+
+            var project = PublishProjectTextBox.Text.Trim();
+            var repositoryUrl = PublishGitUrlTextBox.Text.Trim();
+            var message = PublishCommitTextBox.Text.Trim();
+            if (!RequireAp21(project, "请选择自己拥有的 .ap21 工程。") ||
+                !RequireGitUrl(repositoryUrl))
+                return;
+
+            string exportStage = null;
+            BeginOperation("发布 TIA 工程到 GitHub", "正在准备 Git 仓库与安全导出 staging。");
+            ResetSteps();
+            try
+            {
+                SetStep(GitStepBorder, GitStepText, "GIT", "CLONE / PULL", "YellowBrush");
+                var repository = await Task.Run(() =>
+                    _git.PrepareRepository(repositoryUrl, AppendLog));
+                await Task.Run(() =>
+                {
+                    _git.EnsureCommitIdentity(repository);
+                    RepositorySourceManager.ValidateExistingManagedSource(repository);
+                });
+                SetStep(GitStepBorder, GitStepText, "GIT", "完成", "GreenBrush");
+
+                exportStage = CreateExportStage();
+                var stagedSource = Path.Combine(exportStage,
+                    RepositorySourceManager.ManagedDirectoryName);
+                SetStep(ExportStepBorder, ExportStepText, "EXPORT", "运行中", "YellowBrush");
+                var manifest = await RunStaAsync(() =>
+                {
+                    using (var session = TiaProjectSession.OpenOfflineCopy(project))
+                        return session.ExportRoundTripSource(stagedSource, ReportStage);
+                });
+                AppendLog(RoundTripJson.Serialize(manifest).Trim());
+                if (!manifest.RoundTripReady)
+                {
+                    SetStep(ExportStepBorder, ExportStepText, "EXPORT", "BLOCKED", "RedBrush");
+                    SetBlocked("工程不能安全发布",
+                        "Export 未达到 bounded round-trip readiness；tia-source/ 与 Git 仓库均未更新。");
+                    return;
+                }
+
+                await Task.Run(() => RoundTripBuildInput.LoadSource(stagedSource));
+                SetStep(ExportStepBorder, ExportStepText, "EXPORT", "完成", "GreenBrush");
+
+                AppendLog("tia-source: transactional update");
+                await Task.Run(() =>
+                    RepositorySourceManager.ReplaceManagedSource(repository, stagedSource));
+
+                SetStep(PushStepBorder, PushStepText, "PUSH", "COMMIT", "PurpleBrush");
+                var committed = await Task.Run(() =>
+                    _git.CommitManagedSource(repository, message, AppendLog));
+                SetStep(PushStepBorder, PushStepText, "PUSH", "上传中", "CyanBrush");
+                await Task.Run(() => _git.Push(repository, AppendLog));
+                SetStep(PushStepBorder, PushStepText, "PUSH", "完成", "GreenBrush");
+
+                SetOutput(repository);
+                SetSuccess("发布完成", committed
+                    ? "tia-source/ 已安全更新、提交并通过系统 Git 凭据推送到远端。"
+                    : "tia-source/ 没有新的源码差异；已确认现有本地提交可以正常 push/sync。");
+            }
+            catch (OpennessAccessException error)
+            {
+                SetBlocked("Openness 权限不可用", error.Message);
+            }
+            catch (Exception error)
+            {
+                SetError("发布到 GitHub 失败", error);
+            }
+            finally
+            {
+                DeleteExportStage(exportStage);
+                EndOperation();
+            }
         }
 
         private async void OnFullRoundTripClick(object sender, RoutedEventArgs e)
@@ -476,6 +825,14 @@ namespace TiaGuard.Gui
             return false;
         }
 
+        private bool RequireGitUrl(string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value)) return true;
+            MessageBox.Show(this, "请输入 Git 仓库 URL。", "TIA-Guard",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
         private void ReportStage(string stage)
         {
             Dispatcher.BeginInvoke(new Action(() =>
@@ -515,6 +872,14 @@ namespace TiaGuard.Gui
         {
             if (error == null) return "发生未知错误，请查看技术日志。";
 
+            var git = error as GitOperationException;
+            if (git != null) return git.FriendlyMessage;
+
+            if (error.Message.IndexOf("tia-source", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                error.Message.IndexOf("canonical source", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                error.Message.IndexOf("canonical source tree", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "仓库中的 tia-source/ 不是可安全替换的 TIA-Guard canonical source，已停止以避免覆盖未知内容。";
+
             if (error is IOException &&
                 error.Message.IndexOf("already exists", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "目标路径已经存在。为防止覆盖工程，TIA-Guard 要求使用一个尚不存在的新目录。";
@@ -524,7 +889,7 @@ namespace TiaGuard.Gui
 
             if (error.Message.IndexOf("too long", StringComparison.OrdinalIgnoreCase) >= 0 ||
                 error.Message.IndexOf("143", StringComparison.OrdinalIgnoreCase) >= 0)
-                return "输出路径过长。TIA Portal V21 的暂存工程路径有长度限制，请换到更短的目录。";
+                return "TIA Portal V21 的内部工程路径仍超过限制。TIA-Guard 已使用短 staging；请检查工程名称是否异常过长。";
 
             if (error is UnauthorizedAccessException)
                 return "Windows 拒绝访问该路径，请更换目录或检查文件权限。";
@@ -534,9 +899,11 @@ namespace TiaGuard.Gui
 
         private void ResetSteps()
         {
+            SetStep(GitStepBorder, GitStepText, "GIT", "待命", null);
             SetStep(ExportStepBorder, ExportStepText, "EXPORT", "待命", null);
             SetStep(BuildStepBorder, BuildStepText, "BUILD", "待命", null);
             SetStep(VerifyStepBorder, VerifyStepText, "VERIFY", "待命", null);
+            SetStep(PushStepBorder, PushStepText, "PUSH", "待命", null);
         }
 
         private void SetStep(Border border, TextBlock text, string name, string state, string brushKey)
@@ -609,6 +976,17 @@ namespace TiaGuard.Gui
         private void OnBrowseFullProject(object sender, RoutedEventArgs e)
         {
             BrowseProject(FullProjectTextBox);
+        }
+
+        private void OnBrowseRestoreOutput(object sender, RoutedEventArgs e)
+        {
+            BrowseNewFolderTarget(RestoreOutputTextBox,
+                "选择还原工程的父目录", "tia-restored");
+        }
+
+        private void OnBrowsePublishProject(object sender, RoutedEventArgs e)
+        {
+            BrowseProject(PublishProjectTextBox);
         }
 
         private void OnBrowseFullWorkspace(object sender, RoutedEventArgs e)
@@ -705,6 +1083,41 @@ namespace TiaGuard.Gui
 
                 if (dialog.ShowDialog() == Forms.DialogResult.OK)
                     target.Text = dialog.SelectedPath;
+            }
+        }
+
+        private static string CreateExportStage()
+        {
+            var root = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "TG", "e");
+            Directory.CreateDirectory(root);
+            var stage = Path.Combine(root, "e-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(stage);
+            return stage;
+        }
+
+        private void DeleteExportStage(string stage)
+        {
+            if (string.IsNullOrWhiteSpace(stage) || !Directory.Exists(stage)) return;
+            try
+            {
+                var full = Path.GetFullPath(stage).TrimEnd(Path.DirectorySeparatorChar);
+                var expectedParent = Path.GetFullPath(Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "TG", "e")).TrimEnd(Path.DirectorySeparatorChar);
+                var name = Path.GetFileName(full);
+                if (!string.Equals(Path.GetDirectoryName(full), expectedParent,
+                        StringComparison.OrdinalIgnoreCase) ||
+                    !name.StartsWith("e-", StringComparison.Ordinal) ||
+                    !Guid.TryParseExact(name.Substring(2), "N", out _))
+                    throw new InvalidOperationException(
+                        "Refusing to remove an unowned GUI export stage.");
+                Directory.Delete(full, true);
+            }
+            catch (Exception error)
+            {
+                AppendLog("export staging cleanup failed: " + error.Message);
             }
         }
 

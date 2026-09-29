@@ -247,8 +247,14 @@ namespace TiaGuard.Openness.Smoke
                 var buildInput = RoundTripBuildInput.Load(firstOutput, unusedBuildOutput);
                 if (buildInput.TagTables.Count != 2 || buildInput.Plc.Name != "PLC_1")
                     throw new InvalidOperationException("Build input rejected the valid canonical tree.");
-                AssertInvalidBuildInput(firstOutput,
-                    Path.Combine(shortOutputParent, new string('x', 120)));
+                var longBuildOutput = Path.Combine(
+                    shortOutputParent, new string('x', 120));
+                var longPathInput = RoundTripBuildInput.Load(firstOutput, longBuildOutput);
+                if (!string.Equals(longPathInput.OutputDirectory,
+                        Path.GetFullPath(longBuildOutput).TrimEnd(Path.DirectorySeparatorChar),
+                        StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException(
+                        "Long output path was not accepted independently from TIA staging.");
                 if (RoundTripVerifier.CompareSources(firstOutput, secondOutput).Verdict != "pass")
                     throw new InvalidOperationException("Equal canonical source trees did not verify PASS.");
                 var verifyStubOriginal = Path.Combine(selfTestRoot, "verify-original.ap21");

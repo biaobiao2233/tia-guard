@@ -60,13 +60,6 @@ namespace TiaGuard.Openness
             if (InsideOrEqual(output, input.SourceRoot) || InsideOrEqual(input.SourceRoot, output))
                 throw new IOException("The build output and canonical source tree overlap.");
 
-            // V21 rejects project creation when the staged project folder exceeds
-            // 143 characters. The staging suffix has a fixed 32-character GUID.
-            var stageName = "." + Path.GetFileName(output) + ".tia-guard-" +
-                new string('0', 32);
-            Require(Path.Combine(outputParent, stageName, input.Manifest.Project.Name).Length <= 143,
-                "The output path is too long for TIA Portal V21 project creation (maximum 143 characters).");
-
             input.OutputDirectory = output;
             return input;
         }

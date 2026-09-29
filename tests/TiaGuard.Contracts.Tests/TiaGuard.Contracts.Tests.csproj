@@ -13,10 +13,13 @@
     <Reference Include="System.Web.Extensions" />
     <!-- Compile the production pure-source boundary, without any Siemens dependency. -->
     <Compile Include="../../src/TiaGuard.Cli/CliCommandLine.cs" Link="Core/CliCommandLine.cs" />
+    <Compile Include="../../src/TiaGuard.Gui/GitRepositoryClient.cs" Link="Core/GitRepositoryClient.cs" />
     <Compile Include="../../src/TiaGuard.Openness/OpennessEnvironmentProbe.cs" Link="Core/OpennessEnvironmentProbe.cs" />
     <Compile Include="../../src/TiaGuard.Openness/OpennessRuntime.cs" Link="Core/OpennessRuntime.cs" />
     <Compile Include="../../src/TiaGuard.Openness/OpennessAccess.cs" Link="Core/OpennessAccess.cs" />
     <Compile Include="../../src/TiaGuard.Openness/RoundTripBuildInput.cs" Link="Core/RoundTripBuildInput.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/RoundTripBuildLayout.cs" Link="Core/RoundTripBuildLayout.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/RepositorySourceManager.cs" Link="Core/RepositorySourceManager.cs" />
     <Compile Include="../../src/TiaGuard.Openness/RoundTripSourceV1.cs" Link="Core/RoundTripSourceV1.cs" />
     <Compile Include="../../src/TiaGuard.Openness/RoundTripSourceMaterializer.cs" Link="Core/RoundTripSourceMaterializer.cs" />
     <Compile Include="../../src/TiaGuard.Openness/RoundTripVerifier.Compare.cs" Link="Core/RoundTripVerifier.Compare.cs" />

@@ -65,7 +65,7 @@ if ($guiCoreHash -ne $cliCoreHash) {
     throw "CLI and GUI were built against different TiaGuard.Openness.dll content."
 }
 
-if (Get-ChildItem $stage -Filter "Siemens*.dll" -File) {
+if (Get-ChildItem $stage -Filter "Siemens*.dll" -File -Recurse) {
     throw "Refusing to package Siemens DLLs."
 }
 
@@ -84,13 +84,19 @@ Automation / AI CLI:
 
 Requirements:
 - Windows x64
+- Git for Windows available as git.exe (existing Git Credential Manager / SSH credentials are reused)
 - TIA Portal V21 installed
 - TIA Portal Openness installed/enabled
 - Current Windows logon token has effective Siemens TIA Openness group membership
 
+GUI product flows:
+- Git repository URL -> clone/pull -> repo/tia-source/ -> fresh compiled .ap21 -> automatic integrity check
+- owned .ap21 + Git repository URL -> safe Export staging -> repo/tia-source/ -> commit -> push
+- TIA-Guard never stores a GitHub token and manages only repo/tia-source/
+- Export / Build / Verify remain available under advanced diagnostics
+
 Scope:
 - bounded V21 S7-1200 demo profile only
-- GUI supports environment check, one-click Export -> Build -> Verify, and individual operations
 - no PLC online/download/write operations
 - Siemens DLLs, licenses and TIA project binaries are not redistributed
 "@
