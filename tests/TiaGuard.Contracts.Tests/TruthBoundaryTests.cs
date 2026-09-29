@@ -93,6 +93,51 @@ namespace TiaGuard.Contracts.Tests
             }
         }
 
+        [Fact]
+        public void OriginalProjectIdentityIsAcceptedWhenComplete()
+        {
+            using (var f = new CanonicalFixture())
+            {
+                f.Manifest.Project.OriginalFileName = "Demo.ap21";
+                f.Manifest.Project.OriginalSizeBytes = 12345;
+                f.Manifest.Project.OriginalSha256 =
+                    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+                f.Save();
+
+                var input = RoundTripBuildInput.LoadSource(f.Root);
+                Assert.Equal("Demo.ap21", input.Manifest.Project.OriginalFileName);
+                Assert.Equal(12345, input.Manifest.Project.OriginalSizeBytes);
+                Assert.Equal(
+                    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                    input.Manifest.Project.OriginalSha256);
+            }
+        }
+
+        [Fact]
+        public void IncompleteOriginalProjectIdentityIsRejected()
+        {
+            using (var f = new CanonicalFixture())
+            {
+                f.Manifest.Project.OriginalFileName = "Demo.ap21";
+                f.Save();
+                AssertBlocked(f);
+            }
+        }
+
+        [Fact]
+        public void UnsafeOriginalProjectFileNameIsRejected()
+        {
+            using (var f = new CanonicalFixture())
+            {
+                f.Manifest.Project.OriginalFileName = "../Demo.ap21";
+                f.Manifest.Project.OriginalSizeBytes = 12345;
+                f.Manifest.Project.OriginalSha256 =
+                    "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+                f.Save();
+                AssertBlocked(f);
+            }
+        }
+
         [Theory]
         [InlineData("../outside.json")] [InlineData("C:/outside.json")] [InlineData("tia\\hardware\\station-a.json")]
         [InlineData("tia/hardware/CON.json")] [InlineData("tia/hardware/station-a.json.")]

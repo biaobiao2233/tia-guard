@@ -2,12 +2,14 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using TiaGuard.Openness;
 using Forms = System.Windows.Forms;
@@ -28,11 +30,18 @@ namespace TiaGuard.Gui
         private TextBlock GitStepText;
         private Border PushStepBorder;
         private TextBlock PushStepText;
+        private readonly Stopwatch _operationStopwatch = new Stopwatch();
+        private readonly Stopwatch _stageStopwatch = new Stopwatch();
+        private readonly DispatcherTimer _elapsedTimer = new DispatcherTimer();
+        private string _activeStage;
+        private string _activeStageLabel;
 
         public MainWindow()
         {
             InitializeComponent();
             InstallProductSurface();
+            _elapsedTimer.Interval = TimeSpan.FromSeconds(1);
+            _elapsedTimer.Tick += (sender, args) => UpdateProgressStatus();
             VersionText.Text = "v" + ProductVersion;
             FullWorkspaceTextBox.Text = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
@@ -382,7 +391,8 @@ namespace TiaGuard.Gui
                     return;
                 }
 
-                await Task.Run(() => RoundTripBuildInput.LoadSource(sourceRoot));
+                var sourceInput = await Task.Run(() =>
+                    RoundTripBuildInput.LoadSource(sourceRoot));
                 AppendLog("tia-source: canonical source validation PASS");
 
                 SetStep(BuildStepBorder, BuildStepText, "BUILD", "运行中", "PurpleBrush");
@@ -406,8 +416,19 @@ namespace TiaGuard.Gui
 
                 SetStep(VerifyStepBorder, VerifyStepText, "VERIFY", "PASS", "GreenBrush");
                 SetOutput(Path.GetDirectoryName(build.ProjectFile));
-                SetSuccess("还原完成",
-                    "Fresh .ap21 已从 tia-source/ 重建、编译并通过 canonical source 完整性复核。");
+
+                var binaryIdentityError = VerifyRestoredFileIdentity(
+                    sourceInput.Manifest.Project, build.ProjectFile);
+                if (binaryIdentityError != null)
+                {
+                    SetBlocked("还原产物与上传前不完全一致", binaryIdentityError);
+                    return;
+                }
+
+                var hasBinaryIdentity = sourceInput.Manifest.Project.OriginalSizeBytes.HasValue;
+                SetSuccess("还原完成", hasBinaryIdentity
+                    ? "文件名、大小、SHA-256 与上传前完全一致；同时 Verify PASS。"
+                    : "Fresh .ap21 已从 tia-source/ 重建、编译并通过 canonical source 完整性复核。");
             }
             catch (OpennessAccessException error)
             {
@@ -442,9 +463,10 @@ namespace TiaGuard.Gui
                 SetStep(GitStepBorder, GitStepText, "GIT", "CLONE / PULL", "YellowBrush");
                 var repository = await Task.Run(() =>
                     _git.PrepareRepository(repositoryUrl, AppendLog));
+
                 await Task.Run(() =>
                 {
-                    _git.EnsureCommitIdentity(repository);
+                    _git.EnsureCommitIdentityFromSystemGitHub(repository, AppendLog);
                     RepositorySourceManager.ValidateExistingManagedSource(repository);
                 });
                 SetStep(GitStepBorder, GitStepText, "GIT", "完成", "GreenBrush");
@@ -768,18 +790,33 @@ namespace TiaGuard.Gui
             _busy = true;
             ActionsPanel.IsEnabled = false;
             BusyProgress.Visibility = Visibility.Visible;
+            ProgressStatusText.Visibility = Visibility.Visible;
             ResultBadgeBorder.Background = ResourceBrush("YellowBrush");
             ResultBadgeText.Text = "RUNNING";
             ResultTitleText.Text = title;
             ResultDetailText.Text = detail;
+
+            _activeStage = null;
+            _activeStageLabel = detail;
+            _stageStopwatch.Reset();
+            _operationStopwatch.Restart();
+            _elapsedTimer.Start();
+            UpdateProgressStatus();
             AppendLog("---- " + title + " ----");
         }
 
         private void EndOperation()
         {
+            FinishActiveStage();
+            _operationStopwatch.Stop();
+            _elapsedTimer.Stop();
+            if (_operationStopwatch.Elapsed > TimeSpan.Zero)
+                AppendLog("operation duration=" + FormatElapsed(_operationStopwatch.Elapsed));
+
             _busy = false;
             ActionsPanel.IsEnabled = true;
             BusyProgress.Visibility = Visibility.Collapsed;
+            ProgressStatusText.Visibility = Visibility.Collapsed;
         }
 
         private bool RequireIdle()
@@ -836,10 +873,120 @@ namespace TiaGuard.Gui
         private void ReportStage(string stage)
         {
             Dispatcher.BeginInvoke(new Action(() =>
+                StartStage(stage)));
+        }
+
+        private void StartStage(string stage)
+        {
+            FinishActiveStage();
+            _activeStage = stage;
+            _activeStageLabel = FriendlyStage(stage);
+            _stageStopwatch.Restart();
+            ResultDetailText.Text = _activeStageLabel;
+            AppendLog("stage=" + stage + " started");
+            UpdateProgressStatus();
+        }
+
+        private void FinishActiveStage()
+        {
+            if (string.IsNullOrWhiteSpace(_activeStage) || !_stageStopwatch.IsRunning)
+                return;
+
+            _stageStopwatch.Stop();
+            AppendLog("stage=" + _activeStage + " duration=" +
+                FormatElapsed(_stageStopwatch.Elapsed));
+        }
+
+        private void UpdateProgressStatus()
+        {
+            if (!_busy) return;
+            var label = string.IsNullOrWhiteSpace(_activeStageLabel)
+                ? "正在处理"
+                : _activeStageLabel;
+            ProgressStatusText.Text = label + "  ·  已用时 " +
+                FormatElapsed(_operationStopwatch.Elapsed);
+        }
+
+        private static string FriendlyStage(string stage)
+        {
+            switch (stage)
             {
-                ResultDetailText.Text = "当前阶段：" + stage;
-                AppendLog("stage=" + stage);
-            }));
+                case "preflight-read":
+                    return "正在读取 TIA 工程；首次/较大工程可能需要几分钟，请勿关闭窗口";
+                case "compile-preparation":
+                    return "正在准备 TIA 工程编译与导出；此阶段可能需要几分钟";
+                case "capture-export":
+                    return "正在导出工程结构与程序块";
+                case "hints":
+                    return "正在整理硬件、PLC 与变量信息";
+                case "materialize":
+                    return "正在生成 Git canonical source";
+                case "validate-source":
+                    return "正在校验 Git source";
+                case "create-project":
+                    return "正在启动 TIA Portal V21 并创建新工程；可能需要几分钟";
+                case "create-device":
+                    return "正在重建 S7-1200 设备";
+                case "create-tags":
+                    return "正在重建 PLC 变量表";
+                case "import-ob1":
+                    return "正在导入 Main / OB1 / LAD";
+                case "save":
+                    return "正在保存 TIA 工程";
+                case "compile":
+                case "compile-rebuilt-copy":
+                    return "正在编译还原工程；TIA Portal 可能需要几分钟";
+                case "publish":
+                    return "正在发布最终工程到你选择的目录";
+                case "export-original":
+                case "export-rebuilt":
+                    return "正在导出工程用于完整性验证";
+                case "compare":
+                    return "正在比较 canonical source";
+                case "done":
+                    return "正在完成最后检查";
+                default:
+                    return "当前阶段：" + stage;
+            }
+        }
+
+        private static string FormatElapsed(TimeSpan elapsed)
+        {
+            if (elapsed.TotalHours >= 1)
+                return elapsed.ToString(@"hh\:mm\:ss");
+            return elapsed.ToString(@"mm\:ss");
+        }
+
+        private string VerifyRestoredFileIdentity(
+            RoundTripProjectV1 project, string restoredProjectFile)
+        {
+            if (project == null || !project.OriginalSizeBytes.HasValue ||
+                string.IsNullOrWhiteSpace(project.OriginalFileName) ||
+                string.IsNullOrWhiteSpace(project.OriginalSha256))
+                return null;
+
+            var file = new FileInfo(restoredProjectFile);
+            string sha256;
+            using (var stream = file.Open(FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var sha = SHA256.Create())
+                sha256 = BitConverter.ToString(sha.ComputeHash(stream))
+                    .Replace("-", string.Empty).ToLowerInvariant();
+
+            AppendLog("binary identity expected: name=" + project.OriginalFileName +
+                " size=" + project.OriginalSizeBytes.Value +
+                " sha256=" + project.OriginalSha256);
+            AppendLog("binary identity actual: name=" + file.Name +
+                " size=" + file.Length + " sha256=" + sha256);
+
+            if (!string.Equals(file.Name, project.OriginalFileName, StringComparison.Ordinal))
+                return "还原后的 .ap21 文件名与上传前不同，TIA-Guard 已停止把它标记为完整还原。";
+            if (file.Length != project.OriginalSizeBytes.Value)
+                return "还原后的 .ap21 文件大小与上传前不同；语义 Verify 已通过，但二进制身份不一致。";
+            if (!string.Equals(sha256, project.OriginalSha256, StringComparison.Ordinal))
+                return "还原后的 .ap21 SHA-256 与上传前不同；语义 Verify 已通过，但二进制身份不一致。";
+
+            AppendLog("binary identity: PASS");
+            return null;
         }
 
         private void SetSuccess(string title, string detail)

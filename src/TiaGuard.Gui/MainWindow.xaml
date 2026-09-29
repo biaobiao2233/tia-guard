@@ -359,6 +359,13 @@
                                      Visibility="Collapsed"
                                      Foreground="{StaticResource InkBrush}"
                                      Background="White"/>
+                        <TextBlock x:Name="ProgressStatusText"
+                                   Visibility="Collapsed"
+                                   Margin="0,8,0,0"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource MutedBrush}"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 

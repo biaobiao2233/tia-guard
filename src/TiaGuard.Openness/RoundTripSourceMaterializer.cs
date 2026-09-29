@@ -84,7 +84,10 @@ namespace TiaGuard.Openness
                 Project = new RoundTripProjectV1
                 {
                     Name = snapshot.Project?.Name ?? string.Empty,
-                    ProjectVersion = snapshot.Project?.ProjectVersion
+                    ProjectVersion = snapshot.Project?.ProjectVersion,
+                    OriginalFileName = hints.SourceFile?.FileName,
+                    OriginalSizeBytes = hints.SourceFile?.SizeBytes,
+                    OriginalSha256 = hints.SourceFile?.Sha256
                 }
             };
 

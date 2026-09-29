@@ -18,10 +18,17 @@ descriptor_schema = read(schemas / "roundtrip-descriptors-v1.schema.json")
 fixture = repo / "examples/roundtrip-fixture"
 manifest = read(fixture / "tia-guard.json")
 validate(manifest_schema, manifest)
+with_identity = deepcopy(manifest)
+with_identity["project"].update({
+    "originalFileName": "Demo.ap21",
+    "originalSizeBytes": 151394,
+    "originalSha256": "b0ca8738b321e15074ff48019a4cf53b0918914d5f9f1138a967e25c4f30caae",
+})
+validate(manifest_schema, with_identity)
 for path in (fixture / "tia").rglob("*.json"):
     validate(descriptor_schema, read(path))
 
-for mutation in ("numeric-name", "missing-projectVersion", "missing-reason", "ready-diagnostic"):
+for mutation in ("numeric-name", "missing-projectVersion", "missing-reason", "ready-diagnostic", "incomplete-original-identity"):
     invalid = deepcopy(manifest)
     if mutation == "numeric-name":
         invalid["project"]["name"] = 123
@@ -29,7 +36,9 @@ for mutation in ("numeric-name", "missing-projectVersion", "missing-reason", "re
         del invalid["project"]["projectVersion"]
     elif mutation == "missing-reason":
         del invalid["capabilities"][0]["reason"]
-    else:
+    elif mutation == "ready-diagnostic":
         invalid["diagnostics"] = [{"code": "BLOCKED", "message": "incomplete", "objectRef": None}]
+    else:
+        invalid["project"]["originalFileName"] = "Demo.ap21"
     assert list(Draft202012Validator(manifest_schema).iter_errors(invalid)), mutation
-print("PASS: Snapshot, canonical manifest/descriptors, and four schema negative cases")
+print("PASS: Snapshot, canonical manifest/descriptors, original file identity, and five schema negative cases")

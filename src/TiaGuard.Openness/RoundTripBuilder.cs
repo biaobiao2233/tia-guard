@@ -102,13 +102,20 @@ namespace TiaGuard.Openness
                 portal.Dispose();
                 portal = null;
                 progress?.Invoke("publish");
-                PublishBuiltProject(stagedFolder, input.OutputDirectory);
+                var publishedFileName = string.IsNullOrWhiteSpace(
+                    input.Manifest.Project.OriginalFileName)
+                    ? input.Manifest.Project.Name + ".ap21"
+                    : input.Manifest.Project.OriginalFileName;
+                PublishBuiltProject(
+                    stagedFolder,
+                    input.OutputDirectory,
+                    input.Manifest.Project.Name + ".ap21",
+                    publishedFileName);
                 DeleteOwnedStage(layout.StageDirectory, layout.WorkingRoot);
                 progress?.Invoke("done");
                 return new RoundTripBuildResult
                 {
-                    ProjectFile = Path.Combine(input.OutputDirectory,
-                        input.Manifest.Project.Name + ".ap21"),
+                    ProjectFile = Path.Combine(input.OutputDirectory, publishedFileName),
                     CompileErrors = compileErrors,
                     CompileWarnings = compileWarnings
                 };
@@ -122,7 +129,11 @@ namespace TiaGuard.Openness
             }
         }
 
-        private static void PublishBuiltProject(string stagedFolder, string outputDirectory)
+        private static void PublishBuiltProject(
+            string stagedFolder,
+            string outputDirectory,
+            string generatedProjectFileName,
+            string publishedProjectFileName)
         {
             var output = Path.GetFullPath(outputDirectory).TrimEnd(Path.DirectorySeparatorChar);
             var parent = Path.GetDirectoryName(output);
@@ -138,6 +149,16 @@ namespace TiaGuard.Openness
             try
             {
                 FileSystemSafety.CopyPlainTree(stagedFolder, publish);
+                if (!string.Equals(generatedProjectFileName, publishedProjectFileName,
+                        StringComparison.Ordinal))
+                {
+                    var generated = Path.Combine(publish, generatedProjectFileName);
+                    var desired = Path.Combine(publish, publishedProjectFileName);
+                    if (!File.Exists(generated) || File.Exists(desired))
+                        throw new IOException(
+                            "The rebuilt project file cannot be renamed to the original file name safely.");
+                    File.Move(generated, desired);
+                }
                 if (Directory.Exists(output) || File.Exists(output))
                     throw new IOException("The build output path appeared while publishing.");
                 Directory.Move(publish, output);

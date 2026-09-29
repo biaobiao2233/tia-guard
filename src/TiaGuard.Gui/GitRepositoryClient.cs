@@ -8,6 +8,21 @@ using System.Text;
 
 namespace TiaGuard.Gui
 {
+    internal sealed class GitCommitIdentity
+    {
+        internal string Name { get; set; }
+        internal string Email { get; set; }
+
+        internal bool IsConfigured
+        {
+            get
+            {
+                return !string.IsNullOrWhiteSpace(Name) &&
+                       !string.IsNullOrWhiteSpace(Email);
+            }
+        }
+    }
+
     internal sealed class GitOperationException : InvalidOperationException
     {
         internal string FriendlyMessage { get; private set; }
@@ -42,8 +57,8 @@ namespace TiaGuard.Gui
             if (!Directory.Exists(root))
             {
                 log?.Invoke("git: clone -> managed cache");
-                var clone = Run(null, new[] { "clone", "--", url, root }, false);
-                EnsureSuccess("clone", clone);
+                RunRemoteOperation(null,
+                    new[] { "clone", "--", url, root }, "clone", log);
             }
             else
             {
@@ -61,12 +76,14 @@ namespace TiaGuard.Gui
 
                 EnsureClean(root);
                 log?.Invoke("git: fetch origin");
-                EnsureSuccess("fetch", Run(root, new[] { "fetch", "--prune", "origin" }, false));
+                RunRemoteOperation(root,
+                    new[] { "fetch", "--prune", "origin" }, "fetch", log);
 
                 if (HasHead(root) && HasUpstream(root))
                 {
                     log?.Invoke("git: pull --ff-only");
-                    EnsureSuccess("pull", Run(root, new[] { "pull", "--ff-only" }, false));
+                    RunRemoteOperation(root,
+                        new[] { "pull", "--ff-only" }, "pull", log);
                 }
             }
 
@@ -77,13 +94,76 @@ namespace TiaGuard.Gui
 
         internal void EnsureCommitIdentity(string repositoryRoot)
         {
+            if (!GetCommitIdentity(repositoryRoot).IsConfigured)
+                throw new GitOperationException(
+                    "当前仓库还没有可用的 Git 提交身份。",
+                    "Git commit identity is not configured.");
+        }
+
+        internal GitCommitIdentity GetCommitIdentity(string repositoryRoot)
+        {
             var name = Run(repositoryRoot, new[] { "config", "--get", "user.name" }, true);
             var email = Run(repositoryRoot, new[] { "config", "--get", "user.email" }, true);
-            if (name.ExitCode != 0 || string.IsNullOrWhiteSpace(name.Output) ||
-                email.ExitCode != 0 || string.IsNullOrWhiteSpace(email.Output))
+            return new GitCommitIdentity
+            {
+                Name = name.ExitCode == 0 ? name.Output.Trim() : string.Empty,
+                Email = email.ExitCode == 0 ? email.Output.Trim() : string.Empty
+            };
+        }
+
+        internal void EnsureCommitIdentityFromSystemGitHub(
+            string repositoryRoot, Action<string> log)
+        {
+            if (GetCommitIdentity(repositoryRoot).IsConfigured) return;
+
+            var login = RunGitHubCli(new[] { "api", "user", "--jq", ".login" }, true);
+            var name = RunGitHubCli(new[] { "api", "user", "--jq", ".name // empty" }, true);
+            var email = RunGitHubCli(new[] { "api", "user", "--jq", ".email // empty" }, true);
+
+            if (login.ExitCode != 0 || string.IsNullOrWhiteSpace(login.Output))
                 throw new GitOperationException(
-                    "系统 Git 还没有可用的 user.name / user.email。请先在 Git 中配置提交身份，TIA-Guard 不会保存账号或 Token。",
-                    "Git commit identity is not configured.");
+                    "没有检测到可用的本机 GitHub 登录。请先使用 GitHub CLI / 系统 Git 登录 GitHub 后重试。",
+                    "GitHub CLI has no active authenticated account.");
+
+            var cleanLogin = login.Output.Trim();
+            var cleanName = string.IsNullOrWhiteSpace(name.Output)
+                ? cleanLogin
+                : name.Output.Trim();
+            var cleanEmail = email.Output.Trim();
+
+            if (string.IsNullOrWhiteSpace(cleanEmail))
+            {
+                var id = RunGitHubCli(new[] { "api", "user", "--jq", ".id" }, true);
+                if (id.ExitCode == 0 && !string.IsNullOrWhiteSpace(id.Output))
+                    cleanEmail = id.Output.Trim() + "+" + cleanLogin +
+                                 "@users.noreply.github.com";
+            }
+
+            ConfigureCommitIdentity(repositoryRoot, cleanName, cleanEmail);
+            log?.Invoke("git identity: using active system GitHub account " + cleanLogin);
+        }
+
+        internal void ConfigureCommitIdentity(
+            string repositoryRoot, string name, string email)
+        {
+            var cleanName = RequireSingleLine(name, "提交姓名不能为空。");
+            var cleanEmail = RequireSingleLine(email, "提交邮箱不能为空。");
+            if (!cleanEmail.Contains("@"))
+                throw new GitOperationException("请输入有效的 Git 提交邮箱。");
+
+            EnsureSuccess("config user.name", Run(repositoryRoot,
+                new[] { "config", "user.name", cleanName }, false));
+            EnsureSuccess("config user.email", Run(repositoryRoot,
+                new[] { "config", "user.email", cleanEmail }, false));
+            EnsureCommitIdentity(repositoryRoot);
+        }
+
+        private static string RequireSingleLine(string value, string message)
+        {
+            if (string.IsNullOrWhiteSpace(value) ||
+                value.IndexOfAny(new[] { '\r', '\n' }) >= 0)
+                throw new GitOperationException(message);
+            return value.Trim();
         }
 
         internal bool CommitManagedSource(
@@ -118,12 +198,60 @@ namespace TiaGuard.Gui
                 throw new GitOperationException("仓库还没有可推送的提交。", "Git repository has no HEAD.");
 
             log?.Invoke("git: push");
-            GitResult result;
             if (HasUpstream(repositoryRoot))
-                result = Run(repositoryRoot, new[] { "push" }, false);
+                RunRemoteOperation(repositoryRoot,
+                    new[] { "push" }, "push", log);
             else
-                result = Run(repositoryRoot, new[] { "push", "-u", "origin", "HEAD" }, false);
-            EnsureSuccess("push", result);
+                RunRemoteOperation(repositoryRoot,
+                    new[] { "push", "-u", "origin", "HEAD" }, "push", log);
+        }
+
+        private static void RunRemoteOperation(
+            string workingDirectory, string[] arguments, string operation, Action<string> log)
+        {
+            var result = Run(workingDirectory, arguments, true);
+            if (result.ExitCode != 0 && IsCredentialRelatedFailure(result))
+            {
+                log?.Invoke("git auth: opening system GitHub account selector");
+                if (OpenSystemGitHubAccountSelector())
+                    result = Run(workingDirectory, arguments, true);
+            }
+
+            EnsureSuccess(operation, result);
+        }
+
+        private static bool IsCredentialRelatedFailure(GitResult result)
+        {
+            var technical = ((result.Error ?? string.Empty) + "\n" +
+                (result.Output ?? string.Empty)).ToLowerInvariant();
+            return technical.Contains("authentication failed") ||
+                   technical.Contains("could not read username") ||
+                   technical.Contains("terminal prompts disabled") ||
+                   technical.Contains("repository not found") ||
+                   technical.Contains("permission denied (publickey");
+        }
+
+        private static bool OpenSystemGitHubAccountSelector()
+        {
+            try
+            {
+                var info = new ProcessStartInfo
+                {
+                    FileName = "gh.exe",
+                    Arguments = "auth switch --hostname github.com",
+                    UseShellExecute = true,
+                    WindowStyle = ProcessWindowStyle.Normal
+                };
+                using (var process = Process.Start(info))
+                {
+                    if (process == null) return false;
+                    return process.WaitForExit(120000) && process.ExitCode == 0;
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static void EnsureClean(string root)
@@ -241,6 +369,53 @@ namespace TiaGuard.Gui
             {
                 throw new GitOperationException(
                     "无法启动系统 Git。请确认 Git for Windows 已安装并加入 PATH。",
+                    error.Message, error);
+            }
+        }
+
+        private static GitResult RunGitHubCli(string[] arguments, bool allowFailure)
+        {
+            try
+            {
+                var info = new ProcessStartInfo
+                {
+                    FileName = "gh.exe",
+                    Arguments = string.Join(" ", arguments.Select(QuoteArgument)),
+                    WorkingDirectory = Environment.CurrentDirectory,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                using (var process = Process.Start(info))
+                {
+                    var outputTask = process.StandardOutput.ReadToEndAsync();
+                    var errorTask = process.StandardError.ReadToEndAsync();
+                    if (!process.WaitForExit(30000))
+                    {
+                        try { process.Kill(); } catch { }
+                        throw new GitOperationException(
+                            "读取本机 GitHub 登录信息超时，请检查 GitHub CLI 后重试。",
+                            "GitHub CLI timed out.");
+                    }
+
+                    var result = new GitResult
+                    {
+                        ExitCode = process.ExitCode,
+                        Output = outputTask.Result ?? string.Empty,
+                        Error = errorTask.Result ?? string.Empty
+                    };
+                    if (!allowFailure && result.ExitCode != 0)
+                        throw new GitOperationException(
+                            "无法读取本机 GitHub 登录信息，请确认 GitHub CLI 已登录。",
+                            result.Error);
+                    return result;
+                }
+            }
+            catch (Win32Exception error)
+            {
+                throw new GitOperationException(
+                    "未找到 GitHub CLI。请先安装并登录 GitHub CLI，TIA-Guard 不会保存账号、密码或 Token。",
                     error.Message, error);
             }
         }

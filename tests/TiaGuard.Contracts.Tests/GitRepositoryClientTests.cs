@@ -88,6 +88,33 @@ namespace TiaGuard.Contracts.Tests
         }
 
         [Fact]
+        public void CommitIdentityCanBeConfiguredPerManagedRepository()
+        {
+            var gitRoot = CreateGitRoot();
+            var repository = Path.Combine(gitRoot, "repo");
+            Directory.CreateDirectory(repository);
+            Git(repository, "init");
+
+            try
+            {
+                var client = new GitRepositoryClient();
+                client.ConfigureCommitIdentity(
+                    repository,
+                    "Example User",
+                    "example@example.invalid");
+
+                var after = client.GetCommitIdentity(repository);
+                Assert.True(after.IsConfigured);
+                Assert.Equal("Example User", after.Name);
+                Assert.Equal("example@example.invalid", after.Email);
+            }
+            finally
+            {
+                TryDeleteGitRoot(gitRoot);
+            }
+        }
+
+        [Fact]
         public void HttpUrlWithEmbeddedCredentialsIsRejected()
         {
             var client = new GitRepositoryClient();
