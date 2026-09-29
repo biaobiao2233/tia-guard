@@ -30,6 +30,12 @@ namespace TiaGuard.Cli
 
             try
             {
+                if (invocation.Command == "ai-view")
+                {
+                    Console.WriteLine("aiDirectory=" + AiEngineeringPublisher.Generate(invocation.Source));
+                    return 0;
+                }
+
                 if (invocation.Command == "doctor")
                 {
                     var report = OpennessEnvironmentProbe.Inspect();

@@ -78,6 +78,7 @@ Human UI:
 Automation / AI CLI:
   tia-guard doctor
   tia-guard --version
+  tia-guard ai-view <tia-source-dir>
   tia-guard export <project.ap21> <repo-dir>
   tia-guard build <repo-dir> --output <new-output-dir>
   tia-guard verify <original.ap21> <rebuilt.ap21>

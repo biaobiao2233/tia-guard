@@ -15,6 +15,7 @@ namespace TiaGuard.Cli
             "Usage:" + Environment.NewLine +
             "  tia-guard doctor" + Environment.NewLine +
             "  tia-guard --version" + Environment.NewLine +
+            "  tia-guard ai-view <tia-source-dir>" + Environment.NewLine +
             "  tia-guard export <project.ap21> <repo-dir>" + Environment.NewLine +
             "  tia-guard build <repo-dir> --output <new-output-dir>" + Environment.NewLine +
             "  tia-guard verify <original.ap21> <rebuilt.ap21>";
@@ -23,6 +24,12 @@ namespace TiaGuard.Cli
         {
             invocation = null;
             if (args == null) return false;
+
+            if (args.Length == 2 && args[0] == "ai-view" && Present(args[1]))
+            {
+                invocation = new CliInvocation { Command = "ai-view", Source = args[1] };
+                return true;
+            }
 
             if (args.Length == 1 && args[0] == "doctor")
             {

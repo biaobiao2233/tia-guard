@@ -1,0 +1,1113 @@
+{
+  "schemaVersion": "ai-engineering-v2",
+  "authority": "derived-not-build-input",
+  "project": {
+    "name": "S7-1200-Motor-Reversing-Control",
+    "tiaVersion": "V21",
+    "projectVersion": null,
+    "sourceRef": "tia-guard.json#\/project"
+  },
+  "hardware": {
+    "station": "S7-1200 station_1",
+    "family": "S7-1200",
+    "cpuCreateIdentity": "OrderNumber:6ES7 212-1AE40-0XB0\/V4.7",
+    "orderNumber": "6ES7 212-1AE40-0XB0",
+    "firmware": "V4.7",
+    "sourceRef": "tia\/hardware\/station-13afb076661677a7.json#"
+  },
+  "plc": {
+    "name": "PLC_1",
+    "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/plc.json#"
+  },
+  "tagTables": [
+    {
+      "name": "默认变量表",
+      "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/tags\/tag-table-18d5e937f4a8ff63.json#",
+      "tags": [
+        {
+          "name": "BranchA",
+          "dataType": "Bool",
+          "address": "%M0.0",
+          "commentStatus": "present",
+          "comment": "Parallel branch A marker",
+          "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/tags\/tag-table-18d5e937f4a8ff63.json#\/tags\/0"
+        },
+        {
+          "name": "BranchB",
+          "dataType": "Bool",
+          "address": "%M0.1",
+          "commentStatus": "present",
+          "comment": "Parallel branch B marker",
+          "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/tags\/tag-table-18d5e937f4a8ff63.json#\/tags\/1"
+        },
+        {
+          "name": "ForwardOut",
+          "dataType": "Bool",
+          "address": "%Q0.0",
+          "commentStatus": "present",
+          "comment": "Forward contactor output",
+          "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/tags\/tag-table-18d5e937f4a8ff63.json#\/tags\/2"
+        },
+        {
+          "name": "ReverseOut",
+          "dataType": "Bool",
+          "address": "%Q0.1",
+          "commentStatus": "present",
+          "comment": "Reverse contactor output",
+          "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/tags\/tag-table-18d5e937f4a8ff63.json#\/tags\/3"
+        },
+        {
+          "name": "StartForward",
+          "dataType": "Bool",
+          "address": "%I0.0",
+          "commentStatus": "present",
+          "comment": "Forward start command",
+          "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/tags\/tag-table-18d5e937f4a8ff63.json#\/tags\/4"
+        },
+        {
+          "name": "StartReverse",
+          "dataType": "Bool",
+          "address": "%I0.1",
+          "commentStatus": "present",
+          "comment": "Reverse start command",
+          "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/tags\/tag-table-18d5e937f4a8ff63.json#\/tags\/5"
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "name": "Main",
+      "kind": "OB",
+      "number": 1,
+      "language": "LAD",
+      "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/block.json#",
+      "xmlSourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#\/Document\/SW.Blocks.OB",
+      "networkInventory": {
+        "area": "networks",
+        "status": "extracted",
+        "reason": "Direct compile units in canonical XML order; no logic inference."
+      },
+      "networks": [
+        {
+          "ordinal": 1,
+          "language": "LAD",
+          "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[1]",
+          "titles": [
+            {
+              "culture": "zh-CN",
+              "text": "Forward interlock",
+              "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#(\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[1]\/ObjectList\/MultilingualText[@CompositionName='Title']\/ObjectList\/MultilingualTextItem)[1]"
+            }
+          ],
+          "comments": [
+            {
+              "culture": "zh-CN",
+              "text": "正转支路，反转输出作为常闭互锁。",
+              "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#(\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[1]\/ObjectList\/MultilingualText[@CompositionName='Comment']\/ObjectList\/MultilingualTextItem)[1]"
+            }
+          ],
+          "logic": {
+            "area": "logic",
+            "status": "supported",
+            "reason": "Complete bounded contact\/coil topology; derived assignments apply at this network's execution."
+          },
+          "id": "OB1\/network-1",
+          "graph": {
+            "schemaVersion": "lad-evidence-v1",
+            "status": "complete",
+            "nodes": [
+              {
+                "id": "n-002ae3f19538d923-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "ForwardOut",
+                "negated": false,
+                "sourceUid": "23",
+                "sourceSelector": ".\/\/*[@UId='23']"
+              },
+              {
+                "id": "n-4cec10444c33c577-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "ReverseOut",
+                "negated": false,
+                "sourceUid": "22",
+                "sourceSelector": ".\/\/*[@UId='22']"
+              },
+              {
+                "id": "n-4d5021972631b14f-1",
+                "kind": "instruction",
+                "instruction": "Coil",
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": "26",
+                "sourceSelector": ".\/\/*[@UId='26']"
+              },
+              {
+                "id": "n-69e4ee8e9a6184cb-1",
+                "kind": "instruction",
+                "instruction": "Contact",
+                "scope": null,
+                "symbol": null,
+                "negated": true,
+                "sourceUid": "25",
+                "sourceSelector": ".\/\/*[@UId='25']"
+              },
+              {
+                "id": "n-8d6c9e32fe82760a-1",
+                "kind": "powerrail",
+                "instruction": null,
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": null,
+                "sourceSelector": ".\/\/*[local-name()='Powerrail']"
+              },
+              {
+                "id": "n-8d8e8cdadee6be18-1",
+                "kind": "instruction",
+                "instruction": "Contact",
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": "24",
+                "sourceSelector": ".\/\/*[@UId='24']"
+              },
+              {
+                "id": "n-b8e9d420d3bb0e3d-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "StartForward",
+                "negated": false,
+                "sourceUid": "21",
+                "sourceSelector": ".\/\/*[@UId='21']"
+              }
+            ],
+            "wires": [
+              {
+                "id": "w-0a33f7be410edc48-1",
+                "endpoints": [
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-4cec10444c33c577-1",
+                    "port": null
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-69e4ee8e9a6184cb-1",
+                    "port": "operand"
+                  }
+                ],
+                "sourceUid": "30",
+                "sourceSelector": ".\/\/*[@UId='30']"
+              },
+              {
+                "id": "w-305daaf7fe617df5-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-69e4ee8e9a6184cb-1",
+                    "port": "in"
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-8d8e8cdadee6be18-1",
+                    "port": "out"
+                  }
+                ],
+                "sourceUid": "29",
+                "sourceSelector": ".\/\/*[@UId='29']"
+              },
+              {
+                "id": "w-6608b384994732bf-1",
+                "endpoints": [
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-002ae3f19538d923-1",
+                    "port": null
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-4d5021972631b14f-1",
+                    "port": "operand"
+                  }
+                ],
+                "sourceUid": "32",
+                "sourceSelector": ".\/\/*[@UId='32']"
+              },
+              {
+                "id": "w-ce19b656c09fb53b-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-8d8e8cdadee6be18-1",
+                    "port": "operand"
+                  },
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-b8e9d420d3bb0e3d-1",
+                    "port": null
+                  }
+                ],
+                "sourceUid": "28",
+                "sourceSelector": ".\/\/*[@UId='28']"
+              },
+              {
+                "id": "w-e86f02fe1cf7a99a-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-4d5021972631b14f-1",
+                    "port": "in"
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-69e4ee8e9a6184cb-1",
+                    "port": "out"
+                  }
+                ],
+                "sourceUid": "31",
+                "sourceSelector": ".\/\/*[@UId='31']"
+              },
+              {
+                "id": "w-efd777de1e2c1313-1",
+                "endpoints": [
+                  {
+                    "kind": "Powerrail",
+                    "nodeId": "n-8d6c9e32fe82760a-1",
+                    "port": null
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-8d8e8cdadee6be18-1",
+                    "port": "in"
+                  }
+                ],
+                "sourceUid": "27",
+                "sourceSelector": ".\/\/*[@UId='27']"
+              }
+            ],
+            "diagnostics": [
+
+            ]
+          },
+          "analysis": {
+            "status": "supported",
+            "evaluation": "assignment-at-network-execution; networks execute in ordinal order; not simultaneous equations or a safety proof",
+            "reads": [
+              {
+                "nodeId": "n-69e4ee8e9a6184cb-1",
+                "accessId": "n-4cec10444c33c577-1",
+                "operandWireId": "w-0a33f7be410edc48-1",
+                "symbol": "ReverseOut",
+                "address": "%Q0.1",
+                "negated": true
+              },
+              {
+                "nodeId": "n-8d8e8cdadee6be18-1",
+                "accessId": "n-b8e9d420d3bb0e3d-1",
+                "operandWireId": "w-ce19b656c09fb53b-1",
+                "symbol": "StartForward",
+                "address": "%I0.0",
+                "negated": false
+              }
+            ],
+            "writes": [
+              {
+                "target": {
+                  "nodeId": "n-4d5021972631b14f-1",
+                  "accessId": "n-002ae3f19538d923-1",
+                  "operandWireId": "w-6608b384994732bf-1",
+                  "symbol": "ForwardOut",
+                  "address": "%Q0.0",
+                  "negated": false
+                },
+                "expression": {
+                  "op": "and",
+                  "symbol": null,
+                  "args": [
+                    {
+                      "op": "read",
+                      "symbol": "StartForward",
+                      "args": [
+
+                      ]
+                    },
+                    {
+                      "op": "not",
+                      "symbol": null,
+                      "args": [
+                        {
+                          "op": "read",
+                          "symbol": "ReverseOut",
+                          "args": [
+
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "path": [
+                  "n-8d6c9e32fe82760a-1",
+                  "n-8d8e8cdadee6be18-1",
+                  "n-69e4ee8e9a6184cb-1",
+                  "n-4d5021972631b14f-1"
+                ]
+              }
+            ],
+            "flows": [
+              {
+                "from": "n-69e4ee8e9a6184cb-1",
+                "fromPort": "out",
+                "to": "n-4d5021972631b14f-1",
+                "toPort": "in",
+                "wireId": "w-e86f02fe1cf7a99a-1"
+              },
+              {
+                "from": "n-8d6c9e32fe82760a-1",
+                "fromPort": "power",
+                "to": "n-8d8e8cdadee6be18-1",
+                "toPort": "in",
+                "wireId": "w-efd777de1e2c1313-1"
+              },
+              {
+                "from": "n-8d8e8cdadee6be18-1",
+                "fromPort": "out",
+                "to": "n-69e4ee8e9a6184cb-1",
+                "toPort": "in",
+                "wireId": "w-305daaf7fe617df5-1"
+              }
+            ],
+            "diagnostics": [
+
+            ]
+          }
+        },
+        {
+          "ordinal": 2,
+          "language": "LAD",
+          "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[2]",
+          "titles": [
+            {
+              "culture": "zh-CN",
+              "text": "Reverse interlock",
+              "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#(\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[2]\/ObjectList\/MultilingualText[@CompositionName='Title']\/ObjectList\/MultilingualTextItem)[1]"
+            }
+          ],
+          "comments": [
+            {
+              "culture": "zh-CN",
+              "text": "反转支路，正转输出作为常闭互锁。",
+              "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#(\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[2]\/ObjectList\/MultilingualText[@CompositionName='Comment']\/ObjectList\/MultilingualTextItem)[1]"
+            }
+          ],
+          "logic": {
+            "area": "logic",
+            "status": "supported",
+            "reason": "Complete bounded contact\/coil topology; derived assignments apply at this network's execution."
+          },
+          "id": "OB1\/network-2",
+          "graph": {
+            "schemaVersion": "lad-evidence-v1",
+            "status": "complete",
+            "nodes": [
+              {
+                "id": "n-29f71e922c1fb195-1",
+                "kind": "instruction",
+                "instruction": "Contact",
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": "24",
+                "sourceSelector": ".\/\/*[@UId='24']"
+              },
+              {
+                "id": "n-630210e672486532-1",
+                "kind": "instruction",
+                "instruction": "Coil",
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": "26",
+                "sourceSelector": ".\/\/*[@UId='26']"
+              },
+              {
+                "id": "n-69e5b8e663be3faa-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "ForwardOut",
+                "negated": false,
+                "sourceUid": "22",
+                "sourceSelector": ".\/\/*[@UId='22']"
+              },
+              {
+                "id": "n-78d8ae5f20f8aef3-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "ReverseOut",
+                "negated": false,
+                "sourceUid": "23",
+                "sourceSelector": ".\/\/*[@UId='23']"
+              },
+              {
+                "id": "n-8a0864eece5b188e-1",
+                "kind": "instruction",
+                "instruction": "Contact",
+                "scope": null,
+                "symbol": null,
+                "negated": true,
+                "sourceUid": "25",
+                "sourceSelector": ".\/\/*[@UId='25']"
+              },
+              {
+                "id": "n-8f7dc14097d9b37d-1",
+                "kind": "powerrail",
+                "instruction": null,
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": null,
+                "sourceSelector": ".\/\/*[local-name()='Powerrail']"
+              },
+              {
+                "id": "n-c30997444b2110d1-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "StartReverse",
+                "negated": false,
+                "sourceUid": "21",
+                "sourceSelector": ".\/\/*[@UId='21']"
+              }
+            ],
+            "wires": [
+              {
+                "id": "w-4ba38c9d5abb311b-1",
+                "endpoints": [
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-69e5b8e663be3faa-1",
+                    "port": null
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-8a0864eece5b188e-1",
+                    "port": "operand"
+                  }
+                ],
+                "sourceUid": "30",
+                "sourceSelector": ".\/\/*[@UId='30']"
+              },
+              {
+                "id": "w-57260e814d8cbdda-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-630210e672486532-1",
+                    "port": "operand"
+                  },
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-78d8ae5f20f8aef3-1",
+                    "port": null
+                  }
+                ],
+                "sourceUid": "32",
+                "sourceSelector": ".\/\/*[@UId='32']"
+              },
+              {
+                "id": "w-5878529c02900bad-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-630210e672486532-1",
+                    "port": "in"
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-8a0864eece5b188e-1",
+                    "port": "out"
+                  }
+                ],
+                "sourceUid": "31",
+                "sourceSelector": ".\/\/*[@UId='31']"
+              },
+              {
+                "id": "w-8523931df51863cb-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-29f71e922c1fb195-1",
+                    "port": "in"
+                  },
+                  {
+                    "kind": "Powerrail",
+                    "nodeId": "n-8f7dc14097d9b37d-1",
+                    "port": null
+                  }
+                ],
+                "sourceUid": "27",
+                "sourceSelector": ".\/\/*[@UId='27']"
+              },
+              {
+                "id": "w-df3dc06a39242d3c-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-29f71e922c1fb195-1",
+                    "port": "out"
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-8a0864eece5b188e-1",
+                    "port": "in"
+                  }
+                ],
+                "sourceUid": "29",
+                "sourceSelector": ".\/\/*[@UId='29']"
+              },
+              {
+                "id": "w-fb7cc076fd53e7d3-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-29f71e922c1fb195-1",
+                    "port": "operand"
+                  },
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-c30997444b2110d1-1",
+                    "port": null
+                  }
+                ],
+                "sourceUid": "28",
+                "sourceSelector": ".\/\/*[@UId='28']"
+              }
+            ],
+            "diagnostics": [
+
+            ]
+          },
+          "analysis": {
+            "status": "supported",
+            "evaluation": "assignment-at-network-execution; networks execute in ordinal order; not simultaneous equations or a safety proof",
+            "reads": [
+              {
+                "nodeId": "n-8a0864eece5b188e-1",
+                "accessId": "n-69e5b8e663be3faa-1",
+                "operandWireId": "w-4ba38c9d5abb311b-1",
+                "symbol": "ForwardOut",
+                "address": "%Q0.0",
+                "negated": true
+              },
+              {
+                "nodeId": "n-29f71e922c1fb195-1",
+                "accessId": "n-c30997444b2110d1-1",
+                "operandWireId": "w-fb7cc076fd53e7d3-1",
+                "symbol": "StartReverse",
+                "address": "%I0.1",
+                "negated": false
+              }
+            ],
+            "writes": [
+              {
+                "target": {
+                  "nodeId": "n-630210e672486532-1",
+                  "accessId": "n-78d8ae5f20f8aef3-1",
+                  "operandWireId": "w-57260e814d8cbdda-1",
+                  "symbol": "ReverseOut",
+                  "address": "%Q0.1",
+                  "negated": false
+                },
+                "expression": {
+                  "op": "and",
+                  "symbol": null,
+                  "args": [
+                    {
+                      "op": "read",
+                      "symbol": "StartReverse",
+                      "args": [
+
+                      ]
+                    },
+                    {
+                      "op": "not",
+                      "symbol": null,
+                      "args": [
+                        {
+                          "op": "read",
+                          "symbol": "ForwardOut",
+                          "args": [
+
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "path": [
+                  "n-8f7dc14097d9b37d-1",
+                  "n-29f71e922c1fb195-1",
+                  "n-8a0864eece5b188e-1",
+                  "n-630210e672486532-1"
+                ]
+              }
+            ],
+            "flows": [
+              {
+                "from": "n-29f71e922c1fb195-1",
+                "fromPort": "out",
+                "to": "n-8a0864eece5b188e-1",
+                "toPort": "in",
+                "wireId": "w-df3dc06a39242d3c-1"
+              },
+              {
+                "from": "n-8a0864eece5b188e-1",
+                "fromPort": "out",
+                "to": "n-630210e672486532-1",
+                "toPort": "in",
+                "wireId": "w-5878529c02900bad-1"
+              },
+              {
+                "from": "n-8f7dc14097d9b37d-1",
+                "fromPort": "power",
+                "to": "n-29f71e922c1fb195-1",
+                "toPort": "in",
+                "wireId": "w-8523931df51863cb-1"
+              }
+            ],
+            "diagnostics": [
+
+            ]
+          }
+        },
+        {
+          "ordinal": 3,
+          "language": "LAD",
+          "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[3]",
+          "titles": [
+            {
+              "culture": "zh-CN",
+              "text": "Parallel branches",
+              "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#(\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[3]\/ObjectList\/MultilingualText[@CompositionName='Title']\/ObjectList\/MultilingualTextItem)[1]"
+            }
+          ],
+          "comments": [
+            {
+              "culture": "zh-CN",
+              "text": "同一电源母线上的两个并行支路，用于验证分支图。",
+              "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#(\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[3]\/ObjectList\/MultilingualText[@CompositionName='Comment']\/ObjectList\/MultilingualTextItem)[1]"
+            }
+          ],
+          "logic": {
+            "area": "logic",
+            "status": "supported",
+            "reason": "Complete bounded contact\/coil topology; derived assignments apply at this network's execution."
+          },
+          "id": "OB1\/network-3",
+          "graph": {
+            "schemaVersion": "lad-evidence-v1",
+            "status": "complete",
+            "nodes": [
+              {
+                "id": "n-05bee837407c2e99-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "BranchA",
+                "negated": false,
+                "sourceUid": "23",
+                "sourceSelector": ".\/\/*[@UId='23']"
+              },
+              {
+                "id": "n-0ab0b2b8c0dcdb28-1",
+                "kind": "powerrail",
+                "instruction": null,
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": null,
+                "sourceSelector": ".\/\/*[local-name()='Powerrail']"
+              },
+              {
+                "id": "n-1b15be4ad3b0a87e-1",
+                "kind": "instruction",
+                "instruction": "Coil",
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": "26",
+                "sourceSelector": ".\/\/*[@UId='26']"
+              },
+              {
+                "id": "n-3dfaac62c1b32751-1",
+                "kind": "instruction",
+                "instruction": "Contact",
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": "27",
+                "sourceSelector": ".\/\/*[@UId='27']"
+              },
+              {
+                "id": "n-5190b2bbf4669597-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "BranchB",
+                "negated": false,
+                "sourceUid": "24",
+                "sourceSelector": ".\/\/*[@UId='24']"
+              },
+              {
+                "id": "n-5f0075498d4de94c-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "StartReverse",
+                "negated": false,
+                "sourceUid": "22",
+                "sourceSelector": ".\/\/*[@UId='22']"
+              },
+              {
+                "id": "n-b5d10490e3520fdd-1",
+                "kind": "instruction",
+                "instruction": "Contact",
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": "25",
+                "sourceSelector": ".\/\/*[@UId='25']"
+              },
+              {
+                "id": "n-e0a09008b588fffe-1",
+                "kind": "access",
+                "instruction": null,
+                "scope": "GlobalVariable",
+                "symbol": "StartForward",
+                "negated": false,
+                "sourceUid": "21",
+                "sourceSelector": ".\/\/*[@UId='21']"
+              },
+              {
+                "id": "n-f955731b3adc7a03-1",
+                "kind": "instruction",
+                "instruction": "Coil",
+                "scope": null,
+                "symbol": null,
+                "negated": false,
+                "sourceUid": "28",
+                "sourceSelector": ".\/\/*[@UId='28']"
+              }
+            ],
+            "wires": [
+              {
+                "id": "w-1366e8e64b08d186-1",
+                "endpoints": [
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-05bee837407c2e99-1",
+                    "port": null
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-1b15be4ad3b0a87e-1",
+                    "port": "operand"
+                  }
+                ],
+                "sourceUid": "33",
+                "sourceSelector": ".\/\/*[@UId='33']"
+              },
+              {
+                "id": "w-1cd0a22b3c02ec65-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-b5d10490e3520fdd-1",
+                    "port": "operand"
+                  },
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-e0a09008b588fffe-1",
+                    "port": null
+                  }
+                ],
+                "sourceUid": "30",
+                "sourceSelector": ".\/\/*[@UId='30']"
+              },
+              {
+                "id": "w-3938de5b35a55b7f-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-3dfaac62c1b32751-1",
+                    "port": "out"
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-f955731b3adc7a03-1",
+                    "port": "in"
+                  }
+                ],
+                "sourceUid": "34",
+                "sourceSelector": ".\/\/*[@UId='34']"
+              },
+              {
+                "id": "w-39b12c1073c707f9-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-3dfaac62c1b32751-1",
+                    "port": "operand"
+                  },
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-5f0075498d4de94c-1",
+                    "port": null
+                  }
+                ],
+                "sourceUid": "31",
+                "sourceSelector": ".\/\/*[@UId='31']"
+              },
+              {
+                "id": "w-90851cf395fa232b-1",
+                "endpoints": [
+                  {
+                    "kind": "Powerrail",
+                    "nodeId": "n-0ab0b2b8c0dcdb28-1",
+                    "port": null
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-3dfaac62c1b32751-1",
+                    "port": "in"
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-b5d10490e3520fdd-1",
+                    "port": "in"
+                  }
+                ],
+                "sourceUid": "29",
+                "sourceSelector": ".\/\/*[@UId='29']"
+              },
+              {
+                "id": "w-9b88a6804a8f26f0-1",
+                "endpoints": [
+                  {
+                    "kind": "IdentCon",
+                    "nodeId": "n-5190b2bbf4669597-1",
+                    "port": null
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-f955731b3adc7a03-1",
+                    "port": "operand"
+                  }
+                ],
+                "sourceUid": "35",
+                "sourceSelector": ".\/\/*[@UId='35']"
+              },
+              {
+                "id": "w-fc6b1624b7d81794-1",
+                "endpoints": [
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-1b15be4ad3b0a87e-1",
+                    "port": "in"
+                  },
+                  {
+                    "kind": "NameCon",
+                    "nodeId": "n-b5d10490e3520fdd-1",
+                    "port": "out"
+                  }
+                ],
+                "sourceUid": "32",
+                "sourceSelector": ".\/\/*[@UId='32']"
+              }
+            ],
+            "diagnostics": [
+
+            ]
+          },
+          "analysis": {
+            "status": "supported",
+            "evaluation": "assignment-at-network-execution; networks execute in ordinal order; not simultaneous equations or a safety proof",
+            "reads": [
+              {
+                "nodeId": "n-b5d10490e3520fdd-1",
+                "accessId": "n-e0a09008b588fffe-1",
+                "operandWireId": "w-1cd0a22b3c02ec65-1",
+                "symbol": "StartForward",
+                "address": "%I0.0",
+                "negated": false
+              },
+              {
+                "nodeId": "n-3dfaac62c1b32751-1",
+                "accessId": "n-5f0075498d4de94c-1",
+                "operandWireId": "w-39b12c1073c707f9-1",
+                "symbol": "StartReverse",
+                "address": "%I0.1",
+                "negated": false
+              }
+            ],
+            "writes": [
+              {
+                "target": {
+                  "nodeId": "n-1b15be4ad3b0a87e-1",
+                  "accessId": "n-05bee837407c2e99-1",
+                  "operandWireId": "w-1366e8e64b08d186-1",
+                  "symbol": "BranchA",
+                  "address": "%M0.0",
+                  "negated": false
+                },
+                "expression": {
+                  "op": "read",
+                  "symbol": "StartForward",
+                  "args": [
+
+                  ]
+                },
+                "path": [
+                  "n-0ab0b2b8c0dcdb28-1",
+                  "n-b5d10490e3520fdd-1",
+                  "n-1b15be4ad3b0a87e-1"
+                ]
+              },
+              {
+                "target": {
+                  "nodeId": "n-f955731b3adc7a03-1",
+                  "accessId": "n-5190b2bbf4669597-1",
+                  "operandWireId": "w-9b88a6804a8f26f0-1",
+                  "symbol": "BranchB",
+                  "address": "%M0.1",
+                  "negated": false
+                },
+                "expression": {
+                  "op": "read",
+                  "symbol": "StartReverse",
+                  "args": [
+
+                  ]
+                },
+                "path": [
+                  "n-0ab0b2b8c0dcdb28-1",
+                  "n-3dfaac62c1b32751-1",
+                  "n-f955731b3adc7a03-1"
+                ]
+              }
+            ],
+            "flows": [
+              {
+                "from": "n-0ab0b2b8c0dcdb28-1",
+                "fromPort": "power",
+                "to": "n-3dfaac62c1b32751-1",
+                "toPort": "in",
+                "wireId": "w-90851cf395fa232b-1"
+              },
+              {
+                "from": "n-0ab0b2b8c0dcdb28-1",
+                "fromPort": "power",
+                "to": "n-b5d10490e3520fdd-1",
+                "toPort": "in",
+                "wireId": "w-90851cf395fa232b-1"
+              },
+              {
+                "from": "n-3dfaac62c1b32751-1",
+                "fromPort": "out",
+                "to": "n-f955731b3adc7a03-1",
+                "toPort": "in",
+                "wireId": "w-3938de5b35a55b7f-1"
+              },
+              {
+                "from": "n-b5d10490e3520fdd-1",
+                "fromPort": "out",
+                "to": "n-1b15be4ad3b0a87e-1",
+                "toPort": "in",
+                "wireId": "w-fc6b1624b7d81794-1"
+              }
+            ],
+            "diagnostics": [
+
+            ]
+          }
+        }
+      ],
+      "relationships": {
+        "status": "complete",
+        "interlocks": [
+          {
+            "kind": "mutual-output-inhibit",
+            "members": [
+              "ForwardOut",
+              "ReverseOut"
+            ],
+            "evidence": [
+              {
+                "networkId": "OB1\/network-1",
+                "writeNodeId": "n-4d5021972631b14f-1",
+                "readNodeId": "n-69e4ee8e9a6184cb-1",
+                "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[1]"
+              },
+              {
+                "networkId": "OB1\/network-2",
+                "writeNodeId": "n-630210e672486532-1",
+                "readNodeId": "n-8a0864eece5b188e-1",
+                "sourceRef": "tia\/plc\/plc-0ca0fe5aac0de83a\/blocks\/block-be27f072979d6b0c\/source.xml#\/Document\/SW.Blocks.OB\/ObjectList\/SW.Blocks.CompileUnit[2]"
+              }
+            ],
+            "meaning": "reciprocal mandatory negated reads in unique output assignments; sequential scan, no runtime\/safety guarantee"
+          }
+        ],
+        "diagnostics": [
+
+        ]
+      }
+    }
+  ],
+  "coverage": [
+    {
+      "area": "block-interface",
+      "status": "not-extracted",
+      "reason": "Interface declarations remain in canonical SimaticML; they are not tag-table declarations."
+    },
+    {
+      "area": "comment-language",
+      "status": "not-extracted",
+      "reason": "Tag comments preserve one canonical text and status; their language identity is not captured."
+    },
+    {
+      "area": "hardware-configuration",
+      "status": "not-extracted",
+      "reason": "CPU identity only; IP addresses, parameters and integrated topology are not represented by these descriptors."
+    },
+    {
+      "area": "inventory",
+      "status": "extracted",
+      "reason": "Validated bounded station, PLC, block and root tag declarations. Empty tag lists describe declarations only, not program accesses."
+    },
+    {
+      "area": "lad-semantics",
+      "status": "partial",
+      "reason": "V21 FlgNet\/v5 global Bool contacts, ordinary coils, serial paths and independent parallel branches only. Per-network analysis is all-or-nothing; joins, stateful instructions and unknown shapes have no expression."
+    },
+    {
+      "area": "other-profiles",
+      "status": "unsupported",
+      "reason": "S7-1500, HMI, Safety, drives, multiple PLCs and online operations are outside this profile; this is not an absence claim."
+    },
+    {
+      "area": "runtime-behavior",
+      "status": "unknown",
+      "reason": "Source inspection is not runtime or control-logic correctness evidence. Project names and comments are not behavior evidence."
+    }
+  ]
+}

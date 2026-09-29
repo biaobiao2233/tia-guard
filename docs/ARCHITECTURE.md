@@ -19,7 +19,7 @@ The engineering representation and the AI-readable representation have different
 
 `tia-source/` is authoritative for the bounded round-trip. It is validated, used by Build and compared by Verify. It must preserve engineering detail even when that detail is verbose or inconvenient to read.
 
-A future `ai/` sibling is a deterministic derived view for coding agents and humans. It may reorganize canonical facts into concise Markdown and a stable machine-readable project graph, but it is not allowed to become an implicit second source of truth.
+The `ai/` sibling is a deterministic derived view for coding agents and humans. `AiEngineeringRenderer` first calls the unchanged `RoundTripBuildInput.LoadSource`, then projects typed facts and ordered network observations into versioned JSON and Markdown. Its XML read is rechecked against the validated descriptor's SHA-256. V21 FlgNet/v5 evidence graphs are separated from all-or-nothing contact/coil analysis and guarded cross-network relationships; see [LAD-GRAPH](LAD-GRAPH.md). `AiEngineeringPublisher` updates only a selected source's sibling output through a private stage/backup transaction. It never writes canonical source, starts TIA or calls an AI service.
 
 ```text
 validated .ap21 / Openness
@@ -43,7 +43,7 @@ Initial AI-view invariants:
 - Build and Verify continue to ignore `ai/`;
 - any future AI editing path must emit a structured patch accepted by deterministic validation before canonical data can change, then pass Build → Compile → Verify.
 
-The candidate shape and acceptance questions are documented in [AI-READABILITY.md](AI-READABILITY.md).
+The chosen representation, rejected alternatives and acceptance questions are documented in [AI-READABILITY.md](AI-READABILITY.md). Generation is a separate `ai-view` CLI operation. GUI publish transactions and Git staging remain unchanged; views must be explicitly regenerated after canonical changes.
 
 ## Responsibilities
 
@@ -63,7 +63,7 @@ The SimaticML normalizer changes only the validated root `DocumentInfo/Created` 
 
 This does not cover hardware IP/parameter configuration, built-in system alarm text, language identity of a single comment, runtime behavior, binary project equality, HMI, Safety, drives, multiple PLCs or arbitrary Openness content. User folders and the named unsupported collections above block readiness. Future object classes require explicit discovery and evidence before any support claim.
 
-The historical real acceptance is one self-authored CPU/profile with Chinese-locale integrated item names and an empty tag table. Populated primitive tags have synthetic contract coverage. The topology check is intentionally specific; different firmware, locale or devices require a new evidence gate.
+The historical real acceptance is one self-authored CPU/profile with Chinese-locale integrated item names and an empty tag table. The later local LAD candidate adds real six-Bool-tag and three-network Build/Compile/Verify evidence on that same CPU, separately recorded in [verification/lad-graph](verification/lad-graph.md). The topology check is intentionally specific; different firmware, locale or devices require a new evidence gate.
 
 A fresh V21 CPU automatically contains one empty `Force table`. Only this observed name with zero entries is an implicit default; additional/renamed force tables or any force entries are rejected. No force operation is ever executed.
 
@@ -83,4 +83,4 @@ Pure test success does not establish runtime compatibility. A historic accepted 
 
 ## Supporting work
 
-Doctor/rules, Finding-based Markdown/JSON/SARIF and optional advisory AI exist as separate proposals or supporting surfaces. The new AI-readable engineering-view direction is distinct from advisory AI: it is intended to be a deterministic renderer of already-validated engineering facts, not a model-generated review verdict. Its first implementation still needs a bounded AI IR, deterministic renderer and tests. GitHub SARIF upload/display behavior and AI privacy/value gates are not fulfilled by core source comparison.
+Doctor/rules, Finding-based Markdown/JSON/SARIF and optional advisory AI exist as separate proposals or supporting surfaces. The AI-readable engineering view is distinct from advisory AI: its facts are deterministically rendered from validated engineering source, not a model-generated review verdict. GitHub SARIF upload/display behavior and AI privacy/value gates are not fulfilled by core source comparison.

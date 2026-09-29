@@ -16,7 +16,7 @@ Prove one reproducible loop on **TIA Portal V21**:
 
 The bounded export, fresh-project build, and semantic Verify slices are accepted for the self-authored V21 demo. The contracts remain versioned draft v1 formats; arbitrary TIA projects and runtime behavior are outside this proof.
 
-That historical acceptance covers CPU `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`, its observed Chinese-locale integrated item tree, and an empty tag table. The current validator explicitly limits the CPU profile; populated primitive tags have deterministic contract tests, not the same real-project acceptance evidence. See [architecture and coverage](docs/ARCHITECTURE.md).
+That historical acceptance covers CPU `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`, its observed Chinese-locale integrated item tree, and an empty tag table. The current validator explicitly limits the CPU profile. A later local candidate additionally validates six Bool tags and three nonempty LAD networks on the same CPU; see the [LAD verification receipt](docs/verification/lad-graph.md). This is local candidate evidence, not a release or expanded profile acceptance. See [architecture and coverage](docs/ARCHITECTURE.md).
 
 ## Product direction: AI-readable engineering source
 
@@ -32,7 +32,16 @@ tia-source/          authoritative build + Verify source
 ai/                  derived AI/human-readable view
 ```
 
-The intended `ai/` layer may contain a concise project overview, structured project graph, hardware/symbol views and program/block views. It is replaceable output, not build input: editing generated Markdown must never silently change the PLC project. Future AI-assisted edits should go through a structured, validated patch path followed by Build → Compile → Verify.
+The `ai/` layer contains a concise project/hardware overview, versioned JSON engineering inventory, symbols and ordered network observations. It is replaceable output, not build input: editing generated Markdown cannot change the PLC project. The v2 renderer adds a bounded [LAD evidence graph](docs/LAD-GRAPH.md), proven contact/coil conditions and reciprocal output-inhibit relationships. Unknown instructions and ambiguous topology emit no complete expression. Future AI-assisted edits should go through a structured, validated patch path followed by Build → Compile → Verify.
+
+Generate a selected project's view without starting TIA Portal or calling an AI API:
+
+```powershell
+tia-guard ai-view C:\repo\tia-projects\motor-reversing\tia-source
+# Legacy layout also works: tia-guard ai-view C:\repo\tia-source
+```
+
+The command validates the canonical tree and replaces only its sibling `ai/`. It is an explicit local CLI operation; the GUI Git publish flow does not yet generate or stage AI views. Rerun it after updating canonical source. Existing generated files may be repaired, but unknown files or redirected directories are preserved by refusing replacement. See the [design and coverage contract](docs/AI-READABILITY.md).
 
 See [AI-readable engineering view](docs/AI-READABILITY.md) for the design constraints and next implementation question.
 

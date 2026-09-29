@@ -1,0 +1,329 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V21" />
+  <DocumentInfo>
+    <Created>1970-01-01T00:00:00Z</Created>
+    <ExportSetting>WithDefaults</ExportSetting>
+    <InstalledProducts>
+      <Product>
+        <DisplayName>Totally Integrated Automation Portal</DisplayName>
+        <DisplayVersion>V21</DisplayVersion>
+      </Product>
+      <Product>
+        <DisplayName>STEP 7 Professional</DisplayName>
+        <DisplayVersion>V21</DisplayVersion>
+      </Product>
+      <OptionPackage>
+        <DisplayName>STEP 7 Safety</DisplayName>
+        <DisplayVersion>V21</DisplayVersion>
+      </OptionPackage>
+      <OptionPackage>
+        <DisplayName>Tech WebApplication</DisplayName>
+        <DisplayVersion>V21</DisplayVersion>
+      </OptionPackage>
+      <Product>
+        <DisplayName>WinCC Basic/Comfort/Advanced</DisplayName>
+        <DisplayVersion>V21</DisplayVersion>
+      </Product>
+      <Product>
+        <DisplayName>WinCC Unified</DisplayName>
+        <DisplayVersion>V21</DisplayVersion>
+      </Product>
+    </InstalledProducts>
+  </DocumentInfo>
+  <SW.Blocks.OB ID="0">
+    <AttributeList>
+      <AutoNumber>true</AutoNumber>
+      <HeaderAuthor />
+      <HeaderFamily />
+      <HeaderName />
+      <HeaderVersion>0.1</HeaderVersion>
+      <Interface>
+        <Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+          <Section Name="Input">
+            <Member Name="Initial_Call" Datatype="Bool" Accessibility="Public" Informative="true" />
+            <Member Name="Remanence" Datatype="Bool" Accessibility="Public" Informative="true" />
+          </Section>
+          <Section Name="Temp" />
+          <Section Name="Constant" />
+        </Sections>
+      </Interface>
+      <IsIECCheckEnabled>false</IsIECCheckEnabled>
+      <MemoryLayout>Optimized</MemoryLayout>
+      <Name>Main</Name>
+      <Namespace />
+      <Number>1</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+      <SecondaryType>ProgramCycle</SecondaryType>
+      <SetENOAutomatically>false</SetENOAutomatically>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>zh-CN</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.CompileUnit ID="3" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource>
+            <FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+              <Parts>
+                <Access Scope="GlobalVariable" UId="21">
+                  <Symbol>
+                    <Component Name="StartForward" />
+                  </Symbol>
+                </Access>
+                <Access Scope="GlobalVariable" UId="22">
+                  <Symbol>
+                    <Component Name="ReverseOut" />
+                  </Symbol>
+                </Access>
+                <Access Scope="GlobalVariable" UId="23">
+                  <Symbol>
+                    <Component Name="ForwardOut" />
+                  </Symbol>
+                </Access>
+                <Part Name="Contact" UId="24" />
+                <Part Name="Contact" UId="25">
+                  <Negated Name="operand" />
+                </Part>
+                <Part Name="Coil" UId="26" />
+              </Parts>
+              <Wires>
+                <Wire UId="27">
+                  <Powerrail />
+                  <NameCon UId="24" Name="in" />
+                </Wire>
+                <Wire UId="28">
+                  <IdentCon UId="21" />
+                  <NameCon UId="24" Name="operand" />
+                </Wire>
+                <Wire UId="29">
+                  <NameCon UId="24" Name="out" />
+                  <NameCon UId="25" Name="in" />
+                </Wire>
+                <Wire UId="30">
+                  <IdentCon UId="22" />
+                  <NameCon UId="25" Name="operand" />
+                </Wire>
+                <Wire UId="31">
+                  <NameCon UId="25" Name="out" />
+                  <NameCon UId="26" Name="in" />
+                </Wire>
+                <Wire UId="32">
+                  <IdentCon UId="23" />
+                  <NameCon UId="26" Name="operand" />
+                </Wire>
+              </Wires>
+            </FlgNet>
+          </NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="4" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="5" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text>正转支路，反转输出作为常闭互锁。</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="6" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="7" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text>Forward interlock</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <SW.Blocks.CompileUnit ID="8" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource>
+            <FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+              <Parts>
+                <Access Scope="GlobalVariable" UId="21">
+                  <Symbol>
+                    <Component Name="StartReverse" />
+                  </Symbol>
+                </Access>
+                <Access Scope="GlobalVariable" UId="22">
+                  <Symbol>
+                    <Component Name="ForwardOut" />
+                  </Symbol>
+                </Access>
+                <Access Scope="GlobalVariable" UId="23">
+                  <Symbol>
+                    <Component Name="ReverseOut" />
+                  </Symbol>
+                </Access>
+                <Part Name="Contact" UId="24" />
+                <Part Name="Contact" UId="25">
+                  <Negated Name="operand" />
+                </Part>
+                <Part Name="Coil" UId="26" />
+              </Parts>
+              <Wires>
+                <Wire UId="27">
+                  <Powerrail />
+                  <NameCon UId="24" Name="in" />
+                </Wire>
+                <Wire UId="28">
+                  <IdentCon UId="21" />
+                  <NameCon UId="24" Name="operand" />
+                </Wire>
+                <Wire UId="29">
+                  <NameCon UId="24" Name="out" />
+                  <NameCon UId="25" Name="in" />
+                </Wire>
+                <Wire UId="30">
+                  <IdentCon UId="22" />
+                  <NameCon UId="25" Name="operand" />
+                </Wire>
+                <Wire UId="31">
+                  <NameCon UId="25" Name="out" />
+                  <NameCon UId="26" Name="in" />
+                </Wire>
+                <Wire UId="32">
+                  <IdentCon UId="23" />
+                  <NameCon UId="26" Name="operand" />
+                </Wire>
+              </Wires>
+            </FlgNet>
+          </NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="9" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="A" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text>反转支路，正转输出作为常闭互锁。</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="B" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="C" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text>Reverse interlock</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <SW.Blocks.CompileUnit ID="D" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource>
+            <FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+              <Parts>
+                <Access Scope="GlobalVariable" UId="21">
+                  <Symbol>
+                    <Component Name="StartForward" />
+                  </Symbol>
+                </Access>
+                <Access Scope="GlobalVariable" UId="22">
+                  <Symbol>
+                    <Component Name="StartReverse" />
+                  </Symbol>
+                </Access>
+                <Access Scope="GlobalVariable" UId="23">
+                  <Symbol>
+                    <Component Name="BranchA" />
+                  </Symbol>
+                </Access>
+                <Access Scope="GlobalVariable" UId="24">
+                  <Symbol>
+                    <Component Name="BranchB" />
+                  </Symbol>
+                </Access>
+                <Part Name="Contact" UId="25" />
+                <Part Name="Coil" UId="26" />
+                <Part Name="Contact" UId="27" />
+                <Part Name="Coil" UId="28" />
+              </Parts>
+              <Wires>
+                <Wire UId="29">
+                  <Powerrail />
+                  <NameCon UId="25" Name="in" />
+                  <NameCon UId="27" Name="in" />
+                </Wire>
+                <Wire UId="30">
+                  <IdentCon UId="21" />
+                  <NameCon UId="25" Name="operand" />
+                </Wire>
+                <Wire UId="31">
+                  <IdentCon UId="22" />
+                  <NameCon UId="27" Name="operand" />
+                </Wire>
+                <Wire UId="32">
+                  <NameCon UId="25" Name="out" />
+                  <NameCon UId="26" Name="in" />
+                </Wire>
+                <Wire UId="33">
+                  <IdentCon UId="23" />
+                  <NameCon UId="26" Name="operand" />
+                </Wire>
+                <Wire UId="34">
+                  <NameCon UId="27" Name="out" />
+                  <NameCon UId="28" Name="in" />
+                </Wire>
+                <Wire UId="35">
+                  <IdentCon UId="24" />
+                  <NameCon UId="28" Name="operand" />
+                </Wire>
+              </Wires>
+            </FlgNet>
+          </NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="E" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="F" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text>同一电源母线上的两个并行支路，用于验证分支图。</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="10" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="11" CompositionName="Items">
+                <AttributeList>
+                  <Culture>zh-CN</Culture>
+                  <Text>Parallel branches</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <MultilingualText ID="12" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="13" CompositionName="Items">
+            <AttributeList>
+              <Culture>zh-CN</Culture>
+              <Text>"Main Program Sweep (Cycle)"</Text>
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Blocks.OB>
+</Document>
