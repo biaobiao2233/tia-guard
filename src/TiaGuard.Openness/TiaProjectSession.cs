@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using Siemens.Engineering;
 using Siemens.Engineering.Compiler;
+using Siemens.Engineering.SW;
+using Siemens.Engineering.SW.Tags;
 
 namespace TiaGuard.Openness
 {
@@ -28,6 +30,24 @@ namespace TiaGuard.Openness
     {
         public int Errors { get; internal set; }
         public int Warnings { get; internal set; }
+    }
+
+    public sealed class BridgeTagState
+    {
+        public string TableName { get; internal set; }
+        public bool TableIsDefault { get; internal set; }
+        public bool Exists { get; internal set; }
+        public string Name { get; internal set; }
+        public string DataType { get; internal set; }
+        public string LogicalAddress { get; internal set; }
+    }
+
+    public sealed class BridgePublishResult
+    {
+        public string ProjectDirectory { get; internal set; }
+        public string ProjectFile { get; internal set; }
+        public int CompileErrors { get; internal set; }
+        public int CompileWarnings { get; internal set; }
     }
 
     public sealed class TiaProjectSession : IDisposable
@@ -193,6 +213,186 @@ namespace TiaGuard.Openness
                 throw new InvalidOperationException("Round-trip output must be outside the TIA project folder.");
 
             return RoundTripSourceExporter.Export(_project, ReadProjectInfo(), target, progress);
+        }
+
+        // Bridge v0 write scope is intentionally narrow: root tag tables in a
+        // disposable offline project copy only. Attached user projects remain
+        // read-only until a separate live-engineering write contract is accepted.
+        public BridgeTagState ReadRootTagStateForBridge(string tableName, string tagName)
+        {
+            ThrowIfDisposed();
+            RequireBridgeTagName(tableName, nameof(tableName));
+            RequireBridgeTagName(tagName, nameof(tagName));
+
+            var plc = RequireSinglePlcSoftwareForBridge();
+            var table = plc.TagTableGroup.TagTables.Find(tableName);
+            if (table == null)
+                throw new InvalidOperationException(
+                    "The root PLC tag table '" + tableName + "' was not found.");
+
+            var tag = table.Tags.Find(tagName);
+            return new BridgeTagState
+            {
+                TableName = table.Name,
+                TableIsDefault = table.IsDefault,
+                Exists = tag != null,
+                Name = tag?.Name,
+                DataType = tag?.DataTypeName,
+                LogicalAddress = tag?.LogicalAddress
+            };
+        }
+
+        public BridgeTagState UpsertRootTagForBridge(
+            string tableName,
+            string tagName,
+            string dataType,
+            string logicalAddress)
+        {
+            ThrowIfDisposed();
+            if (_scratchDirectory == null)
+                throw new InvalidOperationException(
+                    "Bridge engineering writes are currently allowed only on an offline disposable project copy.");
+
+            RequireBridgeTagName(tableName, nameof(tableName));
+            RequireBridgeTagName(tagName, nameof(tagName));
+            RequireBridgeTagName(dataType, nameof(dataType));
+            if (logicalAddress == null)
+                throw new ArgumentNullException(nameof(logicalAddress));
+
+            var plc = RequireSinglePlcSoftwareForBridge();
+            var table = plc.TagTableGroup.TagTables.Find(tableName);
+            if (table == null)
+                throw new InvalidOperationException(
+                    "The root PLC tag table '" + tableName + "' was not found.");
+
+            var tag = table.Tags.Find(tagName);
+            if (tag == null)
+                tag = table.Tags.Create(tagName, dataType, logicalAddress);
+            else
+            {
+                tag.DataTypeName = dataType;
+                tag.LogicalAddress = logicalAddress;
+            }
+
+            return new BridgeTagState
+            {
+                TableName = table.Name,
+                TableIsDefault = table.IsDefault,
+                Exists = true,
+                Name = tag.Name,
+                DataType = tag.DataTypeName,
+                LogicalAddress = tag.LogicalAddress
+            };
+        }
+
+        public BridgePublishResult PublishOfflineCopyForBridge(
+            string outputDirectory,
+            string outputName)
+        {
+            ThrowIfDisposed();
+            if (_scratchDirectory == null)
+                throw new InvalidOperationException(
+                    "Bridge publishing is allowed only from a disposable offline project copy.");
+            if (string.IsNullOrWhiteSpace(outputDirectory))
+                throw new ArgumentException(
+                    "An output directory is required.", nameof(outputDirectory));
+            RequireBridgeOutputName(outputName);
+
+            var outputRoot = Path.GetFullPath(outputDirectory);
+            if (!Directory.Exists(outputRoot))
+                throw new DirectoryNotFoundException(
+                    "The Bridge publish output directory does not exist: " + outputRoot);
+
+            var publishDirectory = Path.GetFullPath(Path.Combine(outputRoot, outputName));
+            var sourceFolder = Path.GetDirectoryName(Path.GetFullPath(_sourcePath));
+            RequireNoReparseAncestors(outputRoot);
+            RequireNoReparseAncestors(sourceFolder);
+            RequireNoReparseAncestors(_scratchDirectory);
+
+            if (IsInsideOrEqual(publishDirectory, _scratchDirectory))
+                throw new InvalidOperationException(
+                    "Bridge publish output must be outside the disposable TIA scratch directory.");
+            if (IsInsideOrEqual(publishDirectory, sourceFolder))
+                throw new InvalidOperationException(
+                    "Bridge publish output must be outside the original project folder.");
+            if (Directory.Exists(publishDirectory) || File.Exists(publishDirectory))
+                throw new InvalidOperationException(
+                    "Bridge publish refuses to overwrite an existing output path: " +
+                    publishDirectory);
+
+            var compile = CompilePlcForVerification();
+            if (compile.Errors != 0)
+                throw new InvalidOperationException(
+                    "Bridge publish is blocked because the disposable project has compile errors: " +
+                    compile.Errors);
+
+            _project.SaveAs(new DirectoryInfo(publishDirectory));
+
+            var activeProjectPath = _project.Path?.FullName;
+            var discovered = Directory.Exists(publishDirectory)
+                ? Directory.GetFiles(
+                    publishDirectory, "*.ap21", SearchOption.AllDirectories)
+                : Array.Empty<string>();
+            var matching = string.IsNullOrWhiteSpace(activeProjectPath)
+                ? Array.Empty<string>()
+                : discovered
+                    .Where(path => string.Equals(
+                        Path.GetFullPath(path),
+                        Path.GetFullPath(activeProjectPath),
+                        StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+
+            if (matching.Length != 1)
+                throw new InvalidOperationException(
+                    "TIA Portal SaveAs completed but the Bridge could not prove that the active " +
+                    "project is exactly one newly published .ap21 file. Inspect the output before retrying.");
+
+            var publishedFile = matching[0];
+
+            // TIA Portal still owns the SaveAs result at this point and may hold an
+            // exclusive file handle. The worker disposes this session immediately
+            // after returning the publish metadata; the host computes SHA-256 only
+            // after that worker response, when the TIA handle has been released.
+            return new BridgePublishResult
+            {
+                ProjectDirectory = publishDirectory,
+                ProjectFile = publishedFile,
+                CompileErrors = compile.Errors,
+                CompileWarnings = compile.Warnings
+            };
+        }
+
+        private PlcSoftware RequireSinglePlcSoftwareForBridge()
+        {
+            var softwares = RoundTripSourceExporter.FindPlcSoftware(_project);
+            if (softwares.Count != 1)
+                throw new InvalidOperationException(
+                    "Bridge tag operations require exactly one PLC software object.");
+            return softwares[0];
+        }
+
+        private static void RequireBridgeOutputName(
+            string value,
+            string parameterName = "outputName")
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                throw new ArgumentException(
+                    "A non-empty Bridge output name is required.", parameterName);
+            if (value == "." || value == ".." ||
+                value.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+                value.IndexOf(Path.DirectorySeparatorChar) >= 0 ||
+                value.IndexOf(Path.AltDirectorySeparatorChar) >= 0)
+                throw new ArgumentException(
+                    "Bridge output name must be one safe directory name.", parameterName);
+        }
+
+        private static void RequireBridgeTagName(string value, string parameterName)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                throw new ArgumentException("A non-empty value is required.", parameterName);
+            if (value.IndexOfAny(new[] { '/', '\\' }) >= 0)
+                throw new ArgumentException(
+                    "Bridge v0 accepts root tag-table and tag names, not paths.", parameterName);
         }
 
         // Verification actively compiles only its owned disposable project copy.

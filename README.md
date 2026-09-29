@@ -36,6 +36,27 @@ The intended `ai/` layer may contain a concise project overview, structured proj
 
 See [AI-readable engineering view](docs/AI-READABILITY.md) for the design constraints and next implementation question.
 
+### Experimental TIA AI Bridge
+
+The Bridge candidate is the live companion to the repository AI view. It exposes a local TIA Portal V21 engineering session to external AI clients over MCP stdio, MCP Streamable HTTP, or a loopback-only JSON API while keeping Siemens assemblies isolated in a persistent .NET Framework 4.8 worker.
+
+The default mode is read-only. It can discover open V21 projects, bind to one exact TIA process, open an owned offline `.ap21` as a disposable copy, and return the existing bounded engineering snapshot. Write tools are absent unless the host is explicitly started with `--allow-write`.
+
+The write surface is deliberately narrow: create/update one PLC tag in a root tag table of the disposable offline copy, then—only through a separate guarded operation—publish that modified copy to a brand-new parent directory while preserving the original TIA project name. Tag mutation uses `preview_tag_upsert -> single-use safetyToken -> apply_tag_upsert -> post-read verification`; publication uses its own preview/token, compiles before SaveAs, refuses overwrites or rename-through-publish, reopens the new `.ap21`, and verifies deterministic engineering `contentId`. Tokens are bound to exact project/request/current state and reject replay, request mismatch, binding drift, or stale state. The Bridge still cannot write an attached user project, download to a PLC, start/stop a CPU, force, perform online variable writes, or touch Safety operations.
+
+```powershell
+# Read-only MCP stdio (default)
+& .\src\TiaGuard.Bridge.Host\bin\Release\net8.0\tia-guard-bridge.exe --transport stdio
+
+# Loopback MCP + JSON gateway
+& .\src\TiaGuard.Bridge.Host\bin\Release\net8.0\tia-guard-bridge.exe --transport http --port 18761
+
+# Explicit opt-in guarded write mode; offline-copy only, publish writes only to a new destination
+& .\src\TiaGuard.Bridge.Host\bin\Release\net8.0\tia-guard-bridge.exe --transport stdio --allow-write
+```
+
+See [TIA AI Bridge](docs/TIA-AI-BRIDGE.md) for the protocol and safety contract.
+
 For human use, the Windows GUI is a WPF workbench over the same `TiaGuard.Openness` core. Its product surface is Git-first: one Git repository may contain many independent TIA projects under `repo/tia-projects/<slot>/tia-source/`. Paste a Git URL and choose which project to rebuild, or choose an owned `.ap21` plus a Git URL and either update one existing project or add a new project slot. Each publish changes only the selected project's `tia-source/`; sibling projects and ordinary repository files are left untouched. The legacy single-project `repo/tia-source/` layout remains readable and updatable. TIA-Guard discovers projects directly from their manifests and does not require a separate root index file.
 
 It uses the installed system Git and existing GitHub/Git credential chain; TIA-Guard does not store GitHub passwords or tokens. Long-running TIA stages show the current phase and elapsed time. New exports also record the original project file name, byte length, and SHA-256 (never the absolute local path); restores preserve the file name and explicitly check those values after semantic Verify. Export / Build / Verify remain available as background integrity checks and advanced diagnostics.
@@ -86,6 +107,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package-windows.ps1
 
 The combined package contains `TiaGuard.exe` for the GUI, `tia-guard.exe` for CLI/AI automation, the shared TIA-Guard core, and a short usage note. The GUI Git workflows require the target machine's `git.exe` and reuse its existing credential helper / SSH configuration. The CLI-only package remains available through `scripts/package-cli.ps1`. Neither package redistributes Siemens DLLs, licenses, or TIA project binaries; the target machine must already have TIA Portal V21 and Openness installed.
 
+The experimental Bridge is packaged separately so it does not silently expand the GUI/CLI product surface:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package-bridge.ps1
+```
+
+The Bridge package is self-contained for the .NET 8 host, includes the net48 Openness worker and TIA-Guard core, and refuses to package Siemens DLLs.
+
 ## Design principle
 
 **Deterministic facts stay deterministic; AI handles interpretation.**
@@ -116,7 +145,7 @@ Initial candidates are intentionally narrow:
 - The original project is never saved, upgraded or imported into. An explicit build creates, imports into, saves and compiles only a fresh disposable project.
 - Export may compile only its owned offline copy when Siemens requires consistency before SimaticML export.
 - Partial/unsupported/protected data is reported explicitly.
-- Main has no AI/network review path. Preserved engineering XML/comments may themselves contain sensitive text; canonical export is not automatic anonymization.
+- The experimental Bridge listens only on stdio or loopback HTTP. Its default tool surface is read-only; `--allow-write` adds only guarded offline-copy tag mutation and still does not save the project. Preserved engineering XML/comments may themselves contain sensitive text; canonical export is not automatic anonymization.
 
 ## Development environment
 
