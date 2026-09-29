@@ -233,7 +233,7 @@ Defaults:
   transport = stdio
   http bind = 127.0.0.1
   http port = 18761
-  worker = TiaGuard.Bridge.Worker.exe next to this executable
+  worker = worker\TiaGuard.Bridge.Worker.exe when packaged; flat next-to-host path remains the development fallback
 
 The default is read-only. --allow-write enables only guarded engineering writes to
 a disposable offline project copy plus guarded publication to a NEW output directory.
@@ -242,10 +242,23 @@ online writes, or Safety operations.";
 
     public string Transport { get; private set; } = "stdio";
     public int Port { get; private set; } = 18761;
-    public string WorkerPath { get; private set; } =
-        Path.Combine(AppContext.BaseDirectory, "TiaGuard.Bridge.Worker.exe");
+    public string WorkerPath { get; private set; } = GetDefaultWorkerPath();
     public bool ShowHelp { get; private set; }
     public bool AllowWrite { get; private set; }
+
+    private static string GetDefaultWorkerPath()
+    {
+        var isolated = Path.Combine(
+            AppContext.BaseDirectory,
+            "worker",
+            "TiaGuard.Bridge.Worker.exe");
+        if (File.Exists(isolated))
+            return isolated;
+
+        return Path.Combine(
+            AppContext.BaseDirectory,
+            "TiaGuard.Bridge.Worker.exe");
+    }
 
     public static BridgeOptions Parse(string[] args)
     {

@@ -36,6 +36,21 @@ if ($LASTEXITCODE -ne 0) {
 
 Copy-Item (Join-Path $publish "*") $stage -Recurse -Force
 
+# Keep the .NET Framework Openness worker out of the self-contained
+# .NET 8 host directory. The self-contained host carries its own System.* and
+# CLR runtime files; placing the net48 worker beside them can poison assembly
+# probing and stall TIA Portal startup.
+$flatWorkerNames = @(
+    "TiaGuard.Bridge.Worker.exe",
+    "TiaGuard.Bridge.Worker.exe.config",
+    "TiaGuard.Openness.dll"
+)
+foreach ($name in $flatWorkerNames) {
+    Remove-Item (Join-Path $stage $name) -Force -ErrorAction SilentlyContinue
+}
+$workerStage = Join-Path $stage "worker"
+New-Item -ItemType Directory -Force $workerStage | Out-Null
+
 $workerBin = Join-Path $repoRoot "src\TiaGuard.Bridge.Worker\bin\$Configuration\net48"
 $workerFiles = @(
     "TiaGuard.Bridge.Worker.exe",
@@ -47,7 +62,7 @@ foreach ($name in $workerFiles) {
     if (-not (Test-Path $source)) {
         throw "Required Bridge worker package file is missing: $source"
     }
-    Copy-Item $source $stage -Force
+    Copy-Item $source $workerStage -Force
 }
 
 $bridgeExe = Join-Path $stage "tia-guard-bridge.exe"
@@ -105,6 +120,7 @@ Requirements:
 - current Windows logon token has effective Siemens TIA Openness group membership
 
 The package does not redistribute Siemens DLLs, licenses or TIA project binaries.
+The net48 Openness worker is isolated under .\worker\ so it cannot probe the self-contained .NET 8 host runtime assemblies.
 "@
 [IO.File]::WriteAllText(
     (Join-Path $stage "README-BRIDGE.txt"),
@@ -118,3 +134,4 @@ Write-Output "package=$zip"
 Write-Output "sha256=$((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant())"
 Write-Output "siemensDllCount=$((Get-ChildItem $stage -Filter 'Siemens*.dll' -File -Recurse | Measure-Object).Count)"
 Write-Output "files=$((Get-ChildItem $stage -File | Sort-Object Name | ForEach-Object Name) -join ',')"
+Write-Output "workerFiles=$((Get-ChildItem $workerStage -File | Sort-Object Name | ForEach-Object Name) -join ',')"

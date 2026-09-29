@@ -43,6 +43,7 @@ External AI / MCP client / HTTP client
 ```
 
 The host never loads Siemens assemblies. Siemens Openness remains isolated in the net48 worker.
+Release packages place that net48 worker under a dedicated `worker/` directory so it cannot probe the self-contained .NET 8 host runtime assemblies. Development builds may keep the worker next to the host binary as a fallback.
 
 The default mode is intentionally read-only. It exposes project discovery, exact binding, project metadata and a bounded engineering snapshot.
 
