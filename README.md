@@ -6,6 +6,12 @@
 
 TIA-Guard 是独立的 **pre-alpha** 工程工具，面向本机 **Siemens TIA Portal V21 / S7-1200**。它通过本地 Openness API 将工程转换成确定性的工程源，提供 Windows GUI、CLI，以及供本机 AI Agent 使用的 API Gateway / MCP 接口。
 
+## 项目概览：TIA Portal 工程版本化与 AI 工程 Gateway
+
+- **工程可读化与 Git 协作**：基于 TIA Portal V21 / Openness API，将受支持的 S7-1200 工程转换为结构化工程源，保留 PLC 变量与 LAD 逻辑，便于 Git 比较、审查和复用；已实现中文 WPF GUI 的 GitHub 导入重建、导出提交及多工程管理。
+- **受支持范围内的往返重建与验证**：完成 `.ap21 → 可读工程源 → 新 .ap21` 的闭环；自建 V21 / S7-1200 fixture 已有真实 Build / Compile / Verify 证据，校验受支持对象的逻辑、结构及工程语义；不支持或证据不足的对象阻断通过。
+- **本地 AI 工程 Gateway**：已实现 localhost HTTP / MCP、AI 工程视图与专用 Skill，供 Codex、Cursor、Claude Code 查询变量、有限 LAD 逻辑和引用；支持修改预览、GUI 单次确认及编译、重建、验证、失败回滚控制。GUI / CLI / Gateway 源码已公开，152 项契约测试及 45 项 Host 测试通过；最新集成版本的真实 TIA 修改闭环待复验。
+
 ## 下载与使用说明
 
 - [发行版](https://github.com/biaobiao2233/tia-guard/releases)：预览包与校验值。

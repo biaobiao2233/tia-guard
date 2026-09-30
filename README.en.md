@@ -6,6 +6,12 @@
 
 TIA-Guard is an independent **pre-alpha** engineering tool for local **Siemens TIA Portal V21 / S7-1200** projects. It uses the local Openness API to turn projects into deterministic engineering source, with a Windows GUI, CLI, and a local API Gateway / MCP interface for AI agents.
 
+## Project overview: TIA Portal engineering versioning and AI engineering Gateway
+
+- **Readable engineering source and Git collaboration**: uses TIA Portal V21 / Openness API to convert supported S7-1200 projects into structured engineering source while retaining PLC tags and LAD logic for Git comparison, review and reuse. The Chinese WPF GUI implements GitHub import/rebuild, export/commit and multi-project management.
+- **Round-trip rebuild and verification within supported scope**: completes the `.ap21 → readable engineering source → new .ap21` loop. A self-authored V21 / S7-1200 fixture has real Build / Compile / Verify evidence for supported object logic, structure and engineering semantics. Unsupported objects or insufficient evidence block acceptance.
+- **Local AI engineering Gateway**: implements localhost HTTP / MCP, AI engineering views and a dedicated Skill for Codex, Cursor and Claude Code to query tags, bounded LAD logic and references. It supports edit previews, one-time GUI approval, compilation, rebuild, verification and rollback on failure. GUI / CLI / Gateway source is public; 152 contract tests and 45 Host tests passed. The latest integrated real TIA modification loop still needs requalification.
+
 ## Download and documentation
 
 - [Releases](https://github.com/biaobiao2233/tia-guard/releases): downloadable preview packages and checksums.
