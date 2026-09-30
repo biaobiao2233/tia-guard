@@ -144,6 +144,7 @@ namespace TiaGuard.Gui
                 Content = advancedBody,
                 Margin = new Thickness(0, 2, 0, 16)
             };
+            InstallBridgeSurface();
             ActionsPanel.Children.Add(advanced);
 
             var stepPanel = ExportStepBorder.Parent as Panel;
