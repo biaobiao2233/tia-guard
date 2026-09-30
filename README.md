@@ -1,10 +1,30 @@
 # TIA-Guard
 
-**Reproducible Git engineering source for a bounded Siemens TIA Portal V21 subset.**
+**Readable, reproducible Git engineering source and a local AI engineering gateway for Siemens TIA Portal V21.**
 
 TIA-Guard is an independent pre-alpha project. The Core path exports an existing V21 project to a canonical Git tree, builds a fresh project from that tree, then verifies supported engineering semantics. Snapshot, deterministic checks, reporting and optional AI review remain supporting layers.
 
 The project is designed around the locally installed **TIA Portal Openness API**. It does not redistribute Siemens software, DLLs, licenses, or TIA project binaries.
+
+## Why TIA-Guard
+
+TIA Portal projects are normally stored as `.ap21` engineering binaries. That is convenient for TIA Portal itself, but it makes normal Git workflows, code review, open-source sharing, and AI-assisted engineering much harder than they are for text-based software projects.
+
+TIA-Guard is intended to close that gap in three layers:
+
+1. **Make PLC engineering readable, diffable, and shareable.** TIA-Guard translates the supported part of an S7-1200 project into deterministic, human-readable, Git-native engineering source under `tia-source/`. PLC programs, tags, and LAD logic can then be inspected, versioned, reviewed, searched, and consumed by AI tools. A readable repository also lowers the barrier to sharing PLC engineering work openly, so developers can learn from, reuse, review, and improve each other's implementations instead of exchanging opaque project binaries.
+2. **Preserve the ability to reconstruct the real TIA project.** The readable form is not meant to be a lossy documentation export. The core loop is `.ap21 -> canonical source -> new .ap21`, followed by Build / Verify checks against the supported engineering semantics. The goal is that making a project readable to Git and AI does not silently change the PLC engineering when it is rebuilt.
+3. **Let local AI agents operate the engineering project, not just read it.** Inspired by the interaction model of JLCEDA's API Gateway, the current development direction adds a local TIA AI Gateway plus a companion Skill. Local agents such as Codex, Cursor, and Claude Code can use the Gateway to inspect PLC tags and LAD logic, plan guarded changes, modify supported offline engineering content, and automatically compile, rebuild, and verify the result. The human should describe the engineering intent; the Gateway and Skill should handle the low-level workflow.
+
+This creates a simple progression:
+
+```text
+opaque TIA project
+    -> readable Git engineering source
+    -> reproducible TIA project
+    -> AI-readable engineering context
+    -> AI-assisted, verified engineering changes
+```
 
 ## v0.1 objective
 
@@ -80,7 +100,7 @@ Openness V21 is a **.NET Framework 4.8** integration boundary. Modern .NET compo
     docs/contracts          draft shared evidence/finding contracts
     examples                sanitized fixtures only
 
-Analysis/Reporting/AI remain unmerged supporting-layer proposals, not installed mainline modules. `examples/roundtrip-fixture` is synthetic validation input, not a Siemens-importable demo or proof of compilation.
+The default branch remains the conservative reproducible-core line. AI Engineering and the local Gateway are being developed on an integration candidate and are not yet claimed as released mainline functionality. `examples/roundtrip-fixture` is synthetic validation input, not a Siemens-importable demo or proof of compilation.
 
 ## Safe automated checks
 
