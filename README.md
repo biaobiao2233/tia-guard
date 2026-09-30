@@ -66,6 +66,10 @@ The write surface is deliberately narrow: `upsert_tag` and `replace_output_condi
 
 See [TIA AI Bridge](docs/TIA-AI-BRIDGE.md) for the protocol and safety contract.
 
+The canonical companion Skill is [TIA-Guard Gateway](skills/tia-guard-gateway/SKILL.md). Generate its single-Skill distribution with `scripts/package-gateway-skill.ps1` (`artifacts/release/skill.zip`). Install or reference that same Skill using each local agent's supported Skill directory mechanism; Codex, Cursor and Claude Code do not necessarily use identical installation paths. A Skill alone cannot connect browser-only cloud chat to the user's localhost.
+
+A manually started HTTP Gateway without `--allow-write` and without an operator approval key remains read-only: private allow, reject and shutdown controls return 403. The GUI creates a random child-process key for those controls. They are excluded from the public OpenAPI and are never part of the AI workflow.
+
 For human use, the Windows GUI is a WPF workbench over the same `TiaGuard.Openness` core. Its product surface is Git-first: one Git repository may contain many independent TIA projects under `repo/tia-projects/<slot>/tia-source/`. Paste a Git URL and choose which project to rebuild, or choose an owned `.ap21` plus a Git URL and either update one existing project or add a new project slot. Each publish changes only the selected project's `tia-source/`; sibling projects and ordinary repository files are left untouched. The legacy single-project `repo/tia-source/` layout remains readable and updatable. TIA-Guard discovers projects directly from their manifests and does not require a separate root index file.
 
 It uses the installed system Git and existing GitHub/Git credential chain; TIA-Guard does not store GitHub passwords or tokens. Long-running TIA stages show the current phase and elapsed time. New exports also record the original project file name, byte length, and SHA-256 (never the absolute local path); restores preserve the file name and explicitly check those values after semantic Verify. Export / Build / Verify remain available as background integrity checks and advanced diagnostics.

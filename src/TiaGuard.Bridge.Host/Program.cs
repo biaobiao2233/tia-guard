@@ -144,7 +144,8 @@ app.MapGet("/api/v1/gateway/status", async (
     BridgeWorkerClient worker,
     CancellationToken cancellationToken) =>
 {
-    if (worker.IsIdle)
+    // GUI status polling must not launch the Openness worker before an engineering request.
+    if (worker.HasStarted && worker.IsIdle)
     {
         try
         {
@@ -200,24 +201,14 @@ app.MapGet("/api/v1/gateway/status", async (
         })
     });
 });
-app.MapPost("/api/v1/gateway/approvals/{id}/allow", (string id, HttpRequest request) =>
-    DecideApproval(id, request, approvals.Allow));
-app.MapPost("/api/v1/gateway/approvals/{id}/reject", (string id, HttpRequest request) =>
-    DecideApproval(id, request, approvals.Reject));
-app.MapPost("/api/v1/gateway/shutdown", (HttpRequest request, BridgeWorkerClient worker, IHostApplicationLifetime lifetime) =>
-{
-    var expected = Environment.GetEnvironmentVariable("TIA_GUARD_APPROVAL_KEY") ?? string.Empty;
-    var presented = request.Headers["X-TiaGuard-Approval-Key"].ToString();
-    if (!string.IsNullOrEmpty(expected) && !string.Equals(presented, expected, StringComparison.Ordinal))
-        return Results.Json(new { error = "APPROVAL_FORBIDDEN" }, statusCode: StatusCodes.Status403Forbidden);
-    _ = Task.Run(async () =>
+GatewayOperatorEndpoints.Map(
+    app, approvals, Environment.GetEnvironmentVariable("TIA_GUARD_APPROVAL_KEY"),
+    async () =>
     {
-        await Task.Delay(150);
+        var worker = app.Services.GetRequiredService<BridgeWorkerClient>();
         try { await worker.ShutdownAsync(); } catch (Exception) { }
-        lifetime.StopApplication();
+        app.Lifetime.StopApplication();
     });
-    return Results.Json(new { status = "stopping" });
-});
 
 app.MapGet("/api/v1/projects", async (
     BridgeWorkerClient worker,
@@ -345,17 +336,6 @@ await app.RunAsync();
 
 static IResult Json(string payload)
     => Results.Text(payload, "application/json");
-
-static IResult DecideApproval(string id, HttpRequest request, Action<string> decide)
-{
-    var expected = Environment.GetEnvironmentVariable("TIA_GUARD_APPROVAL_KEY") ?? string.Empty;
-    var presented = request.Headers["X-TiaGuard-Approval-Key"].ToString();
-    if (!string.IsNullOrEmpty(expected) &&
-        !string.Equals(presented, expected, StringComparison.Ordinal))
-        return Results.Json(new { error = "APPROVAL_FORBIDDEN" }, statusCode: StatusCodes.Status403Forbidden);
-    decide(id);
-    return Results.Json(new { status = "recorded" });
-}
 
 internal sealed class ConnectRequest
 {

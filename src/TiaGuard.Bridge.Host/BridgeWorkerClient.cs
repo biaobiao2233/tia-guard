@@ -37,6 +37,8 @@ public sealed class BridgeWorkerClient : IDisposable
 
     public bool IsIdle => _gate.CurrentCount > 0;
 
+    public bool HasStarted => _process != null;
+
     public async Task ShutdownAsync()
     {
         await _gate.WaitAsync().ConfigureAwait(false);

@@ -51,6 +51,8 @@ public sealed class GatewayProductTests
                  })
             Assert.True(paths.TryGetProperty(path, out _), path);
         Assert.False(paths.TryGetProperty("/api/v1/gateway/approvals/{id}/allow", out _));
+        Assert.False(paths.TryGetProperty("/api/v1/gateway/approvals/{id}/reject", out _));
+        Assert.False(paths.TryGetProperty("/api/v1/gateway/shutdown", out _));
         var patch = root.GetProperty("components").GetProperty("schemas").GetProperty("EngineeringPatch");
         Assert.Contains("upsert_tag", patch.GetProperty("properties").GetProperty("operation").GetProperty("enum").EnumerateArray().Select(item => item.GetString()));
         Assert.True(root.GetProperty("components").GetProperty("schemas").TryGetProperty("ErrorBody", out _));
