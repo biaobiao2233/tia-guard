@@ -14,5 +14,6 @@
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeWorkerClient.cs" Link="BridgeWorkerClient.cs" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeWriteSafetyService.cs" Link="BridgeWriteSafetyService.cs" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeAiContextService.cs" Link="BridgeAiContextService.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgePatchCoordinator.cs" Link="BridgePatchCoordinator.cs" />
   </ItemGroup>
 </Project>

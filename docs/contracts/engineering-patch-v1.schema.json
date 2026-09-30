@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tia-guard.engineering-patch/v1",
+  "title": "TIA-Guard structured engineering patch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "operation", "target"],
+  "properties": {
+    "schemaVersion": { "const": "tia-guard.engineering-patch/v1" },
+    "operation": { "enum": ["upsert_tag", "replace_output_condition"] },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "block": { "type": "string" },
+        "network": { "type": "integer", "minimum": 1 },
+        "table": { "type": "string" },
+        "tag": { "type": "string" }
+      }
+    },
+    "output": { "type": "string" },
+    "expression": { "$ref": "#/$defs/expression" },
+    "dataType": { "const": "Bool" },
+    "logicalAddress": { "type": "string" }
+  },
+  "$defs": {
+    "expression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op"],
+      "properties": {
+        "op": { "enum": ["read", "not", "and"] },
+        "symbol": { "type": "string" },
+        "args": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/expression" }
+        }
+      },
+      "description": "Same shape as AI Engineering v2 AiLadExpression. or, joins and stateful instructions are rejected."
+    }
+  }
+}

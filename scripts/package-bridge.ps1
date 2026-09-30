@@ -103,6 +103,7 @@ Read-only AI context, backed by the existing AI Engineering v2 renderer:
 Current write scope:
 - disposable offline .ap21 copy only
 - preview_tag_upsert -> single-use safety token -> apply_tag_upsert
+- preview_patch -> single-use safety token -> apply_patch
 - preview_publish_modified_copy -> separate single-use safety token -> apply_publish_modified_copy
 - exact binding/request/current-state checks
 - tag mutation remains in memory until explicit publish

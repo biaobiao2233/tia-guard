@@ -5,6 +5,7 @@ using System.Linq;
 using Siemens.Engineering;
 using Siemens.Engineering.Compiler;
 using Siemens.Engineering.SW;
+using Siemens.Engineering.SW.Blocks;
 using Siemens.Engineering.SW.Tags;
 
 namespace TiaGuard.Openness
@@ -393,6 +394,33 @@ namespace TiaGuard.Openness
             if (value.IndexOfAny(new[] { '/', '\\' }) >= 0)
                 throw new ArgumentException(
                     "Bridge v0 accepts root tag-table and tag names, not paths.", parameterName);
+        }
+
+        public void ImportMainBlockForBridge(string simaticMlPath)
+        {
+            ThrowIfDisposed();
+            if (_scratchDirectory == null)
+                throw new InvalidOperationException(
+                    "Bridge block import is allowed only on an offline disposable project copy.");
+            if (string.IsNullOrWhiteSpace(simaticMlPath) || !File.Exists(simaticMlPath))
+                throw new FileNotFoundException(
+                    "The SimaticML block to import does not exist.", simaticMlPath);
+
+            var plc = RequireSinglePlcSoftwareForBridge();
+            var imported = plc.BlockGroup.Blocks.Import(
+                new FileInfo(simaticMlPath), ImportOptions.Override);
+            if (imported == null || imported.Count != 1 || imported[0].Name != "Main")
+                throw new InvalidOperationException(
+                    "Bridge block import did not produce exactly Main / OB1.");
+        }
+
+        public void SaveDisposableCopyForBridge()
+        {
+            ThrowIfDisposed();
+            if (_scratchDirectory == null)
+                throw new InvalidOperationException(
+                    "Bridge save is allowed only on an offline disposable project copy.");
+            _project.Save();
         }
 
         // Verification actively compiles only its owned disposable project copy.

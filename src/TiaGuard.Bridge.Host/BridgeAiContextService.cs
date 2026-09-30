@@ -16,6 +16,15 @@ public interface IBridgeEngineeringGateway
         string? symbol,
         bool force,
         CancellationToken cancellationToken);
+
+    Task<string> PreviewPatchAsync(string patchJson, CancellationToken cancellationToken);
+
+    Task<string> ApplyPatchAsync(
+        string patchJson,
+        string expectedContentId,
+        string expectedFingerprint,
+        int expectedEpoch,
+        CancellationToken cancellationToken);
 }
 
 public sealed class BridgeWorkerEngineeringGateway : IBridgeEngineeringGateway
@@ -44,7 +53,34 @@ public sealed class BridgeWorkerEngineeringGateway : IBridgeEngineeringGateway
         return _worker.CallAsync("query_ai", payloadJson: payload, cancellationToken: cancellationToken);
     }
 
+    public Task<string> PreviewPatchAsync(string patchJson, CancellationToken cancellationToken)
+        => _worker.CallAsync(
+            "preview_engineering_patch",
+            payloadJson: patchJson,
+            cancellationToken: cancellationToken);
+
+    public Task<string> ApplyPatchAsync(
+        string patchJson,
+        string expectedContentId,
+        string expectedFingerprint,
+        int expectedEpoch,
+        CancellationToken cancellationToken)
+    {
+        var payload = JsonSerializer.Serialize(new ApplyPayload(
+            patchJson, expectedContentId, expectedFingerprint, expectedEpoch));
+        return _worker.CallAsync(
+            "apply_engineering_patch",
+            payloadJson: payload,
+            cancellationToken: cancellationToken);
+    }
+
     private sealed record QueryPayload(string Kind, string? Block, int Network, string? Symbol, bool Force);
+
+    private sealed record ApplyPayload(
+        string PatchJson,
+        string ExpectedContentId,
+        string ExpectedFingerprint,
+        int ExpectedEpoch);
 }
 
 public sealed class BridgeAiContextService

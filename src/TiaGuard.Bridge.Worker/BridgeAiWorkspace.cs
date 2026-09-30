@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.Serialization.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web.Script.Serialization;
@@ -60,11 +61,126 @@ namespace TiaGuard.Bridge.Worker
             return Envelope(RequireSession(session), _cache.ContentId, _cache.Hit, json);
         }
 
+        public string PreviewPatch(TiaProjectSession session, string patchJson)
+        {
+            RequireOffline(session);
+            Materialize(session, false);
+            var canonical = AiEngineeringPatch.Canonicalize(patchJson);
+            var preview = Path.Combine(_root, "preview-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var plan = AiEngineeringPatch.Plan(_cache.SourceDirectory, canonical, preview);
+                return Envelope(RequireSession(session), _cache.ContentId, _cache.Hit,
+                    RoundTripJson.Serialize(plan).Trim());
+            }
+            finally
+            {
+                AiEngineeringPatch.DeleteOwnedDirectory(preview);
+            }
+        }
+
+        public string ApplyPatch(TiaProjectSession session, string payloadJson)
+        {
+            RequireOffline(session);
+            var payload = _json.Deserialize<AiApplyPayload>(payloadJson ?? "{}") ?? new AiApplyPayload();
+            if (payload.ExpectedEpoch != _epoch)
+                throw new InvalidOperationException("AI_PATCH_REJECTED: STALE_EPOCH");
+
+            var before = Materialize(session, true);
+            if (!string.Equals(_cache.ContentId, payload.ExpectedContentId, StringComparison.Ordinal))
+                throw new InvalidOperationException("AI_PATCH_REJECTED: STALE_CONTENT");
+            var canonical = AiEngineeringPatch.Canonicalize(payload.PatchJson);
+            var request = DeserializePatch(canonical);
+            var fingerprint = AiEngineeringPatch.Fingerprint(before, request);
+            if (!string.Equals(fingerprint, payload.ExpectedFingerprint, StringComparison.Ordinal))
+                throw new InvalidOperationException("AI_PATCH_REJECTED: STALE_FINGERPRINT");
+
+            var preview = Path.Combine(_root, "apply-" + Guid.NewGuid().ToString("N"));
+            var rollbackXml = Path.Combine(_root, "rollback-" + Guid.NewGuid().ToString("N") + ".xml");
+            AiPatchPlan plan;
+            try
+            {
+                plan = AiEngineeringPatch.Plan(_cache.SourceDirectory, canonical, preview);
+                if (request.Operation == "replace_output_condition")
+                {
+                    var current = RoundTripBuildInput.LoadSource(_cache.SourceDirectory);
+                    File.Copy(current.BlockSourcePath, rollbackXml, false);
+                }
+            }
+            catch
+            {
+                AiEngineeringPatch.DeleteOwnedDirectory(preview);
+                if (File.Exists(rollbackXml)) File.Delete(rollbackXml);
+                throw;
+            }
+
+            _epoch++;
+            var previousSource = _cache.SourceDirectory;
+            _cache = null;
+            try
+            {
+                if (request.Operation == "upsert_tag")
+                {
+                    session.UpsertRootTagForBridge(
+                        request.Target.Table, request.Target.Tag, request.DataType, request.LogicalAddress);
+                }
+                else if (request.Operation == "replace_output_condition")
+                {
+                    session.ImportMainBlockForBridge(plan.ModifiedBlockXmlPath);
+                }
+                else
+                {
+                    throw new InvalidOperationException("AI_PATCH_REJECTED: OPERATION_UNSUPPORTED");
+                }
+
+                var compile = session.CompilePlcForVerification();
+                if (compile.Errors != 0)
+                {
+                    Rollback(session, request, rollbackXml);
+                    return RoundTripJson.Serialize(Failure(
+                        request.Operation, compile, "compile errors")).Trim();
+                }
+
+                session.SaveDisposableCopyForBridge();
+                string verified;
+                try
+                {
+                    verified = ExportVerified(session);
+                }
+                catch (Exception error)
+                {
+                    Rollback(session, request, rollbackXml);
+                    return RoundTripJson.Serialize(Failure(
+                        request.Operation, compile, "canonical export was not deterministic: " + error.Message)).Trim();
+                }
+
+                var after = AiEngineeringRenderer.Read(verified);
+                var result = Prove(request, plan, before, after, compile, ReadContentId(session));
+                if (!string.Equals(result.Status, "applied", StringComparison.Ordinal))
+                {
+                    Rollback(session, request, rollbackXml);
+                    result.Status = "verification_failure";
+                    result.SavedDisposableCopy = false;
+                    return RoundTripJson.Serialize(result).Trim();
+                }
+
+                if (!string.IsNullOrWhiteSpace(previousSource))
+                    AiEngineeringPatch.DeleteOwnedDirectory(previousSource);
+                Remember(RequireSession(session), result.ContentId, verified, after, false);
+                return RoundTripJson.Serialize(result).Trim();
+            }
+            finally
+            {
+                AiEngineeringPatch.DeleteOwnedDirectory(preview);
+                if (File.Exists(rollbackXml)) File.Delete(rollbackXml);
+            }
+        }
+
         public void Invalidate()
         {
             _epoch++;
             _cache = null;
-            DeleteOwnedDirectory(_root);
+            AiEngineeringPatch.DeleteOwnedDirectory(_root);
         }
 
         public void Dispose()
@@ -72,7 +188,7 @@ namespace TiaGuard.Bridge.Worker
             if (_disposed) return;
             _disposed = true;
             _cache = null;
-            DeleteOwnedDirectory(_root);
+            AiEngineeringPatch.DeleteOwnedDirectory(_root);
         }
 
         private AiEngineeringView Materialize(TiaProjectSession session, bool force)
@@ -96,21 +212,133 @@ namespace TiaGuard.Bridge.Worker
             var exportedContentId = ReadContentId(session);
             var view = AiEngineeringRenderer.Read(source);
             if (_cache != null && !string.Equals(_cache.SourceDirectory, source, StringComparison.OrdinalIgnoreCase))
-                DeleteOwnedDirectory(_cache.SourceDirectory);
+                AiEngineeringPatch.DeleteOwnedDirectory(_cache.SourceDirectory);
             Remember(project, exportedContentId, source, view, false);
             return view;
         }
 
-        private void DeleteOwnedDirectory(string path)
+        private string ExportVerified(TiaProjectSession session)
         {
-            if (string.IsNullOrWhiteSpace(path)) return;
-            var full = Path.GetFullPath(path);
-            var root = Path.GetFullPath(_root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var prefix = root + Path.DirectorySeparatorChar;
-            if (!string.Equals(full, root, StringComparison.OrdinalIgnoreCase) &&
-                !full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Refusing to delete a directory outside the AI workspace.");
-            if (Directory.Exists(full)) Directory.Delete(full, true);
+            var first = Path.Combine(_root, "verify-" + Guid.NewGuid().ToString("N"));
+            var second = Path.Combine(_root, "verify-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                session.ExportRoundTripSource(first);
+                session.ExportRoundTripSource(second);
+                var compared = RoundTripVerifier.CompareSources(first, second);
+                if (!string.Equals(compared.Verdict, "pass", StringComparison.Ordinal))
+                    throw new InvalidOperationException("EXPORT_NOT_DETERMINISTIC");
+                return first;
+            }
+            finally
+            {
+                AiEngineeringPatch.DeleteOwnedDirectory(second);
+            }
+        }
+
+        private AiPatchApplyResult Prove(
+            AiPatchRequest request, AiPatchPlan plan, AiEngineeringView before, AiEngineeringView after,
+            PlcCompileObservation compile, string contentId)
+        {
+            try
+            {
+                AiEngineeringPatch.AssertNeighborsUnchanged(
+                    before, after, request.Operation == "replace_output_condition" ? request.Target.Network : -1);
+            }
+            catch (InvalidOperationException)
+            {
+                return Failure(request.Operation, compile, "a neighboring network changed");
+            }
+
+            if (request.Operation == "upsert_tag")
+            {
+                var table = after.TagTables.Find(item =>
+                    string.Equals(item.Name, request.Target.Table, StringComparison.Ordinal));
+                var tag = table == null ? null : table.Tags.Find(item =>
+                    string.Equals(item.Name, request.Target.Tag, StringComparison.Ordinal));
+                if (tag == null ||
+                    !string.Equals(tag.DataType, request.DataType, StringComparison.Ordinal) ||
+                    !AddressesMatch(tag.Address, request.LogicalAddress))
+                    return Failure(request.Operation, compile, "resulting tag does not match the preview");
+                return Success(request.Operation, compile, contentId, null, new AiPatchTagState
+                {
+                    Table = table.Name,
+                    Name = tag.Name,
+                    Exists = true,
+                    DataType = tag.DataType,
+                    LogicalAddress = tag.Address,
+                    SourceRef = tag.SourceRef
+                });
+            }
+
+            var block = AiEngineeringContextQuery.ResolveBlock(after, request.Target.Block);
+            var network = AiEngineeringContextQuery.ResolveNetwork(block, request.Target.Network);
+            var expected = plan.ExpectedNetwork == null || plan.ExpectedNetwork.Analysis == null ||
+                plan.ExpectedNetwork.Analysis.Writes.Count != 1
+                ? null : plan.ExpectedNetwork.Analysis.Writes[0].Expression;
+            var actual = network.Analysis == null || network.Analysis.Status != "supported" ||
+                network.Analysis.Writes.Count != 1
+                ? null : network.Analysis.Writes[0].Expression;
+            if (!AiEngineeringPatch.ExpressionEquals(expected, actual))
+                return Failure(request.Operation, compile, "resulting LAD semantics do not match the preview");
+            return Success(request.Operation, compile, contentId, network, null);
+        }
+
+        private static void Rollback(TiaProjectSession session, AiPatchRequest request, string previousXml)
+        {
+            if (request.Operation != "replace_output_condition" || string.IsNullOrWhiteSpace(previousXml) ||
+                !File.Exists(previousXml))
+                return;
+            try
+            {
+                session.ImportMainBlockForBridge(previousXml);
+                var compile = session.CompilePlcForVerification();
+                if (compile.Errors != 0)
+                    throw new InvalidOperationException("rollback compile reported " + compile.Errors + " errors");
+                session.SaveDisposableCopyForBridge();
+            }
+            catch (Exception error)
+            {
+                throw new InvalidOperationException("AI_PATCH_REJECTED: ROLLBACK_FAILED: " + error.Message);
+            }
+        }
+
+        private AiPatchApplyResult Success(
+            string operation, PlcCompileObservation compile, string contentId,
+            AiNetwork network, AiPatchTagState tag)
+        {
+            return new AiPatchApplyResult
+            {
+                Status = "applied",
+                Operation = operation,
+                SavedOriginalProject = false,
+                SavedDisposableCopy = true,
+                Published = false,
+                CompileErrors = compile.Errors,
+                CompileWarnings = compile.Warnings,
+                VerifyVerdict = "pass",
+                ContentId = contentId,
+                ResultingNetwork = network,
+                ResultingTag = tag,
+                Epoch = _epoch
+            };
+        }
+
+        private AiPatchApplyResult Failure(string operation, PlcCompileObservation compile, string reason)
+        {
+            return new AiPatchApplyResult
+            {
+                Status = "verification_failure",
+                Operation = operation,
+                SavedOriginalProject = false,
+                SavedDisposableCopy = false,
+                Published = false,
+                CompileErrors = compile.Errors,
+                CompileWarnings = compile.Warnings,
+                VerifyVerdict = "fail",
+                Reason = reason,
+                Epoch = _epoch
+            };
         }
 
         private void Remember(ProjectInfo project, string contentId, string source, AiEngineeringView view, bool hit)
@@ -124,6 +352,22 @@ namespace TiaGuard.Bridge.Worker
                 View = view,
                 Hit = hit
             };
+        }
+
+        private static bool AddressesMatch(string actual, string expected)
+        {
+            var left = SnapshotAddressParser.Parse(actual);
+            var right = SnapshotAddressParser.Parse(expected);
+            return left.ParseStatus == "parsed" && right.ParseStatus == "parsed" &&
+                string.Equals(left.Area, right.Area, StringComparison.Ordinal) &&
+                left.ByteOffset == right.ByteOffset && left.BitOffset == right.BitOffset &&
+                left.BitWidth == right.BitWidth;
+        }
+
+        private static AiPatchRequest DeserializePatch(string canonical)
+        {
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(canonical)))
+                return (AiPatchRequest)new DataContractJsonSerializer(typeof(AiPatchRequest)).ReadObject(stream);
         }
 
         private string Envelope(ProjectInfo project, string contentId, bool cacheHit, string resultJson)
@@ -222,5 +466,12 @@ namespace TiaGuard.Bridge.Worker
             public bool Force { get; set; }
         }
 
+        private sealed class AiApplyPayload
+        {
+            public string PatchJson { get; set; }
+            public string ExpectedContentId { get; set; }
+            public string ExpectedFingerprint { get; set; }
+            public int ExpectedEpoch { get; set; }
+        }
     }
 }

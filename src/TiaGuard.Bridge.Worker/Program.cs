@@ -101,6 +101,8 @@ namespace TiaGuard.Bridge.Worker
                     {
                         capabilities.Add("upsert_tag");
                         capabilities.Add("publish_offline_copy");
+                        capabilities.Add("preview_engineering_patch");
+                        capabilities.Add("apply_engineering_patch");
                     }
                     return Success(request.Id, Json.Serialize(new
                     {
@@ -180,6 +182,22 @@ namespace TiaGuard.Bridge.Worker
                     EnsureBindingStillMatches();
                     return Success(request.Id, Ai.Query(_session,
                         "{\"Kind\":\"project\",\"Force\":true}"));
+
+                case "preview_engineering_patch":
+                    if (!_allowWrite)
+                        return Failure(request.Id, "write_disabled",
+                            "Bridge write mode is disabled. Restart with --allow-write.");
+                    EnsureConnected();
+                    EnsureBindingStillMatches();
+                    return Success(request.Id, Ai.PreviewPatch(_session, request.PayloadJson));
+
+                case "apply_engineering_patch":
+                    if (!_allowWrite)
+                        return Failure(request.Id, "write_disabled",
+                            "Bridge write mode is disabled. Restart with --allow-write.");
+                    EnsureConnected();
+                    EnsureBindingStillMatches();
+                    return Success(request.Id, Ai.ApplyPatch(_session, request.PayloadJson));
 
                 case "publish_offline_copy":
                     if (!_allowWrite)

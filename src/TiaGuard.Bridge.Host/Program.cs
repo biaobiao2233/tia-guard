@@ -48,6 +48,7 @@ if (options.Transport == "stdio")
         builder.Services.AddSingleton<BridgeWriteSafetyService>();
         builder.Services.AddSingleton<BridgeTagWriteCoordinator>();
         builder.Services.AddSingleton<BridgeProjectPublishCoordinator>();
+        builder.Services.AddSingleton<BridgePatchCoordinator>();
     }
 
     var mcp = builder.Services
@@ -56,7 +57,7 @@ if (options.Transport == "stdio")
         .WithTools<BridgeReadTools>()
         .WithTools<BridgeAiTools>();
     if (options.AllowWrite)
-        mcp.WithTools<BridgeWriteTools>();
+        mcp.WithTools<BridgeWriteTools>().WithTools<BridgePatchTools>();
 
     using var host = builder.Build();
     await host.RunAsync();
@@ -75,6 +76,7 @@ if (options.AllowWrite)
     webBuilder.Services.AddSingleton<BridgeWriteSafetyService>();
     webBuilder.Services.AddSingleton<BridgeTagWriteCoordinator>();
     webBuilder.Services.AddSingleton<BridgeProjectPublishCoordinator>();
+    webBuilder.Services.AddSingleton<BridgePatchCoordinator>();
 }
 
 var httpMcp = webBuilder.Services
@@ -83,7 +85,7 @@ var httpMcp = webBuilder.Services
     .WithTools<BridgeReadTools>()
     .WithTools<BridgeAiTools>();
 if (options.AllowWrite)
-    httpMcp.WithTools<BridgeWriteTools>();
+    httpMcp.WithTools<BridgeWriteTools>().WithTools<BridgePatchTools>();
 
 var app = webBuilder.Build();
 
@@ -221,6 +223,20 @@ if (options.AllowWrite)
         CancellationToken cancellationToken) =>
         Results.Json(await coordinator.ApplyAsync(
             request.ToRequest(), request.SafetyToken, cancellationToken)));
+
+    app.MapPost("/api/v1/ai/patches/preview", async (
+        PatchHttpRequest request,
+        BridgePatchCoordinator coordinator,
+        CancellationToken cancellationToken) =>
+        Json(await coordinator.PreviewAsync(request.PatchJson(), cancellationToken)));
+
+    app.MapPost("/api/v1/ai/patches/apply", async (
+        PatchApplyHttpRequest request,
+        BridgePatchCoordinator coordinator,
+        CancellationToken cancellationToken) =>
+        Json(await coordinator.ApplyAsync(
+            request.PatchJson(), request.SafetyToken, cancellationToken)));
+
 }
 
 Console.Error.WriteLine(
@@ -279,6 +295,21 @@ internal sealed class ProjectPublishApplyHttpRequest : ProjectPublishHttpRequest
     public string SafetyToken { get; set; } = string.Empty;
 }
 
+internal class PatchHttpRequest
+{
+    public JsonElement Patch { get; set; }
+
+    public string PatchJson()
+        => Patch.ValueKind == JsonValueKind.String
+            ? Patch.GetString() ?? string.Empty
+            : Patch.GetRawText();
+}
+
+internal sealed class PatchApplyHttpRequest : PatchHttpRequest
+{
+    public string SafetyToken { get; set; } = string.Empty;
+}
+
 internal sealed class BridgeOptions
 {
     public const string Usage =
@@ -295,7 +326,7 @@ Defaults:
   worker = worker\TiaGuard.Bridge.Worker.exe when packaged; flat next-to-host path remains the development fallback
 
 The default is read-only. It includes AI Engineering v2 context tools.
---allow-write enables guarded tag edits and
+--allow-write enables guarded tag edits, structured engineering patches, and
 publication to a NEW output directory on a disposable offline copy.
 It does not enable attached-project saves/overwrites, PLC download, start/stop, force,
 online writes, or Safety operations.";

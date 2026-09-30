@@ -50,6 +50,7 @@ public sealed class BridgeAiContextServiceTests
     {
         var root = FindRepoRoot();
         var tools = File.ReadAllText(Path.Combine(root, "src", "TiaGuard.Bridge.Host", "BridgeAiTools.cs"));
+        var patches = File.ReadAllText(Path.Combine(root, "src", "TiaGuard.Bridge.Host", "BridgePatchTools.cs"));
         var program = File.ReadAllText(Path.Combine(root, "src", "TiaGuard.Bridge.Host", "Program.cs"));
         foreach (var name in new[]
                  {
@@ -62,13 +63,16 @@ public sealed class BridgeAiContextServiceTests
         }
         Assert.Contains("WithTools<BridgeAiTools>()", program);
         Assert.Contains("if (options.AllowWrite)", program);
-        Assert.DoesNotContain("WithTools<BridgePatchTools>()", program);
+        Assert.Contains("WithTools<BridgePatchTools>()", program);
+        Assert.Contains("Name = \"preview_patch\"", patches);
+        Assert.Contains("Name = \"apply_patch\"", patches);
         Assert.Contains("/api/v1/ai/context", program);
         Assert.Contains("/api/v1/ai/program-graph", program);
         Assert.Contains("/api/v1/ai/network", program);
         Assert.Contains("/api/v1/ai/where-used", program);
         Assert.Contains("/api/v1/ai/refresh", program);
-        Assert.DoesNotContain("/api/v1/ai/patches/preview", program);
+        Assert.Contains("/api/v1/ai/patches/preview", program);
+        Assert.Contains("/api/v1/ai/patches/apply", program);
         Assert.Contains("GetProjectContextAsync", program);
         Assert.DoesNotContain("download", tools, StringComparison.OrdinalIgnoreCase);
     }
