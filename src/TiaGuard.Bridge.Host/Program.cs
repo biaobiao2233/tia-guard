@@ -67,16 +67,26 @@ if (options.Transport == "stdio")
 var webBuilder = WebApplication.CreateBuilder(Array.Empty<string>());
 webBuilder.Logging.AddConsole();
 webBuilder.WebHost.UseUrls($"http://127.0.0.1:{options.Port}");
-webBuilder.Services.AddSingleton(new BridgeWorkerClient(options.WorkerPath, options.AllowWrite));
+var activity = new GatewayActivityTracker();
+var approvals = new GatewayApprovalService(required: !options.AllowWrite);
+webBuilder.Services.AddSingleton(activity);
+webBuilder.Services.AddSingleton(approvals);
+// HTTP writes are always possible inside the worker. Without --allow-write the host
+// still refuses apply until the TIA-Guard window grants that one preview.
+webBuilder.Services.AddSingleton(new BridgeWorkerClient(options.WorkerPath, allowWrite: true));
 webBuilder.Services.AddSingleton<IBridgeEngineeringGateway>(services =>
     new BridgeWorkerEngineeringGateway(services.GetRequiredService<BridgeWorkerClient>()));
 webBuilder.Services.AddSingleton<BridgeAiContextService>();
+webBuilder.Services.AddSingleton<BridgeWriteSafetyService>();
+webBuilder.Services.AddSingleton(services => new BridgePatchCoordinator(
+    services.GetRequiredService<IBridgeEngineeringGateway>(),
+    services.GetRequiredService<BridgeWriteSafetyService>(),
+    services.GetRequiredService<BridgeAiContextService>(),
+    services.GetRequiredService<GatewayApprovalService>()));
 if (options.AllowWrite)
 {
-    webBuilder.Services.AddSingleton<BridgeWriteSafetyService>();
     webBuilder.Services.AddSingleton<BridgeTagWriteCoordinator>();
     webBuilder.Services.AddSingleton<BridgeProjectPublishCoordinator>();
-    webBuilder.Services.AddSingleton<BridgePatchCoordinator>();
 }
 
 var httpMcp = webBuilder.Services
@@ -107,6 +117,12 @@ app.Use(async (context, next) =>
     }
 });
 
+app.Use(async (context, next) =>
+{
+    using (activity.Begin(context.Request.Path.Value ?? string.Empty, context.Request.Headers.UserAgent.ToString()))
+        await next();
+});
+
 app.MapMcp("/mcp");
 
 app.MapGet("/health", () => Results.Json(new
@@ -119,6 +135,89 @@ app.MapGet("/health", () => Results.Json(new
     bind = "127.0.0.1",
     port = options.Port
 }));
+
+app.MapGet("/capabilities", () => Results.Text(
+    GatewayCatalog.CapabilitiesJson(options.AllowWrite), "application/json"));
+app.MapGet("/openapi.json", () => Results.Text(GatewayCatalog.OpenApiJson(), "application/json"));
+string? cachedGatewayState = null;
+app.MapGet("/api/v1/gateway/status", async (
+    BridgeWorkerClient worker,
+    CancellationToken cancellationToken) =>
+{
+    if (worker.IsIdle)
+    {
+        try
+        {
+            cachedGatewayState = await worker.CallAsync("get_state", cancellationToken: cancellationToken);
+        }
+        catch (Exception)
+        {
+            cachedGatewayState = null;
+        }
+    }
+    var tiaConnected = false;
+    string? project = null;
+    if (!string.IsNullOrWhiteSpace(cachedGatewayState))
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(cachedGatewayState);
+            var root = document.RootElement;
+            tiaConnected = root.TryGetProperty("connected", out var connected) &&
+                connected.ValueKind == JsonValueKind.True;
+            if (tiaConnected && root.TryGetProperty("project", out var projectNode) &&
+                projectNode.ValueKind == JsonValueKind.Object &&
+                (projectNode.TryGetProperty("Name", out var name) || projectNode.TryGetProperty("name", out name)))
+                project = name.GetString();
+        }
+        catch (JsonException)
+        {
+            tiaConnected = false;
+            project = null;
+        }
+    }
+    var ai = activity.Read();
+    return Results.Json(new
+    {
+        gateway = "ready",
+        ai = new
+        {
+            connected = ai.Connected,
+            activeRequests = ai.ActiveRequests,
+            lastSeenUtc = ai.LastSeenUtc,
+            state = ai.State,
+            client = ai.Client,
+            transport = ai.Transport,
+            category = ai.Category
+        },
+        tia = new { connected = tiaConnected, project },
+        mode = options.AllowWrite ? "read-write" : "read-only",
+        pendingApprovals = approvals.Pending().Select(item => new
+        {
+            id = item.Id,
+            summary = item.Summary,
+            expiresAt = item.ExpiresAt
+        })
+    });
+});
+app.MapPost("/api/v1/gateway/approvals/{id}/allow", (string id, HttpRequest request) =>
+    DecideApproval(id, request, approvals.Allow));
+app.MapPost("/api/v1/gateway/approvals/{id}/reject", (string id, HttpRequest request) =>
+    DecideApproval(id, request, approvals.Reject));
+app.MapPost("/api/v1/gateway/shutdown", (HttpRequest request, BridgeWorkerClient worker, IHostApplicationLifetime lifetime) =>
+{
+    var expected = Environment.GetEnvironmentVariable("TIA_GUARD_APPROVAL_KEY") ?? string.Empty;
+    var presented = request.Headers["X-TiaGuard-Approval-Key"].ToString();
+    if (!string.IsNullOrEmpty(expected) && !string.Equals(presented, expected, StringComparison.Ordinal))
+        return Results.Json(new { error = "APPROVAL_FORBIDDEN" }, statusCode: StatusCodes.Status403Forbidden);
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(150);
+        try { await worker.ShutdownAsync(); } catch (Exception) { }
+        lifetime.StopApplication();
+    });
+    return Results.Json(new { status = "stopping" });
+});
 
 app.MapGet("/api/v1/projects", async (
     BridgeWorkerClient worker,
@@ -195,6 +294,19 @@ app.MapPost("/api/v1/ai/refresh", async (
     CancellationToken cancellationToken) =>
     Json(await context.RefreshAsync(cancellationToken)));
 
+app.MapPost("/api/v1/ai/patches/preview", async (
+    PatchHttpRequest request,
+    BridgePatchCoordinator coordinator,
+    CancellationToken cancellationToken) =>
+    Json(await coordinator.PreviewAsync(request.PatchJson(), cancellationToken)));
+
+app.MapPost("/api/v1/ai/patches/apply", async (
+    PatchApplyHttpRequest request,
+    BridgePatchCoordinator coordinator,
+    CancellationToken cancellationToken) =>
+    Json(await coordinator.ApplyAsync(
+        request.PatchJson(), request.SafetyToken, request.InjectFailure, cancellationToken)));
+
 if (options.AllowWrite)
 {
     app.MapPost("/api/v1/tags/preview-upsert", async (
@@ -224,19 +336,6 @@ if (options.AllowWrite)
         Results.Json(await coordinator.ApplyAsync(
             request.ToRequest(), request.SafetyToken, cancellationToken)));
 
-    app.MapPost("/api/v1/ai/patches/preview", async (
-        PatchHttpRequest request,
-        BridgePatchCoordinator coordinator,
-        CancellationToken cancellationToken) =>
-        Json(await coordinator.PreviewAsync(request.PatchJson(), cancellationToken)));
-
-    app.MapPost("/api/v1/ai/patches/apply", async (
-        PatchApplyHttpRequest request,
-        BridgePatchCoordinator coordinator,
-        CancellationToken cancellationToken) =>
-        Json(await coordinator.ApplyAsync(
-            request.PatchJson(), request.SafetyToken, request.InjectFailure, cancellationToken)));
-
 }
 
 Console.Error.WriteLine(
@@ -246,6 +345,17 @@ await app.RunAsync();
 
 static IResult Json(string payload)
     => Results.Text(payload, "application/json");
+
+static IResult DecideApproval(string id, HttpRequest request, Action<string> decide)
+{
+    var expected = Environment.GetEnvironmentVariable("TIA_GUARD_APPROVAL_KEY") ?? string.Empty;
+    var presented = request.Headers["X-TiaGuard-Approval-Key"].ToString();
+    if (!string.IsNullOrEmpty(expected) &&
+        !string.Equals(presented, expected, StringComparison.Ordinal))
+        return Results.Json(new { error = "APPROVAL_FORBIDDEN" }, statusCode: StatusCodes.Status403Forbidden);
+    decide(id);
+    return Results.Json(new { status = "recorded" });
+}
 
 internal sealed class ConnectRequest
 {
@@ -326,11 +436,10 @@ Defaults:
   http port = 18761
   worker = worker\TiaGuard.Bridge.Worker.exe when packaged; flat next-to-host path remains the development fallback
 
-The default is read-only. It includes AI Engineering v2 context tools.
---allow-write enables guarded tag edits, structured engineering patches, and
-publication to a NEW output directory on a disposable offline copy.
+The default HTTP gateway is read-only until the TIA-Guard window approves one preview.
+--allow-write skips that window and accepts the single-use preview token directly.
 It does not enable attached-project saves/overwrites, PLC download, start/stop, force,
-online writes, or Safety operations.";
+online writes, or Safety operations. The HTTP listener binds 127.0.0.1 only.";
 
     public string Transport { get; private set; } = "stdio";
     public int Port { get; private set; } = 18761;

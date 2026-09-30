@@ -1,3 +1,11 @@
+# TIA AI Gateway
+
+打开 TIA-Guard 后，本机 AI Gateway 会自动在 `127.0.0.1:18761` 就绪。普通用户不需要复制地址、选择传输方式或手工启动 Bridge。
+
+配套 Skill 先读 `/capabilities`，再读取派生的 AI Engineering 视图。真正写入前，TIA-Guard 窗口只确认这一次修改。原始工程不会被保存。成功的修改只落在 disposable offline copy 上，并且要通过 Compile、round-trip Verify 和 AI 语义检查。
+
+本机的 Cursor、Codex 或其它桌面 Agent 可以直接访问这个 Gateway。纯云端聊天页面没有到本机的通道，Skill 本身不会打通网络。
+
 # TIA AI Bridge
 
 TIA-Guard is adding a vendor-neutral bridge between external AI agents and a local Siemens TIA Portal V21 engineering session.

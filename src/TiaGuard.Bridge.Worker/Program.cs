@@ -137,6 +137,10 @@ namespace TiaGuard.Bridge.Worker
                         accessMode = _allowWrite ? "read-write" : "read-only"
                     }));
 
+                case "shutdown":
+                    DisposeSession();
+                    return Success(request.Id, "{\"status\":\"stopped\"}");
+
                 case "get_state":
                     return Success(request.Id, BuildStatePayload());
 

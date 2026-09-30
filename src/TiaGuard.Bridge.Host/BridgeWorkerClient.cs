@@ -35,6 +35,38 @@ public sealed class BridgeWorkerClient : IDisposable
         _timeout = timeout ?? TimeSpan.FromMinutes(30);
     }
 
+    public bool IsIdle => _gate.CurrentCount > 0;
+
+    public async Task ShutdownAsync()
+    {
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_process is not { HasExited: false })
+                return;
+            if (_handshakeComplete)
+            {
+                try
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+                    await ExchangeAsync(
+                        "shutdown", null, null, null, null, null, null, null, null, null, timeout.Token)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                }
+            }
+            try { _process.StandardInput.Close(); } catch (Exception) { }
+            if (!_process.WaitForExit(8000))
+                KillWorker();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<string> CallAsync(
         string method,
         int? processId = null,

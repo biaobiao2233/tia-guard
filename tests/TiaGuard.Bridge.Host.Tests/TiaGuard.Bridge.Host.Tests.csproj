@@ -15,5 +15,9 @@
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeWriteSafetyService.cs" Link="BridgeWriteSafetyService.cs" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeAiContextService.cs" Link="BridgeAiContextService.cs" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgePatchCoordinator.cs" Link="BridgePatchCoordinator.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/GatewayApprovalService.cs" Link="GatewayApprovalService.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/GatewayActivityTracker.cs" Link="GatewayActivityTracker.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/GatewayCatalog.cs" Link="GatewayCatalog.cs" />
+    <EmbeddedResource Include="../../src/TiaGuard.Bridge.Host/Gateway.openapi.json" LogicalName="TiaGuard.Bridge.openapi.json" />
   </ItemGroup>
 </Project>

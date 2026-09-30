@@ -110,8 +110,11 @@ TIA-Guard v0.1.0 Windows x64 package
 Human UI:
   Double-click TiaGuard.exe
 
-The GUI starts the bundled TIA AI Bridge from bridge\tia-guard-bridge.exe.
-No separate Bridge download is required.
+The window starts a local AI Gateway. A local Cursor, Codex, or other desktop agent can use it without a copied address. A cloud chat page cannot reach this machine just because it has the skill.
+
+Runtime layout:
+  bridge\tia-guard-bridge.exe
+  bridge\worker\TiaGuard.Bridge.Worker.exe
 
 Automation / AI CLI:
   tia-guard doctor

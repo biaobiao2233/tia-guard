@@ -7,9 +7,13 @@
     <Nullable>enable</Nullable>
     <AssemblyName>tia-guard-bridge</AssemblyName>
     <Version>0.1.0</Version>
+    <ApplicationIcon>..\TiaGuard.Gui\Assets\TiaGuard.ico</ApplicationIcon>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
     <FileVersion>0.1.0.0</FileVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Gateway.openapi.json" LogicalName="TiaGuard.Bridge.openapi.json" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
