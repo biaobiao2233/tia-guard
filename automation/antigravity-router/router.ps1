@@ -1,5 +1,5 @@
 param(
-    [string]$InboxRoot = 'E:\AGENT\Automation\TIA-Guard-Antigravity',
+    [string]$InboxRoot = (Join-Path $env:LOCALAPPDATA 'TIA-Guard-Antigravity'),
     [string]$DataDir = $env:ANTIGRAVITY_EXECUTABLE_DATA_DIR,
     [string]$AgentApiCommand = 'agentapi',
     [string]$MutexName = 'Local\TIA-Guard-Antigravity-Router',
