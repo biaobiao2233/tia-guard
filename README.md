@@ -1,108 +1,147 @@
 # TIA-Guard
 
-**Readable, reproducible Git engineering source and a local AI engineering gateway for Siemens TIA Portal V21.**
+**Readable Git engineering source, bounded round-trip reconstruction, and AI-assisted engineering workflows for Siemens TIA Portal V21.**
 
-TIA-Guard is an independent pre-alpha project. The Core path exports an existing V21 project to a canonical Git tree, builds a fresh project from that tree, then verifies supported engineering semantics. Snapshot, deterministic checks, reporting and optional AI review remain supporting layers.
+TIA-Guard is an independent pre-alpha project built around the locally installed **TIA Portal Openness API**. Its core goal is to turn a supported TIA Portal project into deterministic, human-readable engineering source that can be reviewed in Git, rebuilt into a fresh TIA project, and verified against the supported engineering semantics.
 
-The project is designed around the locally installed **TIA Portal Openness API**. It does not redistribute Siemens software, DLLs, licenses, or TIA project binaries.
+The repository does **not** redistribute Siemens software, DLLs, licenses, or TIA project binaries.
 
 ## Why TIA-Guard
 
-TIA Portal projects are normally stored as `.ap21` engineering binaries. That is convenient for TIA Portal itself, but it makes normal Git workflows, code review, open-source sharing, and AI-assisted engineering much harder than they are for text-based software projects.
+TIA Portal projects are normally stored as `.ap21` engineering binaries. That works well inside TIA Portal, but makes normal source-control workflows, code review, open collaboration, and AI-assisted engineering much harder than they are for text-based software projects.
 
-TIA-Guard is intended to close that gap in three layers:
+TIA-Guard addresses that gap in three layers:
 
-1. **Make PLC engineering readable, diffable, and shareable.** TIA-Guard translates the supported part of an S7-1200 project into deterministic, human-readable, Git-native engineering source under `tia-source/`. PLC programs, tags, and LAD logic can then be inspected, versioned, reviewed, searched, and consumed by AI tools. A readable repository also lowers the barrier to sharing PLC engineering work openly, so developers can learn from, reuse, review, and improve each other's implementations instead of exchanging opaque project binaries.
-2. **Preserve the ability to reconstruct the real TIA project.** The readable form is not meant to be a lossy documentation export. The core loop is `.ap21 -> canonical source -> new .ap21`, followed by Build / Verify checks against the supported engineering semantics. The goal is that making a project readable to Git and AI does not silently change the PLC engineering when it is rebuilt.
-3. **Let local AI agents operate the engineering project, not just read it.** Inspired by the interaction model of JLCEDA's API Gateway, the current development direction adds a local TIA AI Gateway plus a companion Skill. Local agents such as Codex, Cursor, and Claude Code can use the Gateway to inspect PLC tags and LAD logic, plan guarded changes, modify supported offline engineering content, and automatically compile, rebuild, and verify the result. The human should describe the engineering intent; the Gateway and Skill should handle the low-level workflow.
+1. **Readable and Git-native engineering source**  
+   Export the supported part of an S7-1200 project into deterministic, structured source that can be diffed, reviewed, searched, versioned, and consumed by local AI tools.
 
-This creates a simple progression:
+2. **Reproducible reconstruction and verification**  
+   Rebuild a fresh TIA Portal project from the canonical source, then use Build / Verify checks to confirm the covered PLC engineering semantics were preserved.
+
+3. **AI-assisted engineering workflow**  
+   A local AI engineering Gateway + companion Skill is the next interaction layer: local agents such as Codex, Cursor, and Claude Code can inspect supported PLC context, plan guarded changes, and participate in compile / rebuild / verify loops without treating an AI answer as proof.
+
+The intended progression is:
 
 ```text
-opaque TIA project
-    -> readable Git engineering source
-    -> reproducible TIA project
-    -> AI-readable engineering context
-    -> AI-assisted, verified engineering changes
+opaque .ap21 project
+    -> readable canonical engineering source
+    -> Git review / version history
+    -> fresh rebuilt TIA project
+    -> bounded semantic verification
+    -> AI-assisted, verified engineering workflow
 ```
 
-## v0.1 objective
+## Current status
 
-Prove one reproducible loop on **TIA Portal V21**:
+The default branch is intentionally conservative. It contains the bounded V21 round-trip core and keeps unsupported areas fail-closed.
 
-1. export the supported single S7-1200 / PLC / Main OB1 LAD project from an owned offline copy to a deterministic Git tree;
-2. validate that tree and build a fresh disposable V21 project from it alone;
-3. compare the supported engineering semantics of the source and rebuilt project.
+| Capability | Current repository status |
+| --- | --- |
+| Export supported V21 engineering source | Implemented through the Openness library / Smoke harness |
+| Build a fresh V21 project from canonical source | Implemented; product CLI exposes `tia-guard build` |
+| Verify original vs rebuilt supported semantics | Implemented through the Openness library / Smoke harness |
+| Unified `export / build / verify` product CLI | Candidate in [PR #32](../../pull/32) |
+| Local AI engineering Gateway + Skill | Active development layer; not claimed as released mainline functionality |
 
-The bounded export, fresh-project build, and semantic Verify slices are accepted for the self-authored V21 demo. The contracts remain versioned draft v1 formats; arbitrary TIA projects and runtime behavior are outside this proof.
+The accepted real-project proof is deliberately narrow: one self-authored **TIA Portal V21 / S7-1200 / Main OB1 LAD** project profile. Arbitrary TIA projects, runtime/control-logic equivalence, HMI, Safety, drives, multiple PLCs, and unsupported Openness objects are **not** implied by this proof.
 
-That historical acceptance covers CPU `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`, its observed Chinese-locale integrated item tree, and an empty tag table. The current validator explicitly limits the CPU profile; populated primitive tags have deterministic contract tests, not the same real-project acceptance evidence. See [architecture and coverage](docs/ARCHITECTURE.md).
+See [architecture and coverage](docs/ARCHITECTURE.md) and the [Round-trip Source v1 contract](docs/contracts/roundtrip-source-v1.md) for the exact boundary.
 
-The product CLI currently exposes **build**. Export and Verify are available through the library and [Openness Smoke harness](src/TiaGuard.Openness/README.md); they are not yet `tia-guard export` / `tia-guard verify` product commands.
+## Core round-trip
 
-Build a fresh V21 project from a validated canonical Round-trip Source v1 tree:
+The bounded core is:
+
+```text
+existing .ap21
+  -> owned offline copy
+  -> canonical Git source
+  -> strict source validation
+  -> fresh disposable V21 project
+  -> compile
+  -> re-export
+  -> supported semantic comparison
+```
+
+The original project is never used as a writable build target. Build creates a new project in a separate output directory, saves and compiles it, and only publishes the result after successful validation.
+
+### Build example
 
 ```powershell
 dotnet build src/TiaGuard.Cli/TiaGuard.Cli.csproj -c Release
 & .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe build C:\path\to\canonical-tree --output C:\path\to\new-project
 ```
 
-The output directory must not exist. Keep its path short enough for TIA Portal V21's 143-character staged project-folder limit; the command checks this before starting TIA Portal. It checks the complete source tree, then creates a separate headless V21 project, saves and compiles it, and publishes it only with zero compile errors. It does not accept an original `.ap21` as input or connect to a PLC.
+Export and Verify are currently available through the library / [Openness Smoke harness](src/TiaGuard.Openness/README.md). PR #32 exposes the already bounded implementations as one simple CLI surface.
 
-## Design principle
+## Verification model
 
-**Deterministic facts stay deterministic; AI handles interpretation.**
-
-TIA-Guard must distinguish:
+TIA-Guard separates evidence from claims:
 
 - verified engineering facts;
-- coverage and collection failures;
-- deterministic findings;
+- incomplete or unsupported collection;
+- deterministic validation findings;
 - advisory AI output.
 
-An empty result must never mean both "nothing exists" and "collection failed".
+Unsupported, protected, unreadable, or incomplete engineering content cannot silently produce a PASS.
 
-## v0.1 rule scope
-
-Initial candidates are intentionally narrow:
-
-- missing tag comments under a documented language/policy;
-- address-range overlap for supported primitive address forms, reported as overlap rather than automatically as an error;
-- M-area tag declarations as an inventory/info finding, not a claim of actual program use;
-- block consistency / compile evidence only when the evidence source and freshness are explicit;
-- incomplete collection as a first-class diagnostic that prevents a misleading "all clear".
+The real V21 acceptance demonstrated a bounded source -> rebuild -> re-export -> Verify loop with zero compile errors/warnings for the accepted demo profile. Pure contract tests cover additional deterministic negative cases without claiming those cases are real Siemens integration evidence.
 
 ## Safety model
 
-- v0.1 targets **specified offline project copies** first.
-- No online PLC writes.
-- The original project is never saved, upgraded or imported into. An explicit build creates, imports into, saves and compiles only a fresh disposable project.
-- Export may compile only its owned offline copy when Siemens requires consistency before SimaticML export.
-- Partial/unsupported/protected data is reported explicitly.
-- Main has no AI/network review path. Preserved engineering XML/comments may themselves contain sensitive text; canonical export is not automatic anonymization.
+- Offline project copies first; no PLC online writes.
+- No download, force, or runtime control operations.
+- The supplied project is not saved, upgraded, or imported into.
+- Build writes only to a fresh disposable output.
+- Unsupported or incomplete content blocks readiness instead of being treated as empty.
+- Engineering comments/XML may contain project data; canonical export is **not** automatic anonymization.
+- Siemens assemblies are resolved from the user's local installation and are not copied into packages or committed.
+
+## Public-source hygiene
+
+This repository is intended to remain source-only:
+
+- no `.ap21` / TIA project archives;
+- no Siemens DLLs or executables;
+- no licenses, private keys, credentials, or local `.env` files;
+- no build output, logs, local scratch directories, or customer project data;
+- examples are sanitized/synthetic fixtures only.
+
+The ignore policy is defined in [`.gitignore`](.gitignore).
 
 ## Development environment
 
-The first target is Windows with TIA Portal V21 and TIA Portal Openness installed.
+Target environment:
 
-Run the environment probe:
+- Windows
+- Siemens TIA Portal V21
+- TIA Portal Openness V21
+- .NET Framework 4.8 integration boundary
+- .NET SDK 8 for supporting tooling/tests
 
-    powershell -ExecutionPolicy Bypass -File .\scripts\check-env.ps1
+Environment probe:
 
-Openness V21 is a **.NET Framework 4.8** integration boundary. Modern .NET components may be used elsewhere, but the collector boundary must be proven with the locally installed V21 assemblies.
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\check-env.ps1
+```
+
+If administrative bootstrap is needed, `scripts/bootstrap-admin.ps1` uses the current Windows identity by default; no machine-specific user name is required.
 
 ## Repository layout
 
-    src/TiaGuard.Openness   Siemens Openness collector / evidence adapter
-    src/TiaGuard.Cli        V21 build command
-    tests/TiaGuard.Contracts.Tests  pure contract tests, no Siemens dependency
-    tests/TiaGuard.Openness.Smoke   local V21 integration harness
-    docs/contracts          draft shared evidence/finding contracts
-    examples                sanitized fixtures only
-
-The default branch remains the conservative reproducible-core line. AI Engineering and the local Gateway are being developed on an integration candidate and are not yet claimed as released mainline functionality. `examples/roundtrip-fixture` is synthetic validation input, not a Siemens-importable demo or proof of compilation.
+```text
+src/TiaGuard.Openness          Siemens Openness adapter / round-trip implementation
+src/TiaGuard.Cli               product CLI
+tests/TiaGuard.Contracts.Tests pure contract and filesystem tests
+tests/TiaGuard.Openness.Smoke  local V21 integration harness
+docs/contracts                 versioned source/evidence contracts
+docs/verification              verification receipts and bounded evidence
+examples                       sanitized fixtures only
+```
 
 ## Safe automated checks
+
+These checks require no Siemens DLL redistribution:
 
 ```powershell
 dotnet test tests/TiaGuard.Contracts.Tests/TiaGuard.Contracts.Tests.csproj -c Release
@@ -110,16 +149,17 @@ python -m pip install jsonschema==4.26.0
 python scripts/test-contract-schemas.py
 ```
 
-These checks run on Windows without TIA or Siemens DLLs. The GitHub workflow runs this pure boundary only; it does not claim TIA runtime compatibility or PLC verification.
+Pure tests prove contract behavior, not TIA runtime compatibility. Real Openness behavior requires a local V21 installation and separately identified integration evidence.
 
-## Release gates for v0.1
+## Project direction
 
-- one self-authored TIA V21 project collected and manually cross-checked against the GUI;
-- repeated unchanged collection produces identical normalized engineering content;
-- one known edit produces the expected diff;
-- supported rules have positive and negative/exception fixtures;
-- partial/protected collection does not produce a false PASS;
-- SARIF upload is demonstrated on GitHub with correct location and stable rerun behavior.
+TIA-Guard is not trying to replace TIA Portal. The project explores a safer bridge between traditional PLC engineering and modern software-engineering workflows:
+
+- readable engineering source;
+- Git review and version history;
+- deterministic reconstruction;
+- bounded verification;
+- local AI agents operating through explicit engineering contracts rather than opaque UI automation alone.
 
 ## Disclaimer
 
