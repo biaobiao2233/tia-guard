@@ -136,7 +136,7 @@ jobs:
             url = $url
             timestamp = [DateTime]::UtcNow.ToString('o')
           }
-          $inbox = 'E:\AGENT\Automation\TIA-Guard-Antigravity\inbox'
+          $inbox = Join-Path $env:LOCALAPPDATA 'TIA-Guard-Antigravity\inbox'
           New-Item -ItemType Directory -Path $inbox -Force | Out-Null
           $id = [guid]::NewGuid().ToString('N')
           $tmp = Join-Path $inbox "$id.tmp"
