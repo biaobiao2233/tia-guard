@@ -14,6 +14,8 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Test the production pure-source boundary (no Siemens DLLs)
         run: dotnet test tests/TiaGuard.Contracts.Tests/TiaGuard.Contracts.Tests.csproj -c Release --logger "trx;LogFileName=contracts.trx"
+      - name: Test Gateway authorization and product contracts (no Siemens DLLs)
+        run: dotnet test tests/TiaGuard.Bridge.Host.Tests/TiaGuard.Bridge.Host.Tests.csproj -c Release --logger "trx;LogFileName=bridge.trx"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

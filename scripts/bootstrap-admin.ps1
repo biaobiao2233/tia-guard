@@ -1,5 +1,5 @@
 param(
-    [string]$UserName = "LAPTOP-KMO7R010\asus"
+    [string]$UserName = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 )
 
 $ErrorActionPreference = "Stop"

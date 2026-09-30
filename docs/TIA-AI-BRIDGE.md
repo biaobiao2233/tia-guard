@@ -1,3 +1,11 @@
+# Current integrated source status
+
+The current source includes the GUI-started local API Gateway, AI Engineering v2 context, structured patch preview/apply, per-preview GUI approval and packaged worker isolation. See the [current publication verification](verification/publication-20261001.md) for exact-source checks. The detailed legacy tag/publish interfaces below remain supported; they are not the complete v2 API.
+
+Current JSON patch operations are `upsert_tag` and `replace_output_condition`. Query `/capabilities` and `/openapi.json` for the actual public API. Default HTTP apply requires the GUI operator to approve that exact preview; default MCP tools remain read-only. Headless `--allow-write` skips GUI approval but retains single-use token checks and offline-copy verification.
+
+Public-source availability is separate from a GitHub Release and from real TIA runtime acceptance.
+
 # TIA AI Gateway
 
 打开 TIA-Guard 后，本机 AI Gateway 会自动在 `127.0.0.1:18761` 就绪。普通用户不需要复制地址、选择传输方式或手工启动 Bridge。
@@ -57,7 +65,7 @@ Release packages place that net48 worker under a dedicated `worker/` directory s
 
 The default mode is intentionally read-only. It exposes project discovery, exact binding, project metadata and a bounded engineering snapshot.
 
-An explicit `--allow-write` switch enables a separate guarded write tool type. The current write scope is still bounded to disposable offline project copies: one root PLC-tag upsert in memory plus an explicit, separately previewed publish-to-new-directory operation. Tag mutation itself is not saved; publication compiles the disposable copy, uses SaveAs only into a brand-new destination, then reopens the new `.ap21` through a fresh disposable copy and verifies its engineering `contentId`.
+For the legacy tag/publish tools described below, an explicit `--allow-write` switch enables a separate guarded write tool type. Their write scope is still bounded to disposable offline project copies: one root PLC-tag upsert in memory plus an explicit, separately previewed publish-to-new-directory operation. Tag mutation itself is not saved; publication compiles the disposable copy, uses SaveAs only into a brand-new destination, then reopens the new `.ap21` through a fresh disposable copy and verifies its engineering `contentId`.
 
 Neither mode exposes:
 
