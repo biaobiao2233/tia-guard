@@ -21,6 +21,9 @@ public sealed class BridgeWorkerClient : IDisposable
     private Task? _stderrPump;
     private bool _handshakeComplete;
     private bool _disposed;
+    private int _generation;
+
+    public int Generation => _generation;
 
     public BridgeWorkerClient(
         string workerPath,
@@ -29,7 +32,7 @@ public sealed class BridgeWorkerClient : IDisposable
     {
         _workerPath = Path.GetFullPath(workerPath);
         _allowWrite = allowWrite;
-        _timeout = timeout ?? TimeSpan.FromMinutes(5);
+        _timeout = timeout ?? TimeSpan.FromMinutes(20);
     }
 
     public async Task<string> CallAsync(
@@ -42,6 +45,7 @@ public sealed class BridgeWorkerClient : IDisposable
         string? logicalAddress = null,
         string? outputDirectory = null,
         string? outputName = null,
+        string? payloadJson = null,
         CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -53,7 +57,7 @@ public sealed class BridgeWorkerClient : IDisposable
             if (!_handshakeComplete)
             {
                 var hello = await ExchangeAsync(
-                    "hello", null, null, null, null, null, null, null, null, cancellationToken)
+                    "hello", null, null, null, null, null, null, null, null, null, cancellationToken)
                     .ConfigureAwait(false);
                 if (!hello.Success)
                     throw BridgeWorkerException.From(hello);
@@ -62,7 +66,7 @@ public sealed class BridgeWorkerClient : IDisposable
 
             var response = await ExchangeAsync(
                 method, processId, projectPath, tableName, tagName, dataType, logicalAddress,
-                outputDirectory, outputName, cancellationToken).ConfigureAwait(false);
+                outputDirectory, outputName, payloadJson, cancellationToken).ConfigureAwait(false);
             if (!response.Success)
                 throw BridgeWorkerException.From(response);
 
@@ -86,6 +90,7 @@ public sealed class BridgeWorkerClient : IDisposable
         string? logicalAddress,
         string? outputDirectory,
         string? outputName,
+        string? payloadJson,
         CancellationToken cancellationToken)
     {
         var process = _process ?? throw new InvalidOperationException("Worker process is unavailable.");
@@ -101,7 +106,8 @@ public sealed class BridgeWorkerClient : IDisposable
             DataType = dataType,
             LogicalAddress = logicalAddress,
             OutputDirectory = outputDirectory,
-            OutputName = outputName
+            OutputName = outputName,
+            PayloadJson = payloadJson
         };
 
         var line = JsonSerializer.Serialize(request);
@@ -196,6 +202,7 @@ public sealed class BridgeWorkerClient : IDisposable
     private void KillWorker()
     {
         _handshakeComplete = false;
+        _generation++;
         var process = _process;
         _process = null;
         _stderrPump = null;
@@ -245,6 +252,7 @@ public sealed class BridgeWorkerClient : IDisposable
         public string? LogicalAddress { get; set; }
         public string? OutputDirectory { get; set; }
         public string? OutputName { get; set; }
+        public string? PayloadJson { get; set; }
     }
 
     internal sealed class WorkerResponse

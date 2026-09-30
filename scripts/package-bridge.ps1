@@ -96,6 +96,10 @@ Explicit guarded write mode:
   tia-guard-bridge.exe --transport stdio --allow-write
   tia-guard-bridge.exe --transport http --port 18761 --allow-write
 
+Read-only AI context, backed by the existing AI Engineering v2 renderer:
+- get_ai_project_context, get_program_graph, get_network, where_used, refresh_ai_context
+- same behavior with or without --allow-write
+
 Current write scope:
 - disposable offline .ap21 copy only
 - preview_tag_upsert -> single-use safety token -> apply_tag_upsert

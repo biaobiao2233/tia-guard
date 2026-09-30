@@ -13,6 +13,7 @@ namespace TiaGuard.Bridge.Worker
         private static TiaProjectSession _session;
         private static ProjectInfo _binding;
         private static bool _allowWrite;
+        private static readonly BridgeAiWorkspace Ai = new BridgeAiWorkspace();
 
         private static int Main(string[] args)
         {
@@ -65,6 +66,7 @@ namespace TiaGuard.Bridge.Worker
             }
 
             DisposeSession();
+            Ai.Dispose();
             return 0;
         }
 
@@ -90,7 +92,10 @@ namespace TiaGuard.Bridge.Worker
                         "get_state",
                         "get_project",
                         "get_project_snapshot",
-                        "get_tag_state"
+                        "get_tag_state",
+                        "get_ai_context_identity",
+                        "query_ai",
+                        "refresh_ai_context"
                     };
                     if (_allowWrite)
                     {
@@ -152,12 +157,29 @@ namespace TiaGuard.Bridge.Worker
                             "Bridge write mode is disabled. Restart with --allow-write.");
                     EnsureConnected();
                     EnsureBindingStillMatches();
-                    return Success(request.Id, Json.Serialize(
-                        _session.UpsertRootTagForBridge(
-                            request.TableName,
-                            request.TagName,
-                            request.DataType,
-                            request.LogicalAddress)));
+                    var upserted = _session.UpsertRootTagForBridge(
+                        request.TableName,
+                        request.TagName,
+                        request.DataType,
+                        request.LogicalAddress);
+                    Ai.Invalidate();
+                    return Success(request.Id, Json.Serialize(upserted));
+
+                case "get_ai_context_identity":
+                    EnsureConnected();
+                    EnsureBindingStillMatches();
+                    return Success(request.Id, Ai.Identity(_session));
+
+                case "query_ai":
+                    EnsureConnected();
+                    EnsureBindingStillMatches();
+                    return Success(request.Id, Ai.Query(_session, request.PayloadJson));
+
+                case "refresh_ai_context":
+                    EnsureConnected();
+                    EnsureBindingStillMatches();
+                    return Success(request.Id, Ai.Query(_session,
+                        "{\"Kind\":\"project\",\"Force\":true}"));
 
                 case "publish_offline_copy":
                     if (!_allowWrite)
@@ -304,6 +326,7 @@ namespace TiaGuard.Bridge.Worker
             {
                 _session = null;
                 _binding = null;
+                Ai.Invalidate();
             }
         }
 
@@ -344,6 +367,7 @@ namespace TiaGuard.Bridge.Worker
         public string LogicalAddress { get; set; }
         public string OutputDirectory { get; set; }
         public string OutputName { get; set; }
+        public string PayloadJson { get; set; }
     }
 
     internal sealed class WorkerResponse

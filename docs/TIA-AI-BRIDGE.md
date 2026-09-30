@@ -7,7 +7,9 @@ The bridge is deliberately separate from the AI-readable renderer:
 - **AI-readable view**: deterministic, derived engineering context generated from validated `tia-source/`.
 - **TIA AI Bridge**: live, explicit access to the local TIA Portal engineering session.
 
-The two surfaces can be integrated later, but neither is allowed to become an implicit replacement for the authoritative round-trip source.
+V2 reads the bound offline project by exporting canonical `tia-source/` into a bridge-owned temporary workspace and running the existing AI Engineering v2 renderer. The bridge does not contain a second LAD parser. `ai/` remains a derived view.
+
+The two surfaces meet only through that temporary canonical export. Neither is allowed to become an implicit replacement for the authoritative round-trip source.
 
 ## Design sources
 

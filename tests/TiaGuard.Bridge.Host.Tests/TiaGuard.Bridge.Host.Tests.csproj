@@ -13,5 +13,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeWorkerClient.cs" Link="BridgeWorkerClient.cs" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeWriteSafetyService.cs" Link="BridgeWriteSafetyService.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeAiContextService.cs" Link="BridgeAiContextService.cs" />
   </ItemGroup>
 </Project>

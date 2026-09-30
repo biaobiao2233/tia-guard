@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
@@ -39,6 +40,9 @@ if (options.Transport == "stdio")
     var builder = Host.CreateApplicationBuilder(Array.Empty<string>());
     builder.Logging.AddConsole(log => log.LogToStandardErrorThreshold = LogLevel.Trace);
     builder.Services.AddSingleton(new BridgeWorkerClient(options.WorkerPath, options.AllowWrite));
+    builder.Services.AddSingleton<IBridgeEngineeringGateway>(services =>
+        new BridgeWorkerEngineeringGateway(services.GetRequiredService<BridgeWorkerClient>()));
+    builder.Services.AddSingleton<BridgeAiContextService>();
     if (options.AllowWrite)
     {
         builder.Services.AddSingleton<BridgeWriteSafetyService>();
@@ -49,7 +53,8 @@ if (options.Transport == "stdio")
     var mcp = builder.Services
         .AddMcpServer()
         .WithStdioServerTransport()
-        .WithTools<BridgeReadTools>();
+        .WithTools<BridgeReadTools>()
+        .WithTools<BridgeAiTools>();
     if (options.AllowWrite)
         mcp.WithTools<BridgeWriteTools>();
 
@@ -62,6 +67,9 @@ var webBuilder = WebApplication.CreateBuilder(Array.Empty<string>());
 webBuilder.Logging.AddConsole();
 webBuilder.WebHost.UseUrls($"http://127.0.0.1:{options.Port}");
 webBuilder.Services.AddSingleton(new BridgeWorkerClient(options.WorkerPath, options.AllowWrite));
+webBuilder.Services.AddSingleton<IBridgeEngineeringGateway>(services =>
+    new BridgeWorkerEngineeringGateway(services.GetRequiredService<BridgeWorkerClient>()));
+webBuilder.Services.AddSingleton<BridgeAiContextService>();
 if (options.AllowWrite)
 {
     webBuilder.Services.AddSingleton<BridgeWriteSafetyService>();
@@ -72,11 +80,30 @@ if (options.AllowWrite)
 var httpMcp = webBuilder.Services
     .AddMcpServer()
     .WithHttpTransport()
-    .WithTools<BridgeReadTools>();
+    .WithTools<BridgeReadTools>()
+    .WithTools<BridgeAiTools>();
 if (options.AllowWrite)
     httpMcp.WithTools<BridgeWriteTools>();
 
 var app = webBuilder.Build();
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception error) when (error is InvalidOperationException or ArgumentException &&
+        context.Request.Path.StartsWithSegments("/api"))
+    {
+        if (context.Response.HasStarted)
+            throw;
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        context.Response.ContentType = "application/json; charset=utf-8";
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(new { error = error.Message }));
+    }
+});
 
 app.MapMcp("/mcp");
 
@@ -115,8 +142,12 @@ app.MapPost("/api/v1/open-offline", async (
 
 app.MapPost("/api/v1/disconnect", async (
     BridgeWorkerClient worker,
+    BridgeAiContextService context,
     CancellationToken cancellationToken) =>
-    Json(await worker.CallAsync("disconnect", cancellationToken: cancellationToken)));
+{
+    context.Invalidate();
+    return Json(await worker.CallAsync("disconnect", cancellationToken: cancellationToken));
+});
 
 app.MapGet("/api/v1/state", async (
     BridgeWorkerClient worker,
@@ -132,6 +163,35 @@ app.MapGet("/api/v1/project/snapshot", async (
     BridgeWorkerClient worker,
     CancellationToken cancellationToken) =>
     Json(await worker.CallAsync("get_project_snapshot", cancellationToken: cancellationToken)));
+
+app.MapGet("/api/v1/ai/context", async (
+    BridgeAiContextService context,
+    CancellationToken cancellationToken) =>
+    Json(await context.GetProjectContextAsync(cancellationToken)));
+
+app.MapGet("/api/v1/ai/program-graph", async (
+    string block,
+    BridgeAiContextService context,
+    CancellationToken cancellationToken) =>
+    Json(await context.GetProgramGraphAsync(block, cancellationToken)));
+
+app.MapGet("/api/v1/ai/network", async (
+    string block,
+    int network,
+    BridgeAiContextService context,
+    CancellationToken cancellationToken) =>
+    Json(await context.GetNetworkAsync(block, network, cancellationToken)));
+
+app.MapGet("/api/v1/ai/where-used", async (
+    string symbol,
+    BridgeAiContextService context,
+    CancellationToken cancellationToken) =>
+    Json(await context.WhereUsedAsync(symbol, cancellationToken)));
+
+app.MapPost("/api/v1/ai/refresh", async (
+    BridgeAiContextService context,
+    CancellationToken cancellationToken) =>
+    Json(await context.RefreshAsync(cancellationToken)));
 
 if (options.AllowWrite)
 {
@@ -161,7 +221,6 @@ if (options.AllowWrite)
         CancellationToken cancellationToken) =>
         Results.Json(await coordinator.ApplyAsync(
             request.ToRequest(), request.SafetyToken, cancellationToken)));
-
 }
 
 Console.Error.WriteLine(
@@ -235,8 +294,9 @@ Defaults:
   http port = 18761
   worker = worker\TiaGuard.Bridge.Worker.exe when packaged; flat next-to-host path remains the development fallback
 
-The default is read-only. --allow-write enables only guarded engineering writes to
-a disposable offline project copy plus guarded publication to a NEW output directory.
+The default is read-only. It includes AI Engineering v2 context tools.
+--allow-write enables guarded tag edits and
+publication to a NEW output directory on a disposable offline copy.
 It does not enable attached-project saves/overwrites, PLC download, start/stop, force,
 online writes, or Safety operations.";
 

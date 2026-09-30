@@ -44,8 +44,12 @@ public class BridgeReadTools
     [Description("Release the current TIA Portal project binding. Does not close or save the user's project.")]
     public static Task<string> DisconnectProject(
         BridgeWorkerClient worker,
+        BridgeAiContextService context,
         CancellationToken cancellationToken)
-        => worker.CallAsync("disconnect", cancellationToken: cancellationToken);
+    {
+        context.Invalidate();
+        return worker.CallAsync("disconnect", cancellationToken: cancellationToken);
+    }
 
     [McpServerTool(Name = "get_bridge_state", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Get the current bridge binding state and bound project identity.")]
