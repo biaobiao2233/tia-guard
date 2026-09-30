@@ -1,6 +1,6 @@
 # TIA-Guard Antigravity event router
 
-GitHub Actions routes selected repository events to the dedicated `antigravity-router` Windows runner. The runner writes a minimal JSON envelope as `*.tmp` and atomically renames it to `*.json` in `E:\AGENT\Automation\TIA-Guard-Antigravity\inbox`. The Antigravity 2.0 native Sidecar watches that directory with `FileSystemWatcher`, then calls the bundled `agentapi` to create or continue a conversation in the TIA-Guard Project. The runner never calls Antigravity or handles its credentials.
+GitHub Actions routes selected repository events to the dedicated `antigravity-router` Windows runner. The runner writes a minimal JSON envelope as `*.tmp` and atomically renames it to `*.json` in `%LOCALAPPDATA%\TIA-Guard-Antigravity\inbox`. The Antigravity 2.0 native Sidecar watches that directory with `FileSystemWatcher`, then calls the bundled `agentapi` to create or continue a conversation in the TIA-Guard Project. The runner never calls Antigravity or handles its credentials.
 
 ## Versioned components
 
