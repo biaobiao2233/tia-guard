@@ -1,8 +1,18 @@
 # TIA-Guard
 
+**中文** | [English](README.en.md)
+
 **让受支持的 TIA Portal 工程可阅读、可用 Git 管理，并能通过验证后重建。**
 
 TIA-Guard 是独立的 **pre-alpha** 工程工具，面向本机 **Siemens TIA Portal V21 / S7-1200**。它通过本地 Openness API 将工程转换成确定性的工程源，提供 Windows GUI、CLI，以及供本机 AI Agent 使用的 API Gateway / MCP 接口。
+
+## 下载与使用说明
+
+- [发行版](https://github.com/biaobiao2233/tia-guard/releases)：预览包与校验值。
+- [快速开始](docs/GETTING-STARTED.md)：环境前提、解压、GUI 流程与常见问题。
+- [AI Gateway 指南](docs/TIA-AI-BRIDGE.md)：本机 Agent、MCP 与受控离线修改。
+
+首个发行版为 pre-alpha 预览版。GUI 当前为中文；页面顶部链接切换的是仓库文档语言。
 
 ## 当前源码状态
 
@@ -18,7 +28,7 @@ TIA-Guard 是独立的 **pre-alpha** 工程工具，面向本机 **Siemens TIA P
 | Gateway Skill | [专用 Skill](skills/tia-guard-gateway/SKILL.md)，供本机 Codex、Cursor、Claude Code 等 Agent 按统一流程调用 |
 | Windows 打包 | GUI + CLI + Gateway + 独立 net48 worker；不打包 Siemens DLL |
 
-这是源码集成状态，不是稳定版发布声明。本次检查覆盖自动化测试、构建、打包和本机 HTTP 控制边界；真实 TIA 工程往返证据另见下文。尚未发布 GitHub Release 安装包。
+这是源码集成状态，不是稳定版发布声明。本次检查覆盖自动化测试、构建、打包和本机 HTTP 控制边界；真实 TIA 工程往返证据另见下文。发行包及发布状态以 Releases 页面为准；历史记录不自动视为最新集成 GUI/Gateway 的真实 TIA 验收。
 
 ## 两个 GUI 主流程
 
@@ -100,11 +110,11 @@ Gateway 服务只绑定 localhost。本机桌面 Agent 可以连接；纯云端�
 
 ```powershell
 dotnet build src/TiaGuard.Gui/TiaGuard.Gui.csproj -c Release
-powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
-powershell -ExecutionPolicy Bypass -File scripts/package-gateway-skill.ps1
+pwsh -File scripts/package-windows.ps1 -Version 0.1.0-prealpha.1
+pwsh -File scripts/package-gateway-skill.ps1
 ```
 
-Windows ZIP 含 GUI、CLI、Gateway、隔离在 `bridge/worker/` 下的 net48 worker 和 TIA-Guard core。Gateway 可单独通过 `scripts/package-bridge.ps1` 打包；CLI 可通过 `scripts/package-cli.ps1` 单独打包。
+Windows ZIP 含 GUI、CLI、Gateway、隔离在 `bridge/worker/` 下的 net48 worker 、TIA-Guard core 及双语入门/Gateway 说明。Gateway 可单独通过 `scripts/package-bridge.ps1` 打包；CLI 可通过 `scripts/package-cli.ps1` 单独打包。
 
 ```powershell
 dotnet test tests/TiaGuard.Contracts.Tests/TiaGuard.Contracts.Tests.csproj -c Release
