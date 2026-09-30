@@ -30,7 +30,19 @@ $stage = Join-Path $OutputDirectory $packageName
 $zip = Join-Path $OutputDirectory ($packageName + ".zip")
 
 New-Item -ItemType Directory -Force $OutputDirectory | Out-Null
-Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
+$removed = $false
+$removeError = $null
+for ($attempt = 1; $attempt -le 8; $attempt++) {
+    try {
+        if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
+        $removed = -not (Test-Path $stage)
+        if ($removed) { break }
+    } catch {
+        $removeError = $_
+        Start-Sleep -Seconds (2 * $attempt)
+    }
+}
+if (-not $removed) { throw "Could not replace the previous Windows package stage. $removeError" }
 Remove-Item -Force $zip -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $stage | Out-Null
 
@@ -69,11 +81,37 @@ if (Get-ChildItem $stage -Filter "Siemens*.dll" -File -Recurse) {
     throw "Refusing to package Siemens DLLs."
 }
 
+$bridgeScript = Join-Path $PSScriptRoot "package-bridge.ps1"
+& $bridgeScript -Configuration $Configuration -OutputDirectory $OutputDirectory
+if ($LASTEXITCODE -ne 0) {
+    throw "Bridge package failed with exit code $LASTEXITCODE."
+}
+$bridgeStage = Join-Path $OutputDirectory "tia-guard-bridge-v0.1.0-windows-x64"
+$bundledBridge = Join-Path $stage "bridge"
+if (-not (Test-Path (Join-Path $bridgeStage "tia-guard-bridge.exe"))) {
+    throw "Bridge runtime was not staged."
+}
+New-Item -ItemType Directory -Force $bundledBridge | Out-Null
+Copy-Item (Join-Path $bridgeStage "*") $bundledBridge -Recurse -Force
+if (-not (Test-Path (Join-Path $bundledBridge "tia-guard-bridge.exe"))) {
+    throw "Bundled bridge executable is missing."
+}
+if (-not (Test-Path (Join-Path $bundledBridge "worker\TiaGuard.Bridge.Worker.exe"))) {
+    throw "Bundled bridge worker is missing."
+}
+
+if (Get-ChildItem $stage -Filter "Siemens*.dll" -File -Recurse) {
+    throw "Refusing to package Siemens DLLs."
+}
+
 $readme = @"
 TIA-Guard v0.1.0 Windows x64 package
 
 Human UI:
   Double-click TiaGuard.exe
+
+The GUI starts the bundled TIA AI Bridge from bridge\tia-guard-bridge.exe.
+No separate Bridge download is required.
 
 Automation / AI CLI:
   tia-guard doctor
@@ -109,7 +147,21 @@ Scope:
     $readme,
     [Text.UTF8Encoding]::new($false))
 
-Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -CompressionLevel Optimal
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zipOk = $false
+$zipError = $null
+for ($attempt = 1; $attempt -le 8; $attempt++) {
+    try {
+        if (Test-Path $zip) { Remove-Item -Force $zip }
+        [IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip)
+        $zipOk = $true
+        break
+    } catch {
+        $zipError = $_
+        Start-Sleep -Seconds (2 * $attempt)
+    }
+}
+if (-not $zipOk) { throw "Could not zip the Windows package. $zipError" }
 
 Write-Output "package=$zip"
 Write-Output "sha256=$((Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant())"

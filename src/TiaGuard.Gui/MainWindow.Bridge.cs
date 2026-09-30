@@ -243,13 +243,13 @@ namespace TiaGuard.Gui
 
         private static string FindBridgeExecutable()
         {
+            var bundled = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bridge", "tia-guard-bridge.exe");
+            if (File.Exists(bundled)) return Path.GetFullPath(bundled);
+            var direct = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tia-guard-bridge.exe");
+            if (File.Exists(direct)) return direct;
             var overridePath = Environment.GetEnvironmentVariable("TIA_GUARD_BRIDGE");
             if (!string.IsNullOrWhiteSpace(overridePath) && File.Exists(overridePath))
                 return Path.GetFullPath(overridePath);
-            var direct = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tia-guard-bridge.exe");
-            if (File.Exists(direct)) return direct;
-            var sibling = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bridge", "tia-guard-bridge.exe");
-            if (File.Exists(sibling)) return sibling;
             var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
             while (dir != null)
             {

@@ -34,7 +34,19 @@ if ($LASTEXITCODE -ne 0) {
     throw "Bridge host publish failed with exit code $LASTEXITCODE."
 }
 
-Copy-Item (Join-Path $publish "*") $stage -Recurse -Force
+$copied = $false
+$copyError = $null
+for ($attempt = 1; $attempt -le 8; $attempt++) {
+    try {
+        Copy-Item (Join-Path $publish "*") $stage -Recurse -Force
+        $copied = $true
+        break
+    } catch {
+        $copyError = $_
+        Start-Sleep -Seconds (2 * $attempt)
+    }
+}
+if (-not $copied) { throw "Could not stage the bridge host. $copyError" }
 
 # Keep the .NET Framework Openness worker out of the self-contained
 # .NET 8 host directory. The self-contained host carries its own System.* and
@@ -106,7 +118,10 @@ Current write scope:
 - preview_patch -> single-use safety token -> apply_patch
 - preview_publish_modified_copy -> separate single-use safety token -> apply_publish_modified_copy
 - exact binding/request/current-state checks
-- tag mutation remains in memory until explicit publish
+- structured patch apply persists only the disposable offline copy after compile, export, rebuild and round-trip verify all pass
+- a failed patch apply restores that disposable copy; rollback failure is reported as rollback_failed
+- the original project is never saved
+- tag upsert outside a structured patch remains in memory until explicit publish
 - publish preserves the TIA project name, writes only to a NEW parent/destination, reopens, and verifies engineering contentId
 
 Not exposed:
@@ -132,7 +147,21 @@ The net48 Openness worker is isolated under .\worker\ so it cannot probe the sel
     $readme,
     [Text.UTF8Encoding]::new($false))
 
-Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -CompressionLevel Optimal
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$zipOk = $false
+$zipError = $null
+for ($attempt = 1; $attempt -le 8; $attempt++) {
+    try {
+        if (Test-Path $zip) { Remove-Item -Force $zip }
+        [IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip)
+        $zipOk = $true
+        break
+    } catch {
+        $zipError = $_
+        Start-Sleep -Seconds (2 * $attempt)
+    }
+}
+if (-not $zipOk) { throw "Could not zip the bridge package. $zipError" }
 Remove-Item -Recurse -Force $publish -ErrorAction SilentlyContinue
 
 Write-Output "package=$zip"
