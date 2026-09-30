@@ -77,6 +77,21 @@ public sealed class BridgeAiContextServiceTests
         Assert.DoesNotContain("download", tools, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Windows_package_bundles_the_bridge_and_gui_prefers_that_copy()
+    {
+        var root = FindRepoRoot();
+        var package = File.ReadAllText(Path.Combine(root, "scripts", "package-windows.ps1"));
+        var gui = File.ReadAllText(Path.Combine(root, "src", "TiaGuard.Gui", "MainWindow.Bridge.cs"));
+        Assert.Contains("bridge\\tia-guard-bridge.exe", package);
+        Assert.Contains("worker\\TiaGuard.Bridge.Worker.exe", package);
+        Assert.Contains("Siemens*.dll", package);
+        var bundled = gui.IndexOf("\"bridge\", \"tia-guard-bridge.exe\"", StringComparison.Ordinal);
+        var environment = gui.IndexOf("GetEnvironmentVariable(\"TIA_GUARD_BRIDGE\")", StringComparison.Ordinal);
+        var artifacts = gui.IndexOf("tia-guard-bridge-v0.1.0-windows-x64", StringComparison.Ordinal);
+        Assert.True(bundled >= 0 && bundled < environment && environment < artifacts);
+    }
+
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -115,7 +130,7 @@ public sealed class BridgeAiContextServiceTests
 
         public Task<string> ApplyPatchAsync(
             string patchJson, string expectedContentId, string expectedFingerprint, int expectedEpoch,
-            CancellationToken cancellationToken)
+            string? injectFailure, CancellationToken cancellationToken)
             => throw new NotSupportedException();
 
         private string Envelope(bool cacheHit)

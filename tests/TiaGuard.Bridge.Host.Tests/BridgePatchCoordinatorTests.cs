@@ -64,7 +64,7 @@ public sealed class BridgePatchCoordinatorTests
 
         public Task<string> ApplyPatchAsync(
             string patchJson, string expectedContentId, string expectedFingerprint, int expectedEpoch,
-            CancellationToken cancellationToken)
+            string? injectFailure, CancellationToken cancellationToken)
         {
             Applies++;
             Assert.Equal(ContentId, expectedContentId);

@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Runtime.Serialization.Json;
 using System.Security.Cryptography;
 using System.Text;
@@ -83,6 +85,11 @@ namespace TiaGuard.Bridge.Worker
         {
             RequireOffline(session);
             var payload = _json.Deserialize<AiApplyPayload>(payloadJson ?? "{}") ?? new AiApplyPayload();
+            if (!string.IsNullOrWhiteSpace(payload.InjectFailure) && !TestHooksEnabled())
+                throw new InvalidOperationException("AI_PATCH_REJECTED: TEST_HOOK_DISABLED");
+            if (!string.IsNullOrWhiteSpace(payload.InjectFailure) &&
+                !System.Text.RegularExpressions.Regex.IsMatch(payload.InjectFailure, "^[A-Z0-9_]{1,64}$"))
+                throw new InvalidOperationException("AI_PATCH_REJECTED: TEST_HOOK_INVALID");
             if (payload.ExpectedEpoch != _epoch)
                 throw new InvalidOperationException("AI_PATCH_REJECTED: STALE_EPOCH");
 
@@ -101,6 +108,8 @@ namespace TiaGuard.Bridge.Worker
             try
             {
                 plan = AiEngineeringPatch.Plan(_cache.SourceDirectory, canonical, preview);
+                if (request.Operation == "upsert_tag")
+                    RequireLiveTagMatchesPreview(session, plan);
                 if (request.Operation == "replace_output_condition")
                 {
                     var current = RoundTripBuildInput.LoadSource(_cache.SourceDirectory);
@@ -117,15 +126,18 @@ namespace TiaGuard.Bridge.Worker
             _epoch++;
             var previousSource = _cache.SourceDirectory;
             _cache = null;
+            var mutated = false;
             try
             {
                 if (request.Operation == "upsert_tag")
                 {
+                    mutated = true;
                     session.UpsertRootTagForBridge(
                         request.Target.Table, request.Target.Tag, request.DataType, request.LogicalAddress);
                 }
                 else if (request.Operation == "replace_output_condition")
                 {
+                    mutated = true;
                     session.ImportMainBlockForBridge(plan.ModifiedBlockXmlPath);
                 }
                 else
@@ -133,15 +145,15 @@ namespace TiaGuard.Bridge.Worker
                     throw new InvalidOperationException("AI_PATCH_REJECTED: OPERATION_UNSUPPORTED");
                 }
 
+                if (!string.IsNullOrWhiteSpace(payload.InjectFailure))
+                    return RejectMutation(session, request, rollbackXml, plan, -1, 0,
+                        "not_run", "not_run", "fail", payload.InjectFailure);
+
                 var compile = session.CompilePlcForVerification();
                 if (compile.Errors != 0)
-                {
-                    Rollback(session, request, rollbackXml);
-                    return RoundTripJson.Serialize(Failure(
-                        request.Operation, compile, "compile errors")).Trim();
-                }
+                    return RejectMutation(session, request, rollbackXml, plan, compile.Errors, compile.Warnings,
+                        "not_run", "not_run", "not_run", "compile errors");
 
-                session.SaveDisposableCopyForBridge();
                 string verified;
                 try
                 {
@@ -149,25 +161,51 @@ namespace TiaGuard.Bridge.Worker
                 }
                 catch (Exception error)
                 {
-                    Rollback(session, request, rollbackXml);
-                    return RoundTripJson.Serialize(Failure(
-                        request.Operation, compile, "canonical export was not deterministic: " + error.Message)).Trim();
+                    return RejectMutation(session, request, rollbackXml, plan, compile.Errors, compile.Warnings,
+                        "fail", "not_run", "not_run", "canonical export was not deterministic: " + error.Message);
                 }
+
+                IsolatedRoundTripResult roundTrip;
+                try
+                {
+                    var rebuildDirectory = Path.Combine(_root, "rebuild-" + Guid.NewGuid().ToString("N"));
+                    roundTrip = ProveRoundTripOutOfProcess(verified, rebuildDirectory);
+                }
+                catch (Exception error)
+                {
+                    return RejectMutation(session, request, rollbackXml, plan, compile.Errors, compile.Warnings,
+                        "pass", "fail", "not_run", "round-trip verify failed: " + error.Message);
+                }
+                if (!roundTrip.Built)
+                    return RejectMutation(session, request, rollbackXml, plan, compile.Errors, compile.Warnings,
+                        "pass", "fail", "not_run", "rebuilt project compile failed: " + roundTrip.Message);
+                if (!string.Equals(roundTrip.Verdict, "pass", StringComparison.Ordinal))
+                    return RejectMutation(session, request, rollbackXml, plan, compile.Errors, compile.Warnings,
+                        "pass", string.IsNullOrWhiteSpace(roundTrip.Verdict) ? "fail" : roundTrip.Verdict, "not_run",
+                        "round-trip verify " + roundTrip.Verdict +
+                        (string.IsNullOrWhiteSpace(roundTrip.BlockedCode) ? string.Empty : ": " + roundTrip.BlockedCode));
 
                 var after = AiEngineeringRenderer.Read(verified);
-                var result = Prove(request, plan, before, after, compile, ReadContentId(session));
-                if (!string.Equals(result.Status, "applied", StringComparison.Ordinal))
-                {
-                    Rollback(session, request, rollbackXml);
-                    result.Status = "verification_failure";
-                    result.SavedDisposableCopy = false;
-                    return RoundTripJson.Serialize(result).Trim();
-                }
+                string semanticReason;
+                if (!SemanticsMatch(request, plan, before, after, out semanticReason))
+                    return RejectMutation(session, request, rollbackXml, plan, compile.Errors, compile.Warnings,
+                        "pass", "pass", "fail", semanticReason);
 
+                session.SaveDisposableCopyForBridge();
                 if (!string.IsNullOrWhiteSpace(previousSource))
                     AiEngineeringPatch.DeleteOwnedDirectory(previousSource);
-                Remember(RequireSession(session), result.ContentId, verified, after, false);
-                return RoundTripJson.Serialize(result).Trim();
+                var contentId = ReadContentId(session);
+                Remember(RequireSession(session), contentId, verified, after, false);
+                return RoundTripJson.Serialize(AiEngineeringPatch.CreateApplyResult(
+                    request.Operation, compile.Errors, compile.Warnings, "pass", "pass", "pass", null,
+                    false, true, null, contentId, ResultNetwork(request, after), ResultTag(request, after), _epoch)).Trim();
+            }
+            catch (Exception error)
+            {
+                if (!mutated)
+                    throw;
+                return RejectMutation(session, request, rollbackXml, plan, 0, 0,
+                    "not_run", "not_run", "not_run", error.Message);
             }
             finally
             {
@@ -236,62 +274,216 @@ namespace TiaGuard.Bridge.Worker
             }
         }
 
-        private AiPatchApplyResult Prove(
-            AiPatchRequest request, AiPatchPlan plan, AiEngineeringView before, AiEngineeringView after,
-            PlcCompileObservation compile, string contentId)
+        private string RejectMutation(
+            TiaProjectSession session, AiPatchRequest request, string rollbackXml, AiPatchPlan plan,
+            int compileErrors, int compileWarnings, string exportVerdict, string roundTripVerdict,
+            string semanticVerdict, string reason)
         {
+            var rollbackOk = true;
+            string rollbackError = null;
             try
             {
-                AiEngineeringPatch.AssertNeighborsUnchanged(
-                    before, after, request.Operation == "replace_output_condition" ? request.Target.Network : -1);
+                Rollback(session, request, rollbackXml, plan);
             }
-            catch (InvalidOperationException)
+            catch (Exception error)
             {
-                return Failure(request.Operation, compile, "a neighboring network changed");
+                rollbackOk = false;
+                rollbackError = error.Message;
             }
-
-            if (request.Operation == "upsert_tag")
-            {
-                var table = after.TagTables.Find(item =>
-                    string.Equals(item.Name, request.Target.Table, StringComparison.Ordinal));
-                var tag = table == null ? null : table.Tags.Find(item =>
-                    string.Equals(item.Name, request.Target.Tag, StringComparison.Ordinal));
-                if (tag == null ||
-                    !string.Equals(tag.DataType, request.DataType, StringComparison.Ordinal) ||
-                    !AddressesMatch(tag.Address, request.LogicalAddress))
-                    return Failure(request.Operation, compile, "resulting tag does not match the preview");
-                return Success(request.Operation, compile, contentId, null, new AiPatchTagState
-                {
-                    Table = table.Name,
-                    Name = tag.Name,
-                    Exists = true,
-                    DataType = tag.DataType,
-                    LogicalAddress = tag.Address,
-                    SourceRef = tag.SourceRef
-                });
-            }
-
-            var block = AiEngineeringContextQuery.ResolveBlock(after, request.Target.Block);
-            var network = AiEngineeringContextQuery.ResolveNetwork(block, request.Target.Network);
-            var expected = plan.ExpectedNetwork == null || plan.ExpectedNetwork.Analysis == null ||
-                plan.ExpectedNetwork.Analysis.Writes.Count != 1
-                ? null : plan.ExpectedNetwork.Analysis.Writes[0].Expression;
-            var actual = network.Analysis == null || network.Analysis.Status != "supported" ||
-                network.Analysis.Writes.Count != 1
-                ? null : network.Analysis.Writes[0].Expression;
-            if (!AiEngineeringPatch.ExpressionEquals(expected, actual))
-                return Failure(request.Operation, compile, "resulting LAD semantics do not match the preview");
-            return Success(request.Operation, compile, contentId, network, null);
+            return RoundTripJson.Serialize(AiEngineeringPatch.CreateApplyResult(
+                request.Operation, compileErrors, compileWarnings, exportVerdict, roundTripVerdict,
+                semanticVerdict, reason, true, rollbackOk, rollbackError, null, null, null, _epoch)).Trim();
         }
 
-        private static void Rollback(TiaProjectSession session, AiPatchRequest request, string previousXml)
+        private static bool SemanticsMatch(
+            AiPatchRequest request, AiPatchPlan plan, AiEngineeringView before, AiEngineeringView after,
+            out string reason)
         {
-            if (request.Operation != "replace_output_condition" || string.IsNullOrWhiteSpace(previousXml) ||
-                !File.Exists(previousXml))
-                return;
             try
             {
-                session.ImportMainBlockForBridge(previousXml);
+                if (request.Operation == "upsert_tag")
+                {
+                    AiEngineeringPatch.AssertTagUpdatePreservesLogic(
+                        before, after, request.Target.Tag, request.LogicalAddress);
+                    var tag = FindTag(after, request.Target.Table, request.Target.Tag);
+                    if (tag == null ||
+                        !string.Equals(tag.DataType, request.DataType, StringComparison.Ordinal))
+                    {
+                        reason = "resulting tag does not match the preview";
+                        return false;
+                    }
+                }
+                else
+                {
+                    AiEngineeringPatch.AssertNeighborsUnchanged(before, after, request.Target.Network);
+                    var block = AiEngineeringContextQuery.ResolveBlock(after, request.Target.Block);
+                    var network = AiEngineeringContextQuery.ResolveNetwork(block, request.Target.Network);
+                    var expected = plan.ExpectedNetwork == null || plan.ExpectedNetwork.Analysis == null ||
+                        plan.ExpectedNetwork.Analysis.Writes.Count != 1
+                        ? null : plan.ExpectedNetwork.Analysis.Writes[0].Expression;
+                    var actual = network.Analysis == null || network.Analysis.Status != "supported" ||
+                        network.Analysis.Writes.Count != 1
+                        ? null : network.Analysis.Writes[0].Expression;
+                    if (!AiEngineeringPatch.ExpressionEquals(expected, actual))
+                    {
+                        reason = "resulting LAD semantics do not match the preview";
+                        return false;
+                    }
+                }
+            }
+            catch (InvalidOperationException error)
+            {
+                reason = error.Message;
+                return false;
+            }
+            reason = null;
+            return true;
+        }
+
+        private static AiNetwork ResultNetwork(AiPatchRequest request, AiEngineeringView after)
+        {
+            if (request.Operation != "replace_output_condition") return null;
+            var block = AiEngineeringContextQuery.ResolveBlock(after, request.Target.Block);
+            return AiEngineeringContextQuery.ResolveNetwork(block, request.Target.Network);
+        }
+
+        private static AiPatchTagState ResultTag(AiPatchRequest request, AiEngineeringView after)
+        {
+            if (request.Operation != "upsert_tag") return null;
+            var tag = FindTag(after, request.Target.Table, request.Target.Tag);
+            return tag == null ? null : new AiPatchTagState
+            {
+                Table = request.Target.Table,
+                Name = tag.Name,
+                Exists = true,
+                DataType = tag.DataType,
+                LogicalAddress = tag.Address,
+                SourceRef = tag.SourceRef,
+                Comment = tag.Comment
+            };
+        }
+
+        private static AiTag FindTag(AiEngineeringView view, string tableName, string tagName)
+        {
+            var table = view.TagTables.Find(item => string.Equals(item.Name, tableName, StringComparison.Ordinal));
+            return table == null ? null : table.Tags.Find(item => string.Equals(item.Name, tagName, StringComparison.Ordinal));
+        }
+
+        private static void RequireLiveTagMatchesPreview(TiaProjectSession session, AiPatchPlan plan)
+        {
+            var live = session.ReadRootTagStateForBridge(plan.Target.Table, plan.Target.Tag);
+            var expected = plan.CurrentTag ?? new AiPatchTagState();
+            if (live.Exists != expected.Exists)
+                throw new InvalidOperationException("AI_PATCH_REJECTED: STALE_TAG");
+            if (!live.Exists) return;
+            if (!string.Equals(live.DataType, expected.DataType, StringComparison.Ordinal) ||
+                !SameAddress(live.LogicalAddress, expected.LogicalAddress))
+                throw new InvalidOperationException("AI_PATCH_REJECTED: STALE_TAG");
+        }
+
+        private static bool SameAddress(string left, string right)
+        {
+            if (string.Equals(left, right, StringComparison.OrdinalIgnoreCase)) return true;
+            return string.Equals(NormalizeAddress(left), NormalizeAddress(right), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeAddress(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+            return value.Trim().TrimStart('%').Replace(" ", string.Empty);
+        }
+
+        public static int RunIsolatedRoundTrip(string[] args)
+        {
+            if (args == null || args.Length != 4)
+            {
+                Console.Error.WriteLine("Usage: --isolated-roundtrip <source> <output> <result>");
+                return 2;
+            }
+            var result = new IsolatedRoundTripResult();
+            try
+            {
+                var built = RoundTripBuilder.Build(args[1], args[2]);
+                result.Built = true;
+                result.ProjectFile = built.ProjectFile;
+                var verify = RoundTripVerifier.VerifySourceAgainstProject(args[1], built.ProjectFile);
+                result.Verdict = verify.Verdict;
+                result.BlockedCode = verify.BlockedCode;
+                result.Message = verify.Verdict;
+            }
+            catch (Exception error)
+            {
+                result.Built = false;
+                result.Verdict = "fail";
+                result.Message = error.ToString();
+            }
+            File.WriteAllText(args[3], new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(result),
+                new UTF8Encoding(false));
+            return 0;
+        }
+
+        private static IsolatedRoundTripResult ProveRoundTripOutOfProcess(string sourceRoot, string outputDirectory)
+        {
+            var exe = Assembly.GetExecutingAssembly().Location;
+            var resultPath = outputDirectory + ".json";
+            var start = new ProcessStartInfo
+            {
+                FileName = exe,
+                Arguments = "--isolated-roundtrip " + Quote(sourceRoot) + " " + Quote(outputDirectory) + " " + Quote(resultPath),
+                WorkingDirectory = Path.GetDirectoryName(exe),
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true
+            };
+            using (var process = Process.Start(start))
+            {
+                if (process == null)
+                    throw new InvalidOperationException("The isolated round-trip process did not start.");
+                var stderr = process.StandardError.ReadToEndAsync();
+                var stdout = process.StandardOutput.ReadToEndAsync();
+                if (!process.WaitForExit(22 * 60 * 1000))
+                {
+                    try { process.Kill(); } catch (Exception) { }
+                    throw new InvalidOperationException("The isolated round-trip timed out.");
+                }
+                process.WaitForExit();
+                var details = (stderr.GetAwaiter().GetResult() + stdout.GetAwaiter().GetResult()).Trim();
+                if (!File.Exists(resultPath))
+                    throw new InvalidOperationException(
+                        "The isolated round-trip produced no result. " + details);
+                var result = new JavaScriptSerializer { MaxJsonLength = int.MaxValue }
+                    .Deserialize<IsolatedRoundTripResult>(File.ReadAllText(resultPath));
+                if (result == null)
+                    throw new InvalidOperationException("The isolated round-trip result was empty. " + details);
+                if (string.IsNullOrWhiteSpace(result.Message)) result.Message = details;
+                return result;
+            }
+        }
+
+        private static bool TestHooksEnabled()
+        {
+            return string.Equals(
+                Environment.GetEnvironmentVariable("TIA_GUARD_BRIDGE_TEST_HOOKS"),
+                "1", StringComparison.Ordinal);
+        }
+
+        private static void Rollback(TiaProjectSession session, AiPatchRequest request, string previousXml, AiPatchPlan plan)
+        {
+            try
+            {
+                if (request.Operation == "replace_output_condition")
+                {
+                    if (string.IsNullOrWhiteSpace(previousXml) || !File.Exists(previousXml))
+                        throw new InvalidOperationException("the pre-apply LAD block is missing");
+                    session.ImportMainBlockForBridge(previousXml);
+                }
+                else if (request.Operation == "upsert_tag")
+                {
+                    var prior = plan.CurrentTag ?? new AiPatchTagState();
+                    session.RestoreRootTagForBridge(
+                        request.Target.Table, request.Target.Tag, prior.Exists, prior.DataType, prior.LogicalAddress);
+                }
                 var compile = session.CompilePlcForVerification();
                 if (compile.Errors != 0)
                     throw new InvalidOperationException("rollback compile reported " + compile.Errors + " errors");
@@ -301,44 +493,6 @@ namespace TiaGuard.Bridge.Worker
             {
                 throw new InvalidOperationException("AI_PATCH_REJECTED: ROLLBACK_FAILED: " + error.Message);
             }
-        }
-
-        private AiPatchApplyResult Success(
-            string operation, PlcCompileObservation compile, string contentId,
-            AiNetwork network, AiPatchTagState tag)
-        {
-            return new AiPatchApplyResult
-            {
-                Status = "applied",
-                Operation = operation,
-                SavedOriginalProject = false,
-                SavedDisposableCopy = true,
-                Published = false,
-                CompileErrors = compile.Errors,
-                CompileWarnings = compile.Warnings,
-                VerifyVerdict = "pass",
-                ContentId = contentId,
-                ResultingNetwork = network,
-                ResultingTag = tag,
-                Epoch = _epoch
-            };
-        }
-
-        private AiPatchApplyResult Failure(string operation, PlcCompileObservation compile, string reason)
-        {
-            return new AiPatchApplyResult
-            {
-                Status = "verification_failure",
-                Operation = operation,
-                SavedOriginalProject = false,
-                SavedDisposableCopy = false,
-                Published = false,
-                CompileErrors = compile.Errors,
-                CompileWarnings = compile.Warnings,
-                VerifyVerdict = "fail",
-                Reason = reason,
-                Epoch = _epoch
-            };
         }
 
         private void Remember(ProjectInfo project, string contentId, string source, AiEngineeringView view, bool hit)
@@ -352,16 +506,6 @@ namespace TiaGuard.Bridge.Worker
                 View = view,
                 Hit = hit
             };
-        }
-
-        private static bool AddressesMatch(string actual, string expected)
-        {
-            var left = SnapshotAddressParser.Parse(actual);
-            var right = SnapshotAddressParser.Parse(expected);
-            return left.ParseStatus == "parsed" && right.ParseStatus == "parsed" &&
-                string.Equals(left.Area, right.Area, StringComparison.Ordinal) &&
-                left.ByteOffset == right.ByteOffset && left.BitOffset == right.BitOffset &&
-                left.BitWidth == right.BitWidth;
         }
 
         private static AiPatchRequest DeserializePatch(string canonical)
@@ -447,6 +591,15 @@ namespace TiaGuard.Bridge.Worker
                 .Replace("\n", "\\n") + "\"";
         }
 
+        public sealed class IsolatedRoundTripResult
+        {
+            public bool Built { get; set; }
+            public string ProjectFile { get; set; }
+            public string Verdict { get; set; }
+            public string BlockedCode { get; set; }
+            public string Message { get; set; }
+        }
+
         private sealed class Cache
         {
             public string Binding;
@@ -472,6 +625,7 @@ namespace TiaGuard.Bridge.Worker
             public string ExpectedContentId { get; set; }
             public string ExpectedFingerprint { get; set; }
             public int ExpectedEpoch { get; set; }
+            public string InjectFailure { get; set; }
         }
     }
 }

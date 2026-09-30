@@ -27,7 +27,7 @@ public sealed class BridgePatchCoordinator
         var binding = PatchBinding.Read(raw);
         var ticket = _safety.CreatePreview(
             Operation,
-            "Preview a structured engineering patch. The open project is not modified.",
+            "Preview a structured engineering patch. The original project is not saved. A successful apply persists the disposable offline copy only.",
             binding.BindingIdentity,
             binding.CanonicalPatch,
             binding.State,
@@ -37,13 +37,17 @@ public sealed class BridgePatchCoordinator
         node["safetyToken"] = ticket.SafetyToken;
         node["expiresAt"] = ticket.ExpiresAt.ToString("O", CultureInfo.InvariantCulture);
         node["savesProject"] = false;
+        node["savesOriginalProject"] = false;
+        node["savesDisposableCopy"] = true;
         node["publishes"] = false;
+        node["mutatesDisposableOfflineCopy"] = true;
         return node.ToJsonString();
     }
 
     public async Task<string> ApplyAsync(
         string patchJson,
         string safetyToken,
+        string? injectFailure = null,
         CancellationToken cancellationToken = default)
     {
         var fresh = await _gateway.PreviewPatchAsync(patchJson, cancellationToken).ConfigureAwait(false);
@@ -61,6 +65,7 @@ public sealed class BridgePatchCoordinator
                 binding.ContentId,
                 binding.Fingerprint,
                 binding.Epoch,
+                injectFailure,
                 cancellationToken).ConfigureAwait(false);
         }
         finally

@@ -235,7 +235,7 @@ if (options.AllowWrite)
         BridgePatchCoordinator coordinator,
         CancellationToken cancellationToken) =>
         Json(await coordinator.ApplyAsync(
-            request.PatchJson(), request.SafetyToken, cancellationToken)));
+            request.PatchJson(), request.SafetyToken, request.InjectFailure, cancellationToken)));
 
 }
 
@@ -308,6 +308,7 @@ internal class PatchHttpRequest
 internal sealed class PatchApplyHttpRequest : PatchHttpRequest
 {
     public string SafetyToken { get; set; } = string.Empty;
+    public string? InjectFailure { get; set; }
 }
 
 internal sealed class BridgeOptions

@@ -101,6 +101,8 @@ namespace TiaGuard.Openness
                 Target = target,
                 Output = null,
                 SavesProject = false,
+                SavesOriginalProject = false,
+                SavesDisposableCopy = true,
                 Publishes = false,
                 MutatesDisposableOfflineCopy = true,
                 AffectedSourceRefs = new List<string> { table.SourceRef },
@@ -113,7 +115,8 @@ namespace TiaGuard.Openness
                     Name = target.Tag,
                     Exists = true,
                     DataType = request.DataType,
-                    LogicalAddress = request.LogicalAddress
+                    LogicalAddress = request.LogicalAddress,
+                    Comment = existing == null ? null : existing.Comment
                 }
             };
         }
@@ -190,6 +193,8 @@ namespace TiaGuard.Openness
                 Target = target,
                 Output = request.Output,
                 SavesProject = false,
+                SavesOriginalProject = false,
+                SavesDisposableCopy = true,
                 Publishes = false,
                 MutatesDisposableOfflineCopy = true,
                 AffectedSourceRefs = new List<string> { network.SourceRef, block.XmlSourceRef },
@@ -197,6 +202,208 @@ namespace TiaGuard.Openness
                 ExpectedNetwork = afterNetwork,
                 ModifiedBlockXmlPath = xmlPath
             };
+        }
+
+        public static void AssertTagUpdatePreservesLogic(
+            AiEngineeringView before, AiEngineeringView after, string symbol, string expectedAddress)
+        {
+            if (before == null || after == null || string.IsNullOrWhiteSpace(symbol))
+                throw Reject("TAG_POSTCONDITION_FAILED");
+            var beforeTags = FlattenTags(before);
+            var afterTags = FlattenTags(after);
+            var creating = !beforeTags.Any(item =>
+                string.Equals(item.Item2.Name, symbol, StringComparison.Ordinal));
+            if (creating)
+            {
+                if (afterTags.Count != beforeTags.Count + 1)
+                    throw Reject("TAG_SET_CHANGED");
+                foreach (var prior in beforeTags)
+                {
+                    var next = afterTags.FirstOrDefault(item =>
+                        string.Equals(item.Item1, prior.Item1, StringComparison.Ordinal) &&
+                        string.Equals(item.Item2.Name, prior.Item2.Name, StringComparison.Ordinal));
+                    if (!SameTag(prior.Item2, next == null ? null : next.Item2, true))
+                        throw Reject("TAG_SET_CHANGED");
+                }
+                var created = afterTags.FirstOrDefault(item =>
+                    string.Equals(item.Item2.Name, symbol, StringComparison.Ordinal));
+                if (created == null || !AddressesEqual(created.Item2.Address, expectedAddress))
+                    throw Reject("TAG_POSTCONDITION_FAILED");
+            }
+            else
+            {
+                if (beforeTags.Count != afterTags.Count)
+                    throw Reject("TAG_SET_CHANGED");
+                var seen = false;
+                foreach (var prior in beforeTags)
+                {
+                    var next = afterTags.FirstOrDefault(item =>
+                        string.Equals(item.Item1, prior.Item1, StringComparison.Ordinal) &&
+                        string.Equals(item.Item2.Name, prior.Item2.Name, StringComparison.Ordinal));
+                    if (next == null || !SameTag(prior.Item2, next.Item2, false))
+                        throw Reject("TAG_SET_CHANGED");
+                    if (string.Equals(prior.Item2.Name, symbol, StringComparison.Ordinal))
+                    {
+                        seen = true;
+                        if (!AddressesEqual(next.Item2.Address, expectedAddress))
+                            throw Reject("TAG_POSTCONDITION_FAILED");
+                    }
+                    else if (!AddressesEqual(prior.Item2.Address, next.Item2.Address))
+                        throw Reject("TAG_SET_CHANGED");
+                }
+                if (!seen)
+                    throw Reject("TAG_POSTCONDITION_FAILED");
+            }
+            if (before.Blocks.Count != after.Blocks.Count)
+                throw Reject("LOGIC_TOPOLOGY_CHANGED");
+            for (var i = 0; i < before.Blocks.Count; i++)
+            {
+                var left = before.Blocks[i];
+                var right = after.Blocks[i];
+                if (!string.Equals(RelationshipShape(left.Relationships), RelationshipShape(right.Relationships), StringComparison.Ordinal))
+                    throw Reject("LOGIC_TOPOLOGY_CHANGED");
+                if (left.Networks.Count != right.Networks.Count)
+                    throw Reject("LOGIC_TOPOLOGY_CHANGED");
+                for (var n = 0; n < left.Networks.Count; n++)
+                    AssertNetworkMeaningPreserved(left.Networks[n], right.Networks[n], symbol, expectedAddress);
+            }
+        }
+
+        public static AiPatchApplyResult CreateApplyResult(
+            string operation,
+            int compileErrors,
+            int compileWarnings,
+            string exportDeterminismVerdict,
+            string roundTripVerifyVerdict,
+            string semanticVerdict,
+            string failureReason,
+            bool rollbackAttempted,
+            bool rollbackSucceeded,
+            string rollbackError,
+            string contentId,
+            AiNetwork network,
+            AiPatchTagState tag,
+            int epoch)
+        {
+            var compileNotRun = compileErrors < 0;
+            if (compileNotRun) compileErrors = 0;
+            var compileOk = !compileNotRun && compileErrors == 0;
+            var exportOk = string.Equals(exportDeterminismVerdict, "pass", StringComparison.Ordinal);
+            var roundTripOk = string.Equals(roundTripVerifyVerdict, "pass", StringComparison.Ordinal);
+            var semanticsOk = string.Equals(semanticVerdict, "pass", StringComparison.Ordinal);
+            var applied = compileOk && exportOk && roundTripOk && semanticsOk && !rollbackAttempted;
+            string status;
+            if (rollbackAttempted && !rollbackSucceeded)
+                status = "rollback_failed";
+            else if (applied)
+                status = "applied";
+            else
+                status = "verification_failure";
+            var reason = status == "rollback_failed"
+                ? rollbackError
+                : (status == "applied" ? null : failureReason);
+            return new AiPatchApplyResult
+            {
+                Status = status,
+                Operation = operation,
+                SavedOriginalProject = false,
+                SavedDisposableCopy = status == "applied",
+                Published = false,
+                CompileErrors = compileErrors,
+                CompileWarnings = compileWarnings,
+                CompileVerdict = compileNotRun ? "not_run" : (compileOk ? "pass" : "fail"),
+                ExportDeterminismVerdict = string.IsNullOrWhiteSpace(exportDeterminismVerdict) ? "not_run" : exportDeterminismVerdict,
+                RoundTripVerifyVerdict = string.IsNullOrWhiteSpace(roundTripVerifyVerdict) ? "not_run" : roundTripVerifyVerdict,
+                AiSemanticVerificationVerdict = string.IsNullOrWhiteSpace(semanticVerdict) ? "not_run" : semanticVerdict,
+                VerifyVerdict = roundTripOk ? "pass" : (string.IsNullOrWhiteSpace(roundTripVerifyVerdict) || roundTripVerifyVerdict == "not_run" ? "not_run" : "fail"),
+                ContentId = contentId,
+                ResultingNetwork = network,
+                ResultingTag = tag,
+                Reason = reason,
+                Epoch = epoch
+            };
+        }
+
+        private static void AssertNetworkMeaningPreserved(
+            AiNetwork before, AiNetwork after, string symbol, string expectedAddress)
+        {
+            if (!string.Equals(GraphShape(before.Graph), GraphShape(after.Graph), StringComparison.Ordinal))
+                throw Reject("LOGIC_TOPOLOGY_CHANGED");
+            var left = before.Analysis;
+            var right = after.Analysis;
+            if (left == null || right == null ||
+                !string.Equals(left.Status, right.Status, StringComparison.Ordinal))
+                throw Reject("LOGIC_SEMANTICS_CHANGED");
+            if (left.Writes.Count != right.Writes.Count || left.Reads.Count != right.Reads.Count)
+                throw Reject("LOGIC_TOPOLOGY_CHANGED");
+            for (var i = 0; i < left.Writes.Count; i++)
+            {
+                if (!ExpressionEquals(left.Writes[i].Expression, right.Writes[i].Expression))
+                    throw Reject("LOGIC_SEMANTICS_CHANGED");
+                AssertUseAddress(left.Writes[i].Target, right.Writes[i].Target, symbol, expectedAddress);
+            }
+            for (var i = 0; i < left.Reads.Count; i++)
+                AssertUseAddress(left.Reads[i], right.Reads[i], symbol, expectedAddress);
+        }
+
+        private static void AssertUseAddress(AiLadUse before, AiLadUse after, string symbol, string expectedAddress)
+        {
+            if (before == null && after == null) return;
+            if (before == null || after == null ||
+                !string.Equals(before.Symbol, after.Symbol, StringComparison.Ordinal) ||
+                before.Negated != after.Negated)
+                throw Reject("LOGIC_TOPOLOGY_CHANGED");
+            var expected = string.Equals(before.Symbol, symbol, StringComparison.Ordinal)
+                ? expectedAddress : before.Address;
+            if (!AddressesEqual(after.Address, expected))
+                throw Reject("LOGIC_SEMANTICS_CHANGED");
+        }
+
+        private static bool SameTag(AiTag before, AiTag after, bool compareAddress)
+        {
+            if (before == null || after == null) return false;
+            if (!string.Equals(before.DataType, after.DataType, StringComparison.Ordinal) ||
+                !string.Equals(before.Comment ?? string.Empty, after.Comment ?? string.Empty, StringComparison.Ordinal))
+                return false;
+            return !compareAddress || AddressesEqual(before.Address, after.Address);
+        }
+
+        private static List<Tuple<string, AiTag>> FlattenTags(AiEngineeringView view)
+        {
+            return view.TagTables
+                .SelectMany(table => table.Tags.Select(tag => Tuple.Create(table.Name, tag)))
+                .ToList();
+        }
+
+        private static bool AddressesEqual(string left, string right)
+        {
+            var parsedLeft = SnapshotAddressParser.Parse(left);
+            var parsedRight = SnapshotAddressParser.Parse(right);
+            return parsedLeft.ParseStatus == "parsed" && parsedRight.ParseStatus == "parsed" &&
+                string.Equals(parsedLeft.Area, parsedRight.Area, StringComparison.Ordinal) &&
+                parsedLeft.ByteOffset == parsedRight.ByteOffset &&
+                parsedLeft.BitOffset == parsedRight.BitOffset &&
+                parsedLeft.BitWidth == parsedRight.BitWidth;
+        }
+
+        private static string GraphShape(AiLadGraph graph)
+        {
+            if (graph == null) return "null";
+            var nodes = string.Join(";", graph.Nodes.Select(node =>
+                (node.Kind ?? string.Empty) + "|" + (node.Instruction ?? string.Empty) + "|" +
+                (node.Symbol ?? string.Empty) + "|" + node.Negated));
+            var wires = string.Join(";", graph.Wires.Select(wire =>
+                string.Join(",", wire.Endpoints.Select(endpoint =>
+                    (endpoint.Kind ?? string.Empty) + ":" + (endpoint.Port ?? string.Empty)))));
+            return (graph.Status ?? string.Empty) + "\n" + nodes + "\n" + wires;
+        }
+
+        private static string RelationshipShape(AiLadRelationships relationships)
+        {
+            if (relationships == null) return "null";
+            var locks = string.Join(";", relationships.Interlocks.Select(item =>
+                (item.Kind ?? string.Empty) + ":" + string.Join(",", item.Members ?? new List<string>())));
+            return (relationships.Status ?? string.Empty) + "\n" + locks;
         }
 
         public static void AssertNeighborsUnchanged(AiEngineeringView before, AiEngineeringView after, int ordinal)
@@ -397,7 +604,8 @@ namespace TiaGuard.Openness
                 Exists = exists,
                 DataType = tag.DataType,
                 LogicalAddress = tag.Address,
-                SourceRef = tag.SourceRef
+                SourceRef = tag.SourceRef,
+                Comment = tag.Comment
             };
         }
 
@@ -507,6 +715,8 @@ namespace TiaGuard.Openness
         [DataMember(Name = "savesProject", Order = 12)] public bool SavesProject;
         [DataMember(Name = "publishes", Order = 13)] public bool Publishes;
         [DataMember(Name = "mutatesDisposableOfflineCopy", Order = 14)] public bool MutatesDisposableOfflineCopy;
+        [DataMember(Name = "savesOriginalProject", Order = 15)] public bool SavesOriginalProject;
+        [DataMember(Name = "savesDisposableCopy", Order = 16)] public bool SavesDisposableCopy;
         public string ModifiedBlockXmlPath { get; set; }
     }
 
@@ -528,6 +738,10 @@ namespace TiaGuard.Openness
         [DataMember(Name = "compileErrors", Order = 5)] public int CompileErrors;
         [DataMember(Name = "compileWarnings", Order = 6)] public int CompileWarnings;
         [DataMember(Name = "verifyVerdict", Order = 7)] public string VerifyVerdict;
+        [DataMember(Name = "compileVerdict", Order = 13)] public string CompileVerdict;
+        [DataMember(Name = "exportDeterminismVerdict", Order = 14)] public string ExportDeterminismVerdict;
+        [DataMember(Name = "roundTripVerifyVerdict", Order = 15)] public string RoundTripVerifyVerdict;
+        [DataMember(Name = "aiSemanticVerificationVerdict", Order = 16)] public string AiSemanticVerificationVerdict;
         [DataMember(Name = "contentId", Order = 8)] public string ContentId;
         [DataMember(Name = "resultingNetwork", Order = 9)] public AiNetwork ResultingNetwork;
         [DataMember(Name = "resultingTag", Order = 10)] public AiPatchTagState ResultingTag;
@@ -544,5 +758,6 @@ namespace TiaGuard.Openness
         [DataMember(Name = "dataType", Order = 3)] public string DataType;
         [DataMember(Name = "logicalAddress", Order = 4)] public string LogicalAddress;
         [DataMember(Name = "sourceRef", Order = 5)] public string SourceRef;
+        [DataMember(Name = "comment", Order = 6)] public string Comment;
     }
 }

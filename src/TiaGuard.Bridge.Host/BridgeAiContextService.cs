@@ -24,6 +24,7 @@ public interface IBridgeEngineeringGateway
         string expectedContentId,
         string expectedFingerprint,
         int expectedEpoch,
+        string? injectFailure,
         CancellationToken cancellationToken);
 }
 
@@ -64,10 +65,11 @@ public sealed class BridgeWorkerEngineeringGateway : IBridgeEngineeringGateway
         string expectedContentId,
         string expectedFingerprint,
         int expectedEpoch,
+        string? injectFailure,
         CancellationToken cancellationToken)
     {
         var payload = JsonSerializer.Serialize(new ApplyPayload(
-            patchJson, expectedContentId, expectedFingerprint, expectedEpoch));
+            patchJson, expectedContentId, expectedFingerprint, expectedEpoch, injectFailure));
         return _worker.CallAsync(
             "apply_engineering_patch",
             payloadJson: payload,
@@ -80,7 +82,8 @@ public sealed class BridgeWorkerEngineeringGateway : IBridgeEngineeringGateway
         string PatchJson,
         string ExpectedContentId,
         string ExpectedFingerprint,
-        int ExpectedEpoch);
+        int ExpectedEpoch,
+        string? InjectFailure);
 }
 
 public sealed class BridgeAiContextService

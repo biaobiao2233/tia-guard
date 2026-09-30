@@ -17,6 +17,10 @@ namespace TiaGuard.Bridge.Worker
 
         private static int Main(string[] args)
         {
+            if (args != null && args.Length > 0 &&
+                string.Equals(args[0], "--isolated-roundtrip", StringComparison.Ordinal))
+                return BridgeAiWorkspace.RunIsolatedRoundTrip(args);
+
             foreach (var arg in args ?? Array.Empty<string>())
             {
                 if (string.Equals(arg, "--allow-write", StringComparison.OrdinalIgnoreCase))

@@ -21,5 +21,5 @@ public class BridgePatchTools
         [Description("The same structured patch JSON that was previewed.")] string patch,
         [Description("Single-use safetyToken returned by preview_patch.")] string safetyToken,
         CancellationToken cancellationToken)
-        => patches.ApplyAsync(patch, safetyToken, cancellationToken);
+        => patches.ApplyAsync(patch, safetyToken, cancellationToken: cancellationToken);
 }

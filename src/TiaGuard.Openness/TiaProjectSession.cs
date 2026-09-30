@@ -286,6 +286,44 @@ namespace TiaGuard.Openness
             };
         }
 
+        public void RestoreRootTagForBridge(
+            string tableName,
+            string tagName,
+            bool existed,
+            string dataType,
+            string logicalAddress)
+        {
+            ThrowIfDisposed();
+            if (_scratchDirectory == null)
+                throw new InvalidOperationException(
+                    "Bridge engineering writes are currently allowed only on an offline disposable project copy.");
+            RequireBridgeTagName(tableName, nameof(tableName));
+            RequireBridgeTagName(tagName, nameof(tagName));
+
+            var plc = RequireSinglePlcSoftwareForBridge();
+            var table = plc.TagTableGroup.TagTables.Find(tableName);
+            if (table == null)
+                throw new InvalidOperationException(
+                    "The root PLC tag table '" + tableName + "' was not found.");
+            var tag = table.Tags.Find(tagName);
+            if (!existed)
+            {
+                if (tag != null)
+                    tag.Delete();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(dataType) || logicalAddress == null)
+                throw new InvalidOperationException("The prior tag state required for rollback is incomplete.");
+            if (tag == null)
+                table.Tags.Create(tagName, dataType, logicalAddress);
+            else
+            {
+                tag.DataTypeName = dataType;
+                tag.LogicalAddress = logicalAddress;
+            }
+        }
+
         public BridgePublishResult PublishOfflineCopyForBridge(
             string outputDirectory,
             string outputName)

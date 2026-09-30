@@ -32,7 +32,7 @@ public sealed class BridgeWorkerClient : IDisposable
     {
         _workerPath = Path.GetFullPath(workerPath);
         _allowWrite = allowWrite;
-        _timeout = timeout ?? TimeSpan.FromMinutes(20);
+        _timeout = timeout ?? TimeSpan.FromMinutes(30);
     }
 
     public async Task<string> CallAsync(
