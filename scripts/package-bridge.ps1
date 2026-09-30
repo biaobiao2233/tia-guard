@@ -1,6 +1,8 @@
 param(
     [string]$Configuration = "Release",
-    [string]$OutputDirectory = ""
+    [string]$OutputDirectory = "",
+    [ValidatePattern('^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$')]
+    [string]$Version = "0.1.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,7 +20,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Bridge worker build failed with exit code $LASTEXITCODE."
 }
 
-$packageName = "tia-guard-bridge-v0.1.0-windows-x64"
+$packageName = "tia-guard-bridge-v$Version-windows-x64"
 $stage = Join-Path $OutputDirectory $packageName
 $zip = Join-Path $OutputDirectory ($packageName + ".zip")
 $publish = Join-Path $OutputDirectory ".bridge-publish"
@@ -92,7 +94,12 @@ if ($LASTEXITCODE -ne 0 -or ($help -join [Environment]::NewLine) -notmatch "TIA-
 }
 
 $readme = @"
-TIA-Guard Bridge v0.1.0 experimental package
+TIA-Guard Bridge v$Version experimental package
+
+中文说明: docs/TIA-AI-BRIDGE.md
+English guide: docs/TIA-AI-BRIDGE.en.md
+Core CLI version remains 0.1.0; the package version identifies this preview.
+See the release notes for exact verification scope.
 
 Purpose:
 - external AI -> local TIA Portal V21 engineering bridge
@@ -146,6 +153,12 @@ The net48 Openness worker is isolated under .\worker\ so it cannot probe the sel
     (Join-Path $stage "README-BRIDGE.txt"),
     $readme,
     [Text.UTF8Encoding]::new($false))
+
+$docStage = Join-Path $stage "docs"
+New-Item -ItemType Directory -Force $docStage | Out-Null
+foreach ($name in @("GETTING-STARTED.md", "GETTING-STARTED.en.md", "TIA-AI-BRIDGE.md", "TIA-AI-BRIDGE.en.md")) {
+    Copy-Item (Join-Path $repoRoot ("docs\" + $name)) $docStage
+}
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zipOk = $false

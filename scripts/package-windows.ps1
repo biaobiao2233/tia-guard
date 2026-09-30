@@ -1,6 +1,8 @@
 param(
     [string]$Configuration = "Release",
-    [string]$OutputDirectory = ""
+    [string]$OutputDirectory = "",
+    [ValidatePattern('^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$')]
+    [string]$Version = "0.1.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,7 +27,7 @@ if ($LASTEXITCODE -ne 0) {
 
 $cliBin = Join-Path $repoRoot "src\TiaGuard.Cli\bin\$Configuration\net48"
 $guiBin = Join-Path $repoRoot "src\TiaGuard.Gui\bin\$Configuration\net48"
-$packageName = "tia-guard-v0.1.0-windows-x64"
+$packageName = "tia-guard-v$Version-windows-x64"
 $stage = Join-Path $OutputDirectory $packageName
 $zip = Join-Path $OutputDirectory ($packageName + ".zip")
 
@@ -82,11 +84,11 @@ if (Get-ChildItem $stage -Filter "Siemens*.dll" -File -Recurse) {
 }
 
 $bridgeScript = Join-Path $PSScriptRoot "package-bridge.ps1"
-& $bridgeScript -Configuration $Configuration -OutputDirectory $OutputDirectory
+& $bridgeScript -Configuration $Configuration -OutputDirectory $OutputDirectory -Version $Version
 if ($LASTEXITCODE -ne 0) {
     throw "Bridge package failed with exit code $LASTEXITCODE."
 }
-$bridgeStage = Join-Path $OutputDirectory "tia-guard-bridge-v0.1.0-windows-x64"
+$bridgeStage = Join-Path $OutputDirectory "tia-guard-bridge-v$Version-windows-x64"
 $bundledBridge = Join-Path $stage "bridge"
 if (-not (Test-Path (Join-Path $bridgeStage "tia-guard-bridge.exe"))) {
     throw "Bridge runtime was not staged."
@@ -105,7 +107,12 @@ if (Get-ChildItem $stage -Filter "Siemens*.dll" -File -Recurse) {
 }
 
 $readme = @"
-TIA-Guard v0.1.0 Windows x64 package
+TIA-Guard v$Version Windows x64 pre-alpha package
+
+中文说明: docs/GETTING-STARTED.md
+English guide: docs/GETTING-STARTED.en.md
+Core CLI version remains 0.1.0; the package version identifies this preview.
+See the release notes for exact verification scope.
 
 Human UI:
   Double-click TiaGuard.exe
@@ -133,7 +140,7 @@ Requirements:
 
 GUI product flows:
 - one Git repository can contain many TIA projects under repo/tia-projects/<slot>/tia-source/
-- Git repository URL -> clone/pull -> choose project -> fresh compiled .ap21 -> automatic semantic + binary identity checks
+- Git repository URL -> clone/pull -> choose project -> fresh compiled .ap21 -> supported semantic verification; binary identity is reported separately
 - owned .ap21 + Git repository URL -> choose existing project or add new slot -> safe Export staging -> commit -> push
 - each publish changes only the selected project's tia-source/; sibling projects and normal repository files are untouched
 - legacy repo/tia-source/ single-project repositories remain supported
@@ -149,6 +156,12 @@ Scope:
     (Join-Path $stage "README.txt"),
     $readme,
     [Text.UTF8Encoding]::new($false))
+
+$docStage = Join-Path $stage "docs"
+New-Item -ItemType Directory -Force $docStage | Out-Null
+foreach ($name in @("GETTING-STARTED.md", "GETTING-STARTED.en.md", "TIA-AI-BRIDGE.md", "TIA-AI-BRIDGE.en.md")) {
+    Copy-Item (Join-Path $repoRoot ("docs\" + $name)) $docStage
+}
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zipOk = $false
