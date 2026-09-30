@@ -13,6 +13,38 @@ It does not replace Siemens engineering tools or establish control-logic correct
 
 `tia-guard build` is the product CLI entry. Export, Snapshot and Verify are library/Smoke-harness entry points. Snapshot is intermediate evidence; it is not the canonical build input. There is no original `.ap21` argument in the builder.
 
+## Two-layer Git representation
+
+The engineering representation and the AI-readable representation have different trust roles.
+
+`tia-source/` is authoritative for the bounded round-trip. It is validated, used by Build and compared by Verify. It must preserve engineering detail even when that detail is verbose or inconvenient to read.
+
+The `ai/` sibling is a deterministic derived view for coding agents and humans. `AiEngineeringRenderer` first calls the unchanged `RoundTripBuildInput.LoadSource`, then projects typed facts and ordered network observations into versioned JSON and Markdown. Its XML read is rechecked against the validated descriptor's SHA-256. V21 FlgNet/v5 evidence graphs are separated from all-or-nothing contact/coil analysis and guarded cross-network relationships; see [LAD-GRAPH](LAD-GRAPH.md). `AiEngineeringPublisher` updates only a selected source's sibling output through a private stage/backup transaction. It never writes canonical source, starts TIA or calls an AI service.
+
+```text
+validated .ap21 / Openness
+          ↓
+      tia-source/       authoritative
+          ↓
+ deterministic renderer
+          ↓
+         ai/            derived / replaceable
+```
+
+The current accepted demo also demonstrates why the distinction matters: its `.ap21` begins with readable XML but mixes engineering information with framework metadata, internal object/type identifiers and embedded/base64 payloads. Technically parseable storage is not the same thing as a compact, stable model interface.
+
+Initial AI-view invariants:
+
+- renderer input must already pass canonical source validation;
+- generation must not mutate `tia-source/`;
+- `ai/` must be safely regenerable/deletable;
+- Markdown/prose is not accepted as engineering truth merely because an AI produced it;
+- unsupported/incomplete coverage remains explicit rather than being summarized away;
+- Build and Verify continue to ignore `ai/`;
+- any future AI editing path must emit a structured patch accepted by deterministic validation before canonical data can change, then pass Build → Compile → Verify.
+
+The chosen representation, rejected alternatives and acceptance questions are documented in [AI-READABILITY.md](AI-READABILITY.md). Generation is a separate `ai-view` CLI operation. GUI publish transactions and Git staging remain unchanged; views must be explicitly regenerated after canonical changes.
+
 ## Responsibilities
 
 - `SnapshotExtractor`: Siemens traversal and explicit incomplete/unsupported diagnostics. User constants, types, external sources, technology objects, watch/force tables, user alarm text lists and user folders cannot silently disappear as empty collections.
@@ -31,7 +63,7 @@ The SimaticML normalizer changes only the validated root `DocumentInfo/Created` 
 
 This does not cover hardware IP/parameter configuration, built-in system alarm text, language identity of a single comment, runtime behavior, binary project equality, HMI, Safety, drives, multiple PLCs or arbitrary Openness content. User folders and the named unsupported collections above block readiness. Future object classes require explicit discovery and evidence before any support claim.
 
-The historical real acceptance is one self-authored CPU/profile with Chinese-locale integrated item names and an empty tag table. Populated primitive tags have synthetic contract coverage. The topology check is intentionally specific; different firmware, locale or devices require a new evidence gate.
+The historical real acceptance is one self-authored CPU/profile with Chinese-locale integrated item names and an empty tag table. The later local LAD candidate adds real six-Bool-tag and three-network Build/Compile/Verify evidence on that same CPU, separately recorded in [verification/lad-graph](verification/lad-graph.md). The topology check is intentionally specific; different firmware, locale or devices require a new evidence gate.
 
 A fresh V21 CPU automatically contains one empty `Force table`. Only this observed name with zero entries is an implicit default; additional/renamed force tables or any force entries are rejected. No force operation is ever executed.
 
@@ -51,4 +83,4 @@ Pure test success does not establish runtime compatibility. A historic accepted 
 
 ## Supporting work
 
-Doctor/rules, Finding-based Markdown/JSON/SARIF and optional advisory AI exist as separate unmerged proposals. They need current-contract reconciliation and their own tests. GitHub SARIF upload/display behavior and AI privacy/value gates are not fulfilled by core source comparison. They do not block repairing core truth boundaries and are not present mainline features.
+Doctor/rules, Finding-based Markdown/JSON/SARIF and optional advisory AI exist as separate proposals or supporting surfaces. The AI-readable engineering view is distinct from advisory AI: its facts are deterministically rendered from validated engineering source, not a model-generated review verdict. GitHub SARIF upload/display behavior and AI privacy/value gates are not fulfilled by core source comparison.

@@ -28,6 +28,35 @@ namespace TiaGuard.Openness
             Directory.Delete(path, recursive: true);
         }
 
+        internal static void CopyPlainTree(string sourcePath, string destinationPath)
+        {
+            var source = Path.GetFullPath(sourcePath).TrimEnd(Path.DirectorySeparatorChar);
+            var destination = Path.GetFullPath(destinationPath).TrimEnd(Path.DirectorySeparatorChar);
+            if (!Directory.Exists(source))
+                throw new DirectoryNotFoundException("The source directory does not exist.");
+            if (Directory.Exists(destination) || File.Exists(destination))
+                throw new IOException("The destination path already exists.");
+
+            RequirePlainAncestors(source);
+            RequirePlainAncestors(Path.GetDirectoryName(destination));
+            CopyDirectory(new DirectoryInfo(source), new DirectoryInfo(destination));
+        }
+
+        private static void CopyDirectory(DirectoryInfo source, DirectoryInfo destination)
+        {
+            if ((source.Attributes & FileAttributes.ReparsePoint) != 0)
+                throw new IOException("Refusing to copy a directory through a reparse point.");
+            destination.Create();
+            foreach (var file in source.GetFiles())
+            {
+                if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("Refusing to copy a file through a reparse point.");
+                file.CopyTo(Path.Combine(destination.FullName, file.Name), false);
+            }
+            foreach (var child in source.GetDirectories())
+                CopyDirectory(child, new DirectoryInfo(Path.Combine(destination.FullName, child.Name)));
+        }
+
         private static void CheckChildren(DirectoryInfo directory)
         {
             foreach (var entry in directory.GetFileSystemInfos())

@@ -1,0 +1,338 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TIA-Guard AI Gateway",
+    "version": "0.1.0",
+    "description": "Local HTTP gateway for a disposable offline TIA Portal project. tia-source is authoritative, AI Engineering is derived, and a patch is mutation intent. The gateway binds 127.0.0.1 only. A skill should call /capabilities before choosing an operation. Operator approval routes are for the TIA-Guard window, not for the AI skill."
+  },
+  "servers": [{ "url": "http://127.0.0.1:18761" }],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Liveness and product identity.",
+        "responses": { "200": { "description": "Gateway is listening.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Health" } } } } }
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "operationId": "capabilities",
+        "summary": "Machine-readable skill discovery.",
+        "responses": { "200": { "description": "Current read, write, and safety boundaries.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Capabilities" } } } } }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "openapi",
+        "summary": "This document.",
+        "responses": { "200": { "description": "OpenAPI document.", "content": { "application/json": { "schema": { "type": "object" } } } } }
+      }
+    },
+    "/api/v1/gateway/status": {
+      "get": {
+        "operationId": "gatewayStatus",
+        "summary": "Gateway, AI activity, and TIA binding. Polling this route is not AI activity.",
+        "responses": { "200": { "description": "Current status.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GatewayStatus" } } } } }
+      }
+    },
+    "/api/v1/state": {
+      "get": {
+        "operationId": "projectState",
+        "summary": "Whether a disposable offline project is bound.",
+        "responses": {
+          "200": { "description": "Binding state.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectState" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/project": {
+      "get": {
+        "operationId": "project",
+        "summary": "Bound project identity.",
+        "responses": {
+          "200": { "description": "Project info.", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/open-offline": {
+      "post": {
+        "operationId": "openOffline",
+        "summary": "Open a disposable offline copy. Does not save the original project.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenOfflineRequest" } } } },
+        "responses": {
+          "200": { "description": "Copy opened.", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/disconnect": {
+      "post": {
+        "operationId": "disconnect",
+        "summary": "Release the bound disposable project.",
+        "responses": {
+          "200": { "description": "Disconnected.", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/ai/context": {
+      "get": {
+        "operationId": "aiContext",
+        "summary": "Derived AI Engineering project context.",
+        "responses": {
+          "200": { "description": "AI context.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AiEnvelope" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/ai/program-graph": {
+      "get": {
+        "operationId": "programGraph",
+        "summary": "Derived program graph for one block.",
+        "parameters": [{ "name": "block", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Program graph.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AiEnvelope" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/ai/network": {
+      "get": {
+        "operationId": "network",
+        "summary": "One LAD network, including expression semantics.",
+        "parameters": [
+          { "name": "block", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "network", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Network.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AiEnvelope" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/ai/where-used": {
+      "get": {
+        "operationId": "whereUsed",
+        "summary": "Reads and writes of one symbol.",
+        "parameters": [{ "name": "symbol", "in": "query", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Uses.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AiEnvelope" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/ai/refresh": {
+      "post": {
+        "operationId": "refreshAi",
+        "summary": "Rebuild the derived AI view from the current disposable project.",
+        "responses": {
+          "200": { "description": "Refreshed context.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AiEnvelope" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/ai/patches/preview": {
+      "post": {
+        "operationId": "previewPatch",
+        "summary": "Validate a patch and return the current graph, expected graph, and a single-use token. Does not modify the project. In the product gateway this also asks the user to approve that one change.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PatchRequest" } } } },
+        "responses": {
+          "200": { "description": "Accepted preview.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PatchPreview" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/ai/patches/apply": {
+      "post": {
+        "operationId": "applyPatch",
+        "summary": "Apply the exact previewed patch after one-shot approval, compile, export, rebuild, round-trip verify, and AI semantic checks. The original project is never saved.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PatchApplyRequest" } } } },
+        "responses": {
+          "200": { "description": "Apply result. status=applied only when every postcondition passed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PatchApplyResult" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "Error": {
+        "description": "The gateway rejected the call before or during the operation.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
+      }
+    },
+    "schemas": {
+      "ErrorBody": {
+        "type": "object",
+        "required": ["error"],
+        "properties": { "error": { "type": "string" } }
+      },
+      "Health": {
+        "type": "object",
+        "required": ["status", "product", "version", "bind"],
+        "properties": {
+          "status": { "type": "string" },
+          "product": { "type": "string" },
+          "version": { "type": "string" },
+          "transport": { "type": "string" },
+          "accessMode": { "type": "string", "description": "read-only means no standing write grant. read-write is the headless token mode." },
+          "bind": { "type": "string" },
+          "port": { "type": "integer" }
+        }
+      },
+      "Capabilities": {
+        "type": "object",
+        "required": ["product", "version", "gatewaySchemaVersion", "read", "write", "unsupported", "authority", "safety"],
+        "properties": {
+          "product": { "type": "string" },
+          "version": { "type": "string" },
+          "gatewaySchemaVersion": { "type": "string" },
+          "read": { "type": "array", "items": { "type": "string" } },
+          "write": { "type": "object" },
+          "unsupported": { "type": "array", "items": { "type": "string" } },
+          "authority": { "type": "object" },
+          "safety": { "type": "object" }
+        }
+      },
+      "GatewayStatus": {
+        "type": "object",
+        "required": ["gateway", "ai", "tia", "mode"],
+        "properties": {
+          "gateway": { "type": "string", "enum": ["ready"] },
+          "ai": { "$ref": "#/components/schemas/AiActivity" },
+          "tia": { "$ref": "#/components/schemas/TiaStatus" },
+          "mode": { "type": "string" },
+          "pendingApprovals": { "type": "array", "items": { "$ref": "#/components/schemas/Approval" } }
+        }
+      },
+      "AiActivity": {
+        "type": "object",
+        "required": ["connected", "activeRequests", "state"],
+        "properties": {
+          "connected": { "type": "boolean" },
+          "activeRequests": { "type": "integer" },
+          "lastSeenUtc": { "type": "string", "nullable": true },
+          "state": { "type": "string", "enum": ["waiting", "connected", "working"] },
+          "client": { "type": "string", "nullable": true },
+          "transport": { "type": "string" },
+          "category": { "type": "string" }
+        }
+      },
+      "TiaStatus": {
+        "type": "object",
+        "required": ["connected"],
+        "properties": {
+          "connected": { "type": "boolean" },
+          "project": { "type": "string", "nullable": true }
+        }
+      },
+      "Approval": {
+        "type": "object",
+        "required": ["id", "summary", "expiresAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "summary": { "type": "string" },
+          "expiresAt": { "type": "string" }
+        }
+      },
+      "ProjectState": {
+        "type": "object",
+        "properties": {
+          "connected": { "type": "boolean" },
+          "project": { "type": "object", "nullable": true }
+        }
+      },
+      "OpenOfflineRequest": {
+        "type": "object",
+        "required": ["projectPath"],
+        "properties": { "projectPath": { "type": "string", "description": "Absolute path of the original .ap21. The gateway opens a copy." } }
+      },
+      "AiEnvelope": {
+        "type": "object",
+        "description": "Derived AI Engineering payload plus gateway cache metadata.",
+        "properties": {
+          "contentId": { "type": "string" },
+          "cacheHit": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      },
+      "PatchRequest": {
+        "type": "object",
+        "required": ["patch"],
+        "properties": {
+          "patch": {
+            "description": "tia-guard.engineering-patch/v1 object or a JSON string of that object.",
+            "oneOf": [
+              { "$ref": "#/components/schemas/EngineeringPatch" },
+              { "type": "string" }
+            ]
+          }
+        }
+      },
+      "EngineeringPatch": {
+        "type": "object",
+        "required": ["schemaVersion", "operation", "target"],
+        "properties": {
+          "schemaVersion": { "type": "string", "enum": ["tia-guard.engineering-patch/v1"] },
+          "operation": { "type": "string", "enum": ["upsert_tag", "replace_output_condition"] },
+          "target": { "type": "object" },
+          "dataType": { "type": "string" },
+          "logicalAddress": { "type": "string" },
+          "output": { "type": "string" },
+          "expression": { "$ref": "#/components/schemas/PatchExpression" }
+        }
+      },
+      "PatchExpression": {
+        "type": "object",
+        "required": ["op"],
+        "properties": {
+          "op": { "type": "string", "enum": ["read", "not", "and"] },
+          "symbol": { "type": "string" },
+          "args": { "type": "array", "items": { "$ref": "#/components/schemas/PatchExpression" } }
+        }
+      },
+      "PatchPreview": {
+        "type": "object",
+        "required": ["safetyToken", "savesOriginalProject", "savesDisposableCopy"],
+        "properties": {
+          "safetyToken": { "type": "string" },
+          "expiresAt": { "type": "string" },
+          "approvalId": { "type": "string" },
+          "approvalSummary": { "type": "string" },
+          "savesProject": { "type": "boolean" },
+          "savesOriginalProject": { "type": "boolean" },
+          "savesDisposableCopy": { "type": "boolean" },
+          "publishes": { "type": "boolean" },
+          "mutatesDisposableOfflineCopy": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      },
+      "PatchApplyRequest": {
+        "type": "object",
+        "required": ["patch", "safetyToken"],
+        "properties": {
+          "patch": { "description": "The same patch that was previewed.", "oneOf": [{ "$ref": "#/components/schemas/EngineeringPatch" }, { "type": "string" }] },
+          "safetyToken": { "type": "string" }
+        }
+      },
+      "PatchApplyResult": {
+        "type": "object",
+        "required": ["status", "compileVerdict", "exportDeterminismVerdict", "roundTripVerifyVerdict", "aiSemanticVerificationVerdict", "verifyVerdict"],
+        "properties": {
+          "status": { "type": "string", "enum": ["applied", "verification_failure", "rollback_failed"] },
+          "savedOriginalProject": { "type": "boolean" },
+          "savedDisposableCopy": { "type": "boolean" },
+          "compileErrors": { "type": "integer" },
+          "compileVerdict": { "type": "string" },
+          "exportDeterminismVerdict": { "type": "string" },
+          "roundTripVerifyVerdict": { "type": "string" },
+          "aiSemanticVerificationVerdict": { "type": "string" },
+          "verifyVerdict": { "type": "string", "description": "pass only when round-trip verify passed." },
+          "reason": { "type": "string", "nullable": true }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

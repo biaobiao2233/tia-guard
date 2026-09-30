@@ -60,13 +60,6 @@ namespace TiaGuard.Openness
             if (InsideOrEqual(output, input.SourceRoot) || InsideOrEqual(input.SourceRoot, output))
                 throw new IOException("The build output and canonical source tree overlap.");
 
-            // V21 rejects project creation when the staged project folder exceeds
-            // 143 characters. The staging suffix has a fixed 32-character GUID.
-            var stageName = "." + Path.GetFileName(output) + ".tia-guard-" +
-                new string('0', 32);
-            Require(Path.Combine(outputParent, stageName, input.Manifest.Project.Name).Length <= 143,
-                "The output path is too long for TIA Portal V21 project creation (maximum 143 characters).");
-
             input.OutputDirectory = output;
             return input;
         }
@@ -88,6 +81,26 @@ namespace TiaGuard.Openness
                     manifest.Diagnostics.Count == 0, "The canonical source is not round-trip ready.");
             Require(manifest.Project != null && SafeProjectName(manifest.Project.Name),
                 "The canonical project name is missing or unsafe.");
+            var hasOriginalIdentity = !string.IsNullOrWhiteSpace(manifest.Project.OriginalFileName) ||
+                manifest.Project.OriginalSizeBytes.HasValue ||
+                !string.IsNullOrWhiteSpace(manifest.Project.OriginalSha256);
+            if (hasOriginalIdentity)
+            {
+                Require(!string.IsNullOrWhiteSpace(manifest.Project.OriginalFileName) &&
+                        manifest.Project.OriginalSizeBytes.HasValue &&
+                        manifest.Project.OriginalSizeBytes.Value > 0 &&
+                        !string.IsNullOrWhiteSpace(manifest.Project.OriginalSha256),
+                    "The original project file identity is incomplete.");
+                Require(Path.GetFileName(manifest.Project.OriginalFileName) ==
+                            manifest.Project.OriginalFileName &&
+                        string.Equals(Path.GetExtension(manifest.Project.OriginalFileName),
+                            ".ap21", StringComparison.OrdinalIgnoreCase) &&
+                        RoundTripProfile.SafeFileName(manifest.Project.OriginalFileName),
+                    "The original project file name is unsafe.");
+                Require(System.Text.RegularExpressions.Regex.IsMatch(
+                            manifest.Project.OriginalSha256, "^[0-9a-f]{64}$"),
+                    "The original project SHA-256 is invalid.");
+            }
             Require(manifest.Hardware != null && manifest.Hardware.Count == 1 &&
                     manifest.Plcs != null && manifest.Plcs.Count == 1,
                 "v0.1 requires one station and one PLC.");
@@ -222,7 +235,10 @@ namespace TiaGuard.Openness
             {
                 Keys(root, "schemaVersion", "contractStatus", "tiaVersion", "project",
                     "roundTripReady", "hardware", "plcs", "capabilities", "diagnostics");
-                Keys(Object(root["project"]), "name", "projectVersion");
+                var project = Object(root["project"]);
+                KeysWithOptional(project,
+                    new[] { "name", "projectVersion" },
+                    new[] { "originalFileName", "originalSizeBytes", "originalSha256" });
                 foreach (var capability in Array(root["capabilities"]))
                     Keys(Object(capability), "objectKind", "objectRef", "state", "reason");
                 Require(Array(root["hardware"]).All(value => value is string) &&
@@ -281,6 +297,12 @@ namespace TiaGuard.Openness
                 Require(value.GetType() == type, "A canonical JSON value has the wrong type.");
                 return;
             }
+            if (type == typeof(long))
+            {
+                Require(value is int || value is long,
+                    "A canonical JSON integer has the wrong type.");
+                return;
+            }
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
             {
                 foreach (var item in Array(value)) ValidateMemberTypes(item, type.GetGenericArguments()[0]);
@@ -307,6 +329,22 @@ namespace TiaGuard.Openness
             Require(value.Count == names.Length &&
                     names.All(value.ContainsKey),
                 "Canonical JSON contains missing or unexpected fields.");
+        }
+
+        private static void KeysWithOptional(
+            IDictionary<string, object> value,
+            string[] required,
+            string[] optionalGroup)
+        {
+            var allowed = new HashSet<string>(required.Concat(optionalGroup),
+                StringComparer.Ordinal);
+            Require(required.All(value.ContainsKey) &&
+                    value.Keys.All(allowed.Contains),
+                "Canonical JSON contains missing or unexpected fields.");
+
+            var optionalCount = optionalGroup.Count(value.ContainsKey);
+            Require(optionalCount == 0 || optionalCount == optionalGroup.Length,
+                "Canonical JSON contains an incomplete optional field group.");
         }
 
         private static string Take(string root, string relative, ISet<string> expected)

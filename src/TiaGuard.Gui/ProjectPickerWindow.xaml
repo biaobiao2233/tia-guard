@@ -1,0 +1,132 @@
+<Window x:Class="TiaGuard.Gui.ProjectPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="选择 TIA 工程"
+        Width="680"
+        Height="540"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource CanvasBrush}"
+        ShowInTaskbar="False">
+    <Border Margin="14"
+            Style="{StaticResource CardBorder}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="12"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0">
+                <TextBlock x:Name="EyebrowText"
+                           Style="{StaticResource Eyebrow}"
+                           Text="PROJECT LIBRARY / 工程库"/>
+                <TextBlock x:Name="TitleText"
+                           FontSize="25"
+                           FontWeight="Black"
+                           Text="选择仓库中的 TIA 工程"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="1"
+                       x:Name="DescriptionText"
+                       Margin="0,6,0,0"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource MutedBrush}"/>
+
+            <ListBox Grid.Row="3"
+                     x:Name="ProjectList"
+                     BorderBrush="{StaticResource InkBrush}"
+                     BorderThickness="2"
+                     Background="White"
+                     Padding="4"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     SelectionMode="Single">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="10"
+                                Margin="2"
+                                BorderBrush="#DDD4C7"
+                                BorderThickness="0,0,0,1">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}"
+                                           FontWeight="Black"
+                                           FontSize="14"/>
+                                <TextBlock Text="{Binding Detail}"
+                                           Margin="0,3,0,0"
+                                           TextWrapping="Wrap"
+                                           FontSize="11"
+                                           Foreground="{StaticResource MutedBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock Grid.Row="4"
+                       x:Name="ProblemText"
+                       Margin="0,8,0,0"
+                       FontSize="11"
+                       Foreground="{StaticResource RedBrush}"
+                       TextWrapping="Wrap"/>
+
+            <Border Grid.Row="5"
+                    x:Name="NewProjectPanel"
+                    Margin="0,12,0,0"
+                    Padding="12"
+                    Background="#FFF3B0"
+                    BorderBrush="{StaticResource InkBrush}"
+                    BorderThickness="2">
+                <StackPanel>
+                    <TextBlock Text="添加新工程"
+                               FontWeight="Black"
+                               FontSize="14"/>
+                    <TextBlock Margin="0,3,0,7"
+                               Text="这个名字只用于 Git 仓库中的工程槽位，不会修改 .ap21 文件名或 TIA 工程名。"
+                               FontSize="11"
+                               Foreground="{StaticResource MutedBrush}"
+                               TextWrapping="Wrap"/>
+                    <TextBox x:Name="NewSlotTextBox"
+                             Style="{StaticResource PathTextBox}"/>
+                </StackPanel>
+            </Border>
+
+            <Grid Grid.Row="6" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock x:Name="StatusText"
+                           Grid.Column="0"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Foreground="{StaticResource MutedBrush}"
+                           TextWrapping="Wrap"/>
+
+                <Button Grid.Column="1"
+                        Style="{StaticResource SecondaryButton}"
+                        Content="取消"
+                        Click="OnCancelClick"/>
+                <Button Grid.Column="3"
+                        x:Name="UseExistingButton"
+                        Style="{StaticResource SecondaryButton}"
+                        Content="使用所选工程"
+                        Click="OnUseExistingClick"/>
+                <Button Grid.Column="5"
+                        x:Name="AddNewButton"
+                        Style="{StaticResource BrutalButton}"
+                        Background="{StaticResource CyanBrush}"
+                        Content="添加为新工程"
+                        Click="OnAddNewClick"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

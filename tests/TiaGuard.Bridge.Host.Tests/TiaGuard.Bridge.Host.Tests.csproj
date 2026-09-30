@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/GatewayOperatorEndpoints.cs" Link="GatewayOperatorEndpoints.cs" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeWorkerClient.cs" Link="BridgeWorkerClient.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeWriteSafetyService.cs" Link="BridgeWriteSafetyService.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeAiContextService.cs" Link="BridgeAiContextService.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgePatchCoordinator.cs" Link="BridgePatchCoordinator.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/GatewayApprovalService.cs" Link="GatewayApprovalService.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/GatewayActivityTracker.cs" Link="GatewayActivityTracker.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/GatewayCatalog.cs" Link="GatewayCatalog.cs" />
+    <EmbeddedResource Include="../../src/TiaGuard.Bridge.Host/Gateway.openapi.json" LogicalName="TiaGuard.Bridge.openapi.json" />
+  </ItemGroup>
+</Project>

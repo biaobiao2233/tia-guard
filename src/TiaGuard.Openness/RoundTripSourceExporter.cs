@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using Siemens.Engineering;
 using Siemens.Engineering.Compiler;
 using Siemens.Engineering.HW;
@@ -40,6 +41,7 @@ namespace TiaGuard.Openness
                 progress?.Invoke("hints");
                 var hints = ExtractHints(project, snapshot);
                 hints.CompilePreparation = compilePreparation;
+                hints.SourceFile = ReadSourceFileIdentity(info.Path);
                 progress?.Invoke("materialize");
                 var manifest = RoundTripSourceMaterializer.Write(snapshot, hints, blockExportDirectory, outputDirectory);
                 progress?.Invoke("done");
@@ -48,6 +50,24 @@ namespace TiaGuard.Openness
             finally
             {
                 DeleteOwnedBlockExportDirectory(blockExportDirectory);
+            }
+        }
+
+        private static RoundTripSourceFileIdentity ReadSourceFileIdentity(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+            var file = new FileInfo(path);
+            using (var stream = file.Open(FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var sha = SHA256.Create())
+            {
+                return new RoundTripSourceFileIdentity
+                {
+                    FileName = file.Name,
+                    SizeBytes = file.Length,
+                    Sha256 = BitConverter.ToString(sha.ComputeHash(stream))
+                        .Replace("-", string.Empty)
+                        .ToLowerInvariant()
+                };
             }
         }
 

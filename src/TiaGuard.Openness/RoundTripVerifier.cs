@@ -5,6 +5,80 @@ namespace TiaGuard.Openness
 {
     public static partial class RoundTripVerifier
     {
+        public static RoundTripVerifyResult VerifySourceAgainstProject(
+            string canonicalSourceRoot,
+            string rebuiltProjectFile,
+            Action<string> progress = null)
+        {
+            string sourceRoot;
+            string rebuiltPath;
+            try
+            {
+                sourceRoot = Path.GetFullPath(canonicalSourceRoot);
+                RoundTripBuildInput.LoadSource(sourceRoot);
+            }
+            catch (Exception error) { return Blocked("ORIGINAL_SOURCE_INVALID", error); }
+
+            try
+            {
+                rebuiltPath = Path.GetFullPath(rebuiltProjectFile);
+                if (!string.Equals(Path.GetExtension(rebuiltPath), ".ap21",
+                        StringComparison.OrdinalIgnoreCase) || !File.Exists(rebuiltPath))
+                    return Blocked("PROJECT_INPUT_INVALID");
+            }
+            catch (Exception error) { return Blocked("PROJECT_INPUT_INVALID", error); }
+
+            var scratchParent = Path.Combine(Path.GetTempPath(), "TiaGuard.Verify");
+            var scratch = Path.Combine(scratchParent, Guid.NewGuid().ToString("N"));
+            PlcCompileObservation observedCompile = null;
+            RoundTripVerifyResult result;
+            try
+            {
+                FileSystemSafety.RequirePlainAncestors(scratch);
+                Directory.CreateDirectory(scratch);
+                var rebuiltRoot = Path.Combine(scratch, "rebuilt");
+                try
+                {
+                    progress?.Invoke("compile-rebuilt-copy");
+                    using (var session = TiaProjectSession.OpenOfflineCopy(rebuiltPath))
+                    {
+                        observedCompile = session.CompilePlcForVerification();
+                        if (observedCompile.Errors != 0)
+                            result = Blocked("REBUILT_COMPILE_ERRORS");
+                        else
+                        {
+                            progress?.Invoke("export-rebuilt");
+                            session.ExportRoundTripSource(rebuiltRoot);
+                            progress?.Invoke("compare");
+                            result = CompareSources(sourceRoot, rebuiltRoot);
+                        }
+                    }
+                }
+                catch (OpennessAccessException error)
+                {
+                    result = Blocked("OPENNESS_ACCESS_BLOCKED", error);
+                }
+                catch (Exception error)
+                {
+                    result = Blocked("REBUILT_EXPORT_OR_COMPILE_FAILED", error);
+                }
+            }
+            catch (Exception error)
+            {
+                result = Blocked("VERIFY_SCRATCH_FAILED", error);
+            }
+
+            try { DeleteOwnedScratch(scratch, scratchParent); }
+            catch (Exception error) { result = Blocked("VERIFY_CLEANUP_FAILED", error); }
+            if (observedCompile != null)
+            {
+                result.RebuiltCompileErrors = observedCompile.Errors;
+                result.RebuiltCompileWarnings = observedCompile.Warnings;
+            }
+            progress?.Invoke("done");
+            return result;
+        }
+
         public static RoundTripVerifyResult VerifyProjects(
             string originalProjectFile, string rebuiltProjectFile, Action<string> progress = null)
         {

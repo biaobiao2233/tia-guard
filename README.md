@@ -1,165 +1,123 @@
 # TIA-Guard
 
-**Readable Git engineering source, bounded round-trip reconstruction, and AI-assisted engineering workflows for Siemens TIA Portal V21.**
+**让受支持的 TIA Portal 工程可阅读、可用 Git 管理，并能通过验证后重建。**
 
-TIA-Guard is an independent pre-alpha project built around the locally installed **TIA Portal Openness API**. Its core goal is to turn a supported TIA Portal project into deterministic, human-readable engineering source that can be reviewed in Git, rebuilt into a fresh TIA project, and verified against the supported engineering semantics.
+TIA-Guard 是独立的 **pre-alpha** 工程工具，面向本机 **Siemens TIA Portal V21 / S7-1200**。它通过本地 Openness API 将工程转换成确定性的工程源，提供 Windows GUI、CLI，以及供本机 AI Agent 使用的 API Gateway / MCP 接口。
 
-The repository does **not** redistribute Siemens software, DLLs, licenses, or TIA project binaries.
+## 当前源码状态
 
-## Why TIA-Guard
+当前源码已经包含以下实现。功能边界和验证证据以本仓库的代码、测试及[本次集成记录](docs/verification/publication-20261001.md)为准。
 
-TIA Portal projects are normally stored as `.ap21` engineering binaries. That works well inside TIA Portal, but makes normal source-control workflows, code review, open collaboration, and AI-assisted engineering much harder than they are for text-based software projects.
-
-TIA-Guard addresses that gap in three layers:
-
-1. **Readable and Git-native engineering source**  
-   Export the supported part of an S7-1200 project into deterministic, structured source that can be diffed, reviewed, searched, versioned, and consumed by local AI tools.
-
-2. **Reproducible reconstruction and verification**  
-   Rebuild a fresh TIA Portal project from the canonical source, then use Build / Verify checks to confirm the covered PLC engineering semantics were preserved.
-
-3. **AI-assisted engineering workflow**  
-   A local AI engineering Gateway + companion Skill is the next interaction layer: local agents such as Codex, Cursor, and Claude Code can inspect supported PLC context, plan guarded changes, and participate in compile / rebuild / verify loops without treating an AI answer as proof.
-
-The intended progression is:
-
-```text
-opaque .ap21 project
-    -> readable canonical engineering source
-    -> Git review / version history
-    -> fresh rebuilt TIA project
-    -> bounded semantic verification
-    -> AI-assisted, verified engineering workflow
-```
-
-## Current status
-
-The default branch is intentionally conservative. It contains the bounded V21 round-trip core and keeps unsupported areas fail-closed.
-
-| Capability | Current repository status |
+| 模块 | 当前实现 |
 | --- | --- |
-| Export supported V21 engineering source | Implemented through the Openness library / Smoke harness |
-| Build a fresh V21 project from canonical source | Implemented; product CLI exposes `tia-guard build` |
-| Verify original vs rebuilt supported semantics | Implemented through the Openness library / Smoke harness |
-| Unified `export / build / verify` product CLI | Candidate in [PR #32](../../pull/32) |
-| Local AI engineering Gateway + Skill | Active development layer; not claimed as released mainline functionality |
+| Windows GUI | 中文 WPF 界面、自定义标题栏；GitHub → TIA 重建、TIA → GitHub 导出并提交；一个仓库可管理多个工程 |
+| CLI | `doctor`、`--version`、`export`、`build`、`verify`、`ai-view` |
+| AI 工程视图 | 从受验证的 canonical source 派生 JSON / Markdown、变量表、有限 LAD 图和来源引用 |
+| API Gateway | GUI 自动启动本机 `127.0.0.1:18761` 服务；提供能力发现、工程上下文、程序图、引用查询和受控 patch |
+| MCP | stdio 与 Streamable HTTP；默认只读工具，显式启用的写工具保留 preview / apply 验证 |
+| Gateway Skill | [专用 Skill](skills/tia-guard-gateway/SKILL.md)，供本机 Codex、Cursor、Claude Code 等 Agent 按统一流程调用 |
+| Windows 打包 | GUI + CLI + Gateway + 独立 net48 worker；不打包 Siemens DLL |
 
-The accepted real-project proof is deliberately narrow: one self-authored **TIA Portal V21 / S7-1200 / Main OB1 LAD** project profile. Arbitrary TIA projects, runtime/control-logic equivalence, HMI, Safety, drives, multiple PLCs, and unsupported Openness objects are **not** implied by this proof.
+这是源码集成状态，不是稳定版发布声明。本次检查覆盖自动化测试、构建、打包和本机 HTTP 控制边界；真实 TIA 工程往返证据另见下文。尚未发布 GitHub Release 安装包。
 
-See [architecture and coverage](docs/ARCHITECTURE.md) and the [Round-trip Source v1 contract](docs/contracts/roundtrip-source-v1.md) for the exact boundary.
+## 两个 GUI 主流程
 
-## Core round-trip
+### GitHub → TIA
 
-The bounded core is:
+粘贴 Git 仓库 URL → clone / pull → 选择工程 → 从工程源构建新的 `.ap21` → 编译与受支持语义校验。
+
+新工程写到用户选择的输出目录，不覆盖原工程。清晰显示阶段、耗时、环境或 Git 认证错误；源文件身份信息存在时保留原始文件名并检查相应身份信息。
+
+### TIA → GitHub
+
+选择自己的 `.ap21` 和 Git 仓库 URL → 选择已有工程或新增工程槽位 → 导出并验证 → 更新所选工程源 → commit / push。
+
+一个仓库可包含多个工程：
 
 ```text
-existing .ap21
-  -> owned offline copy
-  -> canonical Git source
-  -> strict source validation
-  -> fresh disposable V21 project
-  -> compile
-  -> re-export
-  -> supported semantic comparison
+repo/
+  README.md
+  tia-projects/
+    motor-reversing/
+      tia-source/
+      ai/
+    conveyor-control/
+      tia-source/
 ```
 
-The original project is never used as a writable build target. Build creates a new project in a separate output directory, saves and compiles it, and only publishes the result after successful validation.
+仍兼容旧的 `repo/tia-source/` 单工程布局。发布操作只替换所选工程的 `tia-source/`，保留其他工程及普通仓库文件；使用系统 Git、现有 Git Credential Manager / SSH 配置，不内嵌 GitHub token，也不 force-push。
 
-### Build example
+`ai/` 是可重新生成的派生视图。当前 GUI Git 发布流程不会自动生成或提交它；需要时单独运行 `ai-view`。
+
+## CLI
 
 ```powershell
 dotnet build src/TiaGuard.Cli/TiaGuard.Cli.csproj -c Release
-& .\src\TiaGuard.Cli\bin\Release\net48\tia-guard.exe build C:\path\to\canonical-tree --output C:\path\to\new-project
+
+tia-guard doctor
+tia-guard --version
+tia-guard export C:\demo\original.ap21 C:\repo\tia-source
+tia-guard build C:\repo\tia-source --output C:\demo\rebuilt
+tia-guard verify C:\demo\original.ap21 C:\demo\rebuilt\original.ap21
+tia-guard ai-view C:\repo\tia-source
 ```
 
-Export and Verify are currently available through the library / [Openness Smoke harness](src/TiaGuard.Openness/README.md). PR #32 exposes the already bounded implementations as one simple CLI surface.
+`doctor` 只读检查本机前提。Export 打开受控离线副本；Build 严格验证 canonical source，再创建、保存和编译新的工程；Verify 返回 `pass`、`mismatch` 或 `blocked`。短内部 staging 路径将 TIA 的工程创建路径限制与普通 Git / 输出目录长度分开。
 
-## Verification model
+## 本机 AI API Gateway
 
-TIA-Guard separates evidence from claims:
+打开 GUI 后自动启动 Gateway。Agent 先读取 `/capabilities` 和 `/openapi.json`，按实际提供的接口调用：
 
-- verified engineering facts;
-- incomplete or unsupported collection;
-- deterministic validation findings;
-- advisory AI output.
+| 接口 | 用途 |
+| --- | --- |
+| `GET /health`、`GET /capabilities` | 健康与能力发现 |
+| `GET /api/v1/gateway/status` | Gateway、AI 连接、TIA 绑定与待确认状态 |
+| `POST /api/v1/open-offline` | 打开工程的受控离线副本 |
+| `GET /api/v1/ai/context`、`program-graph`、`network`、`where-used` | 有来源依据的工程、网络和变量引用查询 |
+| `POST /api/v1/ai/patches/preview`、`apply` | 预览并申请一次受控修改 |
 
-Unsupported, protected, unreadable, or incomplete engineering content cannot silently produce a PASS.
+HTTP patch 在真正写入前等待 GUI 中的单次确认。操作控制接口使用 GUI 生成的随机进程密钥，独立启动的只读 Gateway 无法自行批准或关闭服务。预览 token 有有效期、绑定工程及请求状态，并且只能使用一次。
 
-The real V21 acceptance demonstrated a bounded source -> rebuild -> re-export -> Verify loop with zero compile errors/warnings for the accepted demo profile. Pure contract tests cover additional deterministic negative cases without claiming those cases are real Siemens integration evidence.
+当前结构化 patch 支持根变量表中的 `upsert_tag` 和有限 LAD 的 `replace_output_condition`。成功 apply 要完成 Compile、导出确定性检查、round-trip Verify 和 AI 语义检查；失败回滚受控副本。输入的原始 `.ap21` 不会被保存。
 
-## Safety model
+MCP 的默认工具集合只读。需要 headless 写模式时显式传 `--allow-write`；该模式省略 GUI 确认，仍保留 preview token 与离线副本验证。完整协议见 [TIA AI Gateway](docs/TIA-AI-BRIDGE.md)。
 
-- Offline project copies first; no PLC online writes.
-- No download, force, or runtime control operations.
-- The supplied project is not saved, upgraded, or imported into.
-- Build writes only to a fresh disposable output.
-- Unsupported or incomplete content blocks readiness instead of being treated as empty.
-- Engineering comments/XML may contain project data; canonical export is **not** automatic anonymization.
-- Siemens assemblies are resolved from the user's local installation and are not copied into packages or committed.
+Gateway 服务只绑定 localhost。本机桌面 Agent 可以连接；纯云端聊天页面仅安装 Skill 并不能访问用户电脑。
 
-## Public-source hygiene
+## 范围和验证边界
 
-This repository is intended to remain source-only:
+- 目标是已支持的 V21 / S7-1200 单 PLC、Main OB1 LAD 和根变量表工程子集。当前 CPU profile 为 `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`。
+- 自建演示工程已经有 Export → 新建 Build → Compile → 再导出 → Verify 的真实 TIA 证据；后续自建非空 LAD fixture 覆盖六个 Bool 变量、三个网络。见[架构与覆盖](docs/ARCHITECTURE.md)、[LAD 验证记录](docs/verification/lad-graph.md)和[源格式契约](docs/contracts/roundtrip-source-v1.md)。
+- LAD 图与 patch 只接受已验证的普通触点、取反读取、普通线圈和串联 AND 等有限结构；未知指令、歧义拓扑及不支持内容不能产生完整表达式或虚假的 PASS。
+- OR 重汇合、任意并联改写、定时器/计数器等有状态指令、S7-1500、HMI、Safety、驱动和多 PLC 工程尚未覆盖。
+- 没有在线 PLC 下载、启停、force 或在线变量写入。工程语义校验不等于任意运行时行为证明，也不保证所有 `.ap21` 二进制字节相同。
 
-- no `.ap21` / TIA project archives;
-- no Siemens DLLs or executables;
-- no licenses, private keys, credentials, or local `.env` files;
-- no build output, logs, local scratch directories, or customer project data;
-- examples are sanitized/synthetic fixtures only.
+旧验收记录对应其注明的候选版本；不自动视为最新集成版本的真实 TIA 验收。现有 Doctor/SARIF 与 provider-neutral advisory AI 提案仍在独立 PR #7 / #5，未由本次源码发布合并。
 
-The ignore policy is defined in [`.gitignore`](.gitignore).
+## 开发与打包
 
-## Development environment
-
-Target environment:
-
-- Windows
-- Siemens TIA Portal V21
-- TIA Portal Openness V21
-- .NET Framework 4.8 integration boundary
-- .NET SDK 8 for supporting tooling/tests
-
-Environment probe:
+运行目标：Windows x64、TIA Portal V21 / Openness、有效的 Siemens TIA Openness 组权限、Git for Windows。GUI / Openness worker 使用 .NET Framework 4.8；Gateway host 使用 .NET 8，打包时生成 self-contained host。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\check-env.ps1
+dotnet build src/TiaGuard.Gui/TiaGuard.Gui.csproj -c Release
+powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
+powershell -ExecutionPolicy Bypass -File scripts/package-gateway-skill.ps1
 ```
 
-If administrative bootstrap is needed, `scripts/bootstrap-admin.ps1` uses the current Windows identity by default; no machine-specific user name is required.
-
-## Repository layout
-
-```text
-src/TiaGuard.Openness          Siemens Openness adapter / round-trip implementation
-src/TiaGuard.Cli               product CLI
-tests/TiaGuard.Contracts.Tests pure contract and filesystem tests
-tests/TiaGuard.Openness.Smoke  local V21 integration harness
-docs/contracts                 versioned source/evidence contracts
-docs/verification              verification receipts and bounded evidence
-examples                       sanitized fixtures only
-```
-
-## Safe automated checks
-
-These checks require no Siemens DLL redistribution:
+Windows ZIP 含 GUI、CLI、Gateway、隔离在 `bridge/worker/` 下的 net48 worker 和 TIA-Guard core。Gateway 可单独通过 `scripts/package-bridge.ps1` 打包；CLI 可通过 `scripts/package-cli.ps1` 单独打包。
 
 ```powershell
 dotnet test tests/TiaGuard.Contracts.Tests/TiaGuard.Contracts.Tests.csproj -c Release
+dotnet test tests/TiaGuard.Bridge.Host.Tests/TiaGuard.Bridge.Host.Tests.csproj -c Release
 python -m pip install jsonschema==4.26.0
 python scripts/test-contract-schemas.py
 ```
 
-Pure tests prove contract behavior, not TIA runtime compatibility. Real Openness behavior requires a local V21 installation and separately identified integration evidence.
+纯测试不需要 Siemens DLL，不能替代本地真实 Openness 操作证据。
 
-## Project direction
+## 公开源码与工程数据
 
-TIA-Guard is not trying to replace TIA Portal. The project explores a safer bridge between traditional PLC engineering and modern software-engineering workflows:
-
-- readable engineering source;
-- Git review and version history;
-- deterministic reconstruction;
-- bounded verification;
-- local AI agents operating through explicit engineering contracts rather than opaque UI automation alone.
+仓库只保存应用源码、测试、文档、应用图标及脱敏 / 自建 canonical fixtures，不提交 TIA 工程二进制、Siemens DLL、许可证、凭据、环境配置或构建产物。参见 [ignore policy](.gitignore)。工程注释和 canonical XML 仍可能包含工程信息，导出本身不是自动脱敏工具。
 
 ## Disclaimer
 

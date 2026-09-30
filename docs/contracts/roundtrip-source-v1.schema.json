@@ -39,7 +39,25 @@
             "string",
             "null"
           ]
+        },
+        "originalFileName": {
+          "type": "string",
+          "minLength": 5,
+          "pattern": "\\.ap21$"
+        },
+        "originalSizeBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "originalSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         }
+      },
+      "dependentRequired": {
+        "originalFileName": ["originalSizeBytes", "originalSha256"],
+        "originalSizeBytes": ["originalFileName", "originalSha256"],
+        "originalSha256": ["originalFileName", "originalSizeBytes"]
       },
       "additionalProperties": false
     },

@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "ai-engineering-v1",
+  "authority": "derived-not-build-input",
+  "project": {
+    "name": "Demo",
+    "tiaVersion": "V21",
+    "projectVersion": null,
+    "sourceRef": "tia-guard.json#\/project"
+  },
+  "hardware": {
+    "station": "Station",
+    "family": "S7-1200",
+    "cpuCreateIdentity": "OrderNumber:6ES7 212-1AE40-0XB0\/V4.7",
+    "orderNumber": null,
+    "firmware": null,
+    "sourceRef": "tia\/hardware\/station-a.json#"
+  },
+  "plc": {
+    "name": "PLC",
+    "sourceRef": "tia\/plc\/plc-a\/plc.json#"
+  },
+  "tagTables": [
+    {
+      "name": "Default",
+      "sourceRef": "tia\/plc\/plc-a\/tags\/table-a.json#",
+      "tags": [
+        {
+          "name": "Start",
+          "dataType": "Bool",
+          "address": "%I0.0",
+          "commentStatus": "missing",
+          "comment": null,
+          "sourceRef": "tia\/plc\/plc-a\/tags\/table-a.json#\/tags\/0"
+        }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "name": "Main",
+      "kind": "OB",
+      "number": 1,
+      "language": "LAD",
+      "sourceRef": "tia\/plc\/plc-a\/blocks\/block-a\/block.json#",
+      "xmlSourceRef": "tia\/plc\/plc-a\/blocks\/block-a\/source.xml#\/Document\/SW.Blocks.OB",
+      "networkInventory": {
+        "area": "networks",
+        "status": "incomplete",
+        "reason": "Expected one block ObjectList; network count is unknown."
+      },
+      "networks": [
+
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "area": "block-interface",
+      "status": "not-extracted",
+      "reason": "Interface declarations remain in canonical SimaticML; they are not tag-table declarations."
+    },
+    {
+      "area": "comment-language",
+      "status": "not-extracted",
+      "reason": "Tag comments preserve one canonical text and status; their language identity is not captured."
+    },
+    {
+      "area": "hardware-configuration",
+      "status": "not-extracted",
+      "reason": "CPU identity only; IP addresses, parameters and integrated topology are not represented by these descriptors."
+    },
+    {
+      "area": "inventory",
+      "status": "extracted",
+      "reason": "Validated bounded station, PLC, block and root tag declarations. Empty tag lists describe declarations only, not program accesses."
+    },
+    {
+      "area": "lad-semantics",
+      "status": "unsupported",
+      "reason": "Non-empty LAD networks, contacts, coils, connections, output conditions and interlocks are not interpreted in v1."
+    },
+    {
+      "area": "other-profiles",
+      "status": "unsupported",
+      "reason": "S7-1500, HMI, Safety, drives, multiple PLCs and online operations are outside this profile; this is not an absence claim."
+    },
+    {
+      "area": "runtime-behavior",
+      "status": "unknown",
+      "reason": "Source inspection is not runtime or control-logic correctness evidence. Project names and comments are not behavior evidence."
+    }
+  ]
+}

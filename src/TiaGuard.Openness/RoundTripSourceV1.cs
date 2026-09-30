@@ -52,6 +52,12 @@ namespace TiaGuard.Openness
         public string Name { get; set; } = string.Empty;
         [DataMember(Name = "projectVersion", Order = 1)]
         public string ProjectVersion { get; set; }
+        [DataMember(Name = "originalFileName", Order = 2, EmitDefaultValue = false)]
+        public string OriginalFileName { get; set; }
+        [DataMember(Name = "originalSizeBytes", Order = 3, EmitDefaultValue = false)]
+        public long? OriginalSizeBytes { get; set; }
+        [DataMember(Name = "originalSha256", Order = 4, EmitDefaultValue = false)]
+        public string OriginalSha256 { get; set; }
     }
 
     [DataContract]
@@ -219,6 +225,13 @@ namespace TiaGuard.Openness
         public string FailureType { get; set; }
     }
 
+    public sealed class RoundTripSourceFileIdentity
+    {
+        public string FileName { get; set; }
+        public long SizeBytes { get; set; }
+        public string Sha256 { get; set; }
+    }
+
     public sealed class RoundTripExtractionHints
     {
         public RoundTripHardwareBuildIdentity Hardware { get; set; } = new RoundTripHardwareBuildIdentity();
@@ -228,6 +241,7 @@ namespace TiaGuard.Openness
         public List<RoundTripTagTableScanFailure> TagTableScanFailures { get; set; } =
             new List<RoundTripTagTableScanFailure>();
         public RoundTripCompilePreparation CompilePreparation { get; set; } = new RoundTripCompilePreparation();
+        public RoundTripSourceFileIdentity SourceFile { get; set; }
     }
 
     public sealed class RoundTripCompilePreparation

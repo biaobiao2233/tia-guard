@@ -46,12 +46,13 @@ The manifest records:
 - `contractStatus = "draft"`
 - `tiaVersion` (v0.1 requires V21)
 - project name/version
+- optional original `.ap21` identity: exact file name, byte length, and SHA-256 (the three fields appear together)
 - `roundTripReady`
 - repository-relative hardware and PLC descriptor paths
 - a stable, sorted capability ledger
 - stable blocking diagnostics
 
-No operational capture metadata is permitted.
+No operational capture metadata is permitted. The original project-file identity is deliberately limited to a file name, byte length, and content hash: no absolute local path is stored. When present, the Windows product surface preserves that file name on rebuild and checks the restored file's name, size, and SHA-256 after semantic Verify. A mismatch is surfaced explicitly instead of being reported as a complete restoration.
 
 ## Hardware descriptor
 

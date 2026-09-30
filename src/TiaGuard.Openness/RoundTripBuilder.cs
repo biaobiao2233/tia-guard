@@ -34,20 +34,21 @@ namespace TiaGuard.Openness
         private static RoundTripBuildResult BuildCore(
             RoundTripBuildInput input, Action<string> progress)
         {
-            // Siemens creates a project subfolder under the supplied directory. Stage
-            // on the destination volume and publish only after save and zero errors.
-            var parent = Path.GetDirectoryName(input.OutputDirectory);
-            var stage = Path.Combine(parent, "." + Path.GetFileName(input.OutputDirectory) +
-                ".tia-guard-" + Guid.NewGuid().ToString("N"));
-            FileSystemSafety.RequirePlainAncestors(parent);
-            Directory.CreateDirectory(stage);
+            // TIA Portal V21 applies its 143-character limit to the project directory
+            // used during creation. Keep that internal path short and independent from
+            // the user's Git clone/output path, then publish only after compile succeeds.
+            var layout = RoundTripBuildLayout.Plan(input.Manifest.Project.Name);
+            FileSystemSafety.RequirePlainAncestors(layout.WorkingRoot);
+            Directory.CreateDirectory(layout.WorkingRoot);
+            Directory.CreateDirectory(layout.StageDirectory);
             TiaPortal portal = null;
             Project project = null;
             try
             {
                 progress?.Invoke("create-project");
                 portal = new TiaPortal(TiaPortalMode.WithoutUserInterface);
-                project = portal.Projects.Create(new DirectoryInfo(stage), input.Manifest.Project.Name);
+                project = portal.Projects.Create(
+                    new DirectoryInfo(layout.StageDirectory), input.Manifest.Project.Name);
 
                 progress?.Invoke("create-device");
                 var device = project.Devices.CreateWithItem(
@@ -67,7 +68,7 @@ namespace TiaGuard.Openness
 
                 progress?.Invoke("import-ob1");
                 string importPath;
-                using (var source = input.OpenValidatedBlockSource(stage))
+                using (var source = input.OpenValidatedBlockSource(layout.StageDirectory))
                 {
                     importPath = source.Name;
                     var imported = plc.BlockGroup.Blocks.Import(new FileInfo(importPath), ImportOptions.Override);
@@ -90,7 +91,7 @@ namespace TiaGuard.Openness
                         compileErrors + " compile errors.");
                 project.Save();
 
-                var stagedFolder = Path.Combine(stage, input.Manifest.Project.Name);
+                var stagedFolder = layout.StagedProjectDirectory;
                 var stagedProject = Path.Combine(stagedFolder,
                     input.Manifest.Project.Name + ".ap21");
                 if (!File.Exists(stagedProject))
@@ -101,13 +102,20 @@ namespace TiaGuard.Openness
                 portal.Dispose();
                 portal = null;
                 progress?.Invoke("publish");
-                Directory.Move(stagedFolder, input.OutputDirectory);
-                Directory.Delete(stage);
+                var publishedFileName = string.IsNullOrWhiteSpace(
+                    input.Manifest.Project.OriginalFileName)
+                    ? input.Manifest.Project.Name + ".ap21"
+                    : input.Manifest.Project.OriginalFileName;
+                PublishBuiltProject(
+                    stagedFolder,
+                    input.OutputDirectory,
+                    input.Manifest.Project.Name + ".ap21",
+                    publishedFileName);
+                DeleteOwnedStage(layout.StageDirectory, layout.WorkingRoot);
                 progress?.Invoke("done");
                 return new RoundTripBuildResult
                 {
-                    ProjectFile = Path.Combine(input.OutputDirectory,
-                        input.Manifest.Project.Name + ".ap21"),
+                    ProjectFile = Path.Combine(input.OutputDirectory, publishedFileName),
                     CompileErrors = compileErrors,
                     CompileWarnings = compileWarnings
                 };
@@ -116,7 +124,48 @@ namespace TiaGuard.Openness
             {
                 try { project?.Close(); } catch { }
                 try { portal?.Dispose(); } catch { }
-                DeleteOwnedStage(stage, parent, Path.GetFileName(input.OutputDirectory));
+                DeleteOwnedStage(layout.StageDirectory, layout.WorkingRoot);
+                throw;
+            }
+        }
+
+        private static void PublishBuiltProject(
+            string stagedFolder,
+            string outputDirectory,
+            string generatedProjectFileName,
+            string publishedProjectFileName)
+        {
+            var output = Path.GetFullPath(outputDirectory).TrimEnd(Path.DirectorySeparatorChar);
+            var parent = Path.GetDirectoryName(output);
+            var outputName = Path.GetFileName(output);
+            var publishName = "." + outputName + ".tia-guard-publish-" +
+                Guid.NewGuid().ToString("N");
+            var publish = Path.Combine(parent, publishName);
+
+            FileSystemSafety.RequirePlainAncestors(parent);
+            if (Directory.Exists(output) || File.Exists(output))
+                throw new IOException("The build output path already exists.");
+
+            try
+            {
+                FileSystemSafety.CopyPlainTree(stagedFolder, publish);
+                if (!string.Equals(generatedProjectFileName, publishedProjectFileName,
+                        StringComparison.Ordinal))
+                {
+                    var generated = Path.Combine(publish, generatedProjectFileName);
+                    var desired = Path.Combine(publish, publishedProjectFileName);
+                    if (!File.Exists(generated) || File.Exists(desired))
+                        throw new IOException(
+                            "The rebuilt project file cannot be renamed to the original file name safely.");
+                    File.Move(generated, desired);
+                }
+                if (Directory.Exists(output) || File.Exists(output))
+                    throw new IOException("The build output path appeared while publishing.");
+                Directory.Move(publish, output);
+            }
+            catch
+            {
+                DeleteOwnedPublish(publish, parent, outputName);
                 throw;
             }
         }
@@ -162,17 +211,31 @@ namespace TiaGuard.Openness
             }
         }
 
-        private static void DeleteOwnedStage(string stage, string parent, string outputName)
+        private static void DeleteOwnedStage(string stage, string workingRoot)
         {
             var full = Path.GetFullPath(stage).TrimEnd(Path.DirectorySeparatorChar);
-            var expectedParent = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar);
-            var prefix = "." + outputName + ".tia-guard-";
+            var expectedParent = Path.GetFullPath(workingRoot).TrimEnd(Path.DirectorySeparatorChar);
+            const string prefix = "b-";
             var name = Path.GetFileName(full);
             if (!string.Equals(Path.GetDirectoryName(full), expectedParent,
                     StringComparison.OrdinalIgnoreCase) ||
                 !name.StartsWith(prefix, StringComparison.Ordinal) ||
                 !Guid.TryParseExact(name.Substring(prefix.Length), "N", out _))
                 throw new InvalidOperationException("Refusing to remove an unowned build stage.");
+            FileSystemSafety.DeleteOwnedTree(full);
+        }
+
+        private static void DeleteOwnedPublish(string publish, string parent, string outputName)
+        {
+            var full = Path.GetFullPath(publish).TrimEnd(Path.DirectorySeparatorChar);
+            var expectedParent = Path.GetFullPath(parent).TrimEnd(Path.DirectorySeparatorChar);
+            var prefix = "." + outputName + ".tia-guard-publish-";
+            var name = Path.GetFileName(full);
+            if (!string.Equals(Path.GetDirectoryName(full), expectedParent,
+                    StringComparison.OrdinalIgnoreCase) ||
+                !name.StartsWith(prefix, StringComparison.Ordinal) ||
+                !Guid.TryParseExact(name.Substring(prefix.Length), "N", out _))
+                throw new InvalidOperationException("Refusing to remove an unowned publish stage.");
             FileSystemSafety.DeleteOwnedTree(full);
         }
     }

@@ -1,0 +1,340 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TIA-Guard derived AI engineering view v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "authority",
+    "project",
+    "hardware",
+    "plc",
+    "tagTables",
+    "blocks",
+    "coverage"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "ai-engineering-v1"
+    },
+    "authority": {
+      "const": "derived-not-build-input"
+    },
+    "project": {
+      "$ref": "#/$defs/project"
+    },
+    "hardware": {
+      "$ref": "#/$defs/hardware"
+    },
+    "plc": {
+      "$ref": "#/$defs/plc"
+    },
+    "tagTables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tagTable"
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "$ref": "#/$defs/block"
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/coverage"
+      }
+    }
+  },
+  "$defs": {
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "tiaVersion",
+        "projectVersion",
+        "sourceRef"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "tiaVersion": {
+          "const": "V21"
+        },
+        "projectVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/sourceRef"
+        }
+      }
+    },
+    "hardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "station",
+        "family",
+        "cpuCreateIdentity",
+        "orderNumber",
+        "firmware",
+        "sourceRef"
+      ],
+      "properties": {
+        "station": {
+          "type": "string"
+        },
+        "family": {
+          "const": "S7-1200"
+        },
+        "cpuCreateIdentity": {
+          "type": "string"
+        },
+        "orderNumber": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "firmware": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/sourceRef"
+        }
+      }
+    },
+    "plc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "sourceRef"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/sourceRef"
+        }
+      }
+    },
+    "tagTable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "sourceRef",
+        "tags"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tag"
+          }
+        }
+      }
+    },
+    "tag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "dataType",
+        "address",
+        "commentStatus",
+        "comment",
+        "sourceRef"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "dataType": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "commentStatus": {
+          "enum": [
+            "present",
+            "missing"
+          ]
+        },
+        "comment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/sourceRef"
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind",
+        "number",
+        "language",
+        "sourceRef",
+        "xmlSourceRef",
+        "networkInventory",
+        "networks"
+      ],
+      "properties": {
+        "name": {
+          "const": "Main"
+        },
+        "kind": {
+          "const": "OB"
+        },
+        "number": {
+          "const": 1
+        },
+        "language": {
+          "const": "LAD"
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "xmlSourceRef": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "networkInventory": {
+          "$ref": "#/$defs/coverage"
+        },
+        "networks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/network"
+          }
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ordinal",
+        "language",
+        "sourceRef",
+        "titles",
+        "comments",
+        "logic"
+      ],
+      "properties": {
+        "ordinal": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/sourceRef"
+        },
+        "titles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "logic": {
+          "$ref": "#/$defs/coverage"
+        }
+      }
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "culture",
+        "text",
+        "sourceRef"
+      ],
+      "properties": {
+        "culture": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sourceRef": {
+          "$ref": "#/$defs/sourceRef"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "area",
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "area": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "extracted",
+            "empty",
+            "not-extracted",
+            "unsupported",
+            "incomplete",
+            "unknown"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "sourceRef": {
+      "type": "string",
+      "pattern": "^(tia-guard\\.json|tia/[^#]+)#.*$"
+    }
+  }
+}

@@ -3,6 +3,9 @@
     <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Version>0.1.0</Version>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
     <TiaPortalPublicApi Condition="'$(TiaPortalPublicApi)' == ''">$(ProgramFiles)\Siemens\Automation\Portal V21\PublicAPI\V21\net48</TiaPortalPublicApi>
   </PropertyGroup>
   <ItemGroup>

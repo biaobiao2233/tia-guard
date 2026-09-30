@@ -1,0 +1,5 @@
+# Canonical descriptors contain hashes of exact Siemens-exported XML bytes.
+tia-source/** -text
+tia-source/**/source.xml whitespace=cr-at-eol
+# The derived renderer's byte contract uses LF on every platform.
+ai/** text eol=lf
