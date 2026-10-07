@@ -110,6 +110,62 @@ The Gateway binds only to localhost. Local desktop agents can connect; installin
 
 Older acceptance records apply to their named candidates, not automatically to the latest integrated revision. Doctor/SARIF and provider-neutral advisory AI remain separate PR #7 / #5.
 
+## Future direction and community adapters
+
+The long-term goal is to extend readable engineering source, Git versioning, review and verified rebuilds to more PLC projects, bringing different platforms into shared project indexing, version history and collaboration workflows. Adapter work will follow the platforms we actually use, available engineering environments and opportunities for verification. Community adapters built on this project are welcome.
+
+### Candidate platforms and engineering environments
+
+The following are potential directions, all awaiting implementation and verification. Specific models, software versions and capability boundaries will be determined when adapter work begins. The list stays open to additional platforms encountered in practice.
+
+| Platform / vendor | Engineering software / target scope | Candidate software-bridge entry points |
+| --- | --- | --- |
+| Siemens | TIA Portal, S7-1500 expansion | Existing [Openness](https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api?contentId=~~8wSiwSWV3Triktc6ADDw) bridge; qualify additional CPUs and objects individually. |
+| Beckhoff | TwinCAT 3 XAE / TcXaeShell / Visual Studio integration | Evaluate [Automation Interface / COM](https://infosys.beckhoff.com/content/1033/tc3_automationinterface/242718859.html). |
+| Mitsubishi | [GX Works3 / GX Works2](https://www.mitsubishielectric.com/fa/products/software/plc/index.html), MELSEC projects | Engineering automation APIs need research; evaluate official import/export and source files. |
+| Omron | [Sysmac Studio](https://www.ia.omron.com/products/category/automation-systems/machine-automation-controllers/software/) (NJ/NX); [CX-One / CX-Programmer](https://industrial.omron.eu/en/products/cx-one) | Evaluate the two project families separately; public engineering APIs, scripts and file access need research. |
+| Rockwell / Allen-Bradley | [Studio 5000 Logix Designer](https://www.rockwellautomation.com/en-us/products/software/factorytalk/designsuite/studio-5000/studio-5000-logix-designer.html) (ControlLogix / CompactLogix) | Evaluate the [Logix Designer SDK](https://literature.rockwellautomation.com/idc/groups/literature/documents/gr/ldsdk-gr001_-en-p.pdf) and project import/export. |
+| Schneider Electric | [EcoStruxure Machine Expert](https://www.se.com/uk/en/product-range/2226-ecostruxure-machine-expert/) / [Control Expert](https://www.se.com/us/en/product-range/548-ecostruxure-control-expert-software/) (Modicon) | Evaluate Machine Expert's [Python / Script Engine](https://product-help.schneider-electric.com/Machine%20Expert/V2.1/en/SoMProg/SoMProg/D-SE-0083846.html); research Control Expert integration separately. |
+| B&R | [Automation Studio](https://www.br-automation.com/en/products/software/automation-studio/) | Evaluate the vendor's announced Agentic Bridge / MCP and version-specific build and engineering interfaces. |
+| ABB | [Automation Builder](https://www.abb.com/global/en/areas/motion/digital-tools/automation-builder/engineering) (AC500) | Evaluate vendor engineering extensions; research scripts, APIs and import/export per version. |
+| CODESYS ecosystem | CODESYS Development System / SoftPLC projects | Evaluate [CODESYS Scripting / ScriptEngine](https://content.helpme-codesys.com/en/CODESYS%20Scripting/_cds_access_cds_func_in_python_scripts.html), command-line access and project import/export. |
+| WAGO | [CODESYS V3.5](https://www.wago.com/global/products/automation-technology/discover-software/codesys-v3); existing e!COCKPIT projects | Evaluate device packages, libraries and scripting; qualify legacy project migration separately. |
+| Bosch Rexroth | [ctrlX PLC Engineering](https://apps.boschrexroth.com/microsites/ctrlx-automation/en/portfolio/ctrlx-plc/) / ctrlX WORKS | Evaluate CODESYS engineering scripts and Rexroth extensions; distinguish runtime REST interfaces. |
+| Festo | [CODESYS provided by Festo](https://www.festo.com/media/catalog/204137_documentation.pdf) and related engineering environments | Evaluate version-specific scripting, device descriptions and vendor libraries. |
+| Phoenix Contact | [PLCnext Engineer](https://www.phoenixcontact.com/en-nl/products/programming-software-plcnext-engineer-1046008) | Evaluate the vendor-listed Application Control Interface (ACI) and project-file interfaces. |
+| Panasonic | [Control FPWIN Pro](https://industry.panasonic.eu/products/automation-devices-solutions/programmable-logic-controllers-plc/plc-software/programming-software-control-fpwin-pro) (FP series) | Engineering APIs and scripting need research; first evaluate official import/export and source access. |
+| KEYENCE | [KV STUDIO](https://www.keyence.com/support/user/controls/plc/) (KV series) | Engineering APIs and scripting need research; first evaluate project files and official exports. |
+| LS ELECTRIC | [XG5000](https://sol.ls-electric.com/ww/en/product/category/476) (XGT / XGB and others) | Engineering APIs and scripting need research; qualify files and import/export by controller family. |
+| Delta | [ISPSoft](https://www.deltaww.com/en-US/products/PLC-Programmable-Logic-Controllers/3598?categoryCode=060301) / [DIADesigner](https://filecenter.deltaww.com/Products/download/06/060301/Manual/DELTA_IA-PLC_AS_HOM_EN_20220530.pdf) (family-specific) | Engineering automation access needs research; qualify each software and PLC family separately. |
+| FATEK | [WinProladder](https://www.fatek.com/en/product.php?act=view&id=162) (FBs / B1 and others) | Engineering APIs and scripting need research; first evaluate source and project files. |
+| Inovance | [InoProShop / AutoShop](https://portal-file.inovance.com/owfile/ProdDoc/CY/19120152-CY/A01/19120152-CY_A01%E3%80%8AExpansion%20Module%20and%20HMI%E3%80%8B-EN-202221116_Web.pdf) (family-specific) | Research engineering APIs, scripting, source and vendor extensions per software version. |
+| XINJE | [XDPPro](https://www.xinje.com/web/productInfo/index?indexGroup=0&seriesId=103) / [XCPPro](https://en.xinje.com/web/search/searchData?val=o) and related tools | Public engineering automation interfaces need research; evaluate file exports per family. |
+| Kinco | [KincoBuilder](https://www.kinco.cn/product/155?classification_id=35) and related tools | Engineering APIs and scripting need research; qualify project structure and import/export. |
+| HollySys | [FA-AutoThink](https://www.hollysys.com/download/products?kw=plc&tp=1&wd=1) (PLC-family-specific) | Engineering automation interfaces need research; qualify source, configuration and toolchain separately. |
+| SUPCON | Engineering software for [G3 / G5 and related platforms](https://www.global.supcon.com/control-safety-systems/plc): name and version not yet confirmed | First confirm the engineering environment; public engineering APIs and file access need research. |
+
+### API bridges for engineering software
+
+Long-term adapters cover both PLC projects and the software used to create, edit and verify them. The engineering software bridge currently implemented in this project is **TIA Portal V21 / Openness**. Other software and interfaces in the table are candidates, not integrated or qualified in TIA-Guard. A vendor providing an API does not mean this project already supports it.
+
+Plan adapter boundaries around engineering software, version, controller family and supported capability. Progressively connect project reads, tag/program queries, edit previews, guarded offline edits, compilation, export, rebuild and verification to shared GUI / CLI / HTTP API / MCP workflows. Shared interfaces and adapter contracts must evolve through implementation; the existing TIA interface is not automatically a common interface for other software.
+
+Evaluate public engineering APIs / SDKs, COM, scripting and plugin interfaces first, then command-line access, official import/export and engineering source files where supported by the tool. Unconfirmed interfaces remain research items, and adapters expose only verified capabilities. Record software versions, required licenses, dependencies and reproducible environment requirements.
+
+Keep engineering-software automation separate from PLC runtime communication. For example, TwinCAT's [Automation Interface](https://infosys.beckhoff.com/content/1033/tc3_automationinterface/242685835.html) operates on the XAE engineering environment, while [ADS](https://infosys.beckhoff.com/content/1033/tc3_grundlagen/116157835.html) is a TwinCAT communication interface. Connecting through ADS, OPC UA or Modbus alone does not qualify engineering-software reads, edits or rebuilds.
+
+### Bringing projects into management incrementally
+
+1. **Readable source and versioning**: first investigate read-only parsing, source or project export, indexing and deterministic comparison, making programs, tags, configuration and changes within the adapter's scope reviewable in Git.
+2. **Rebuild and verification**: where the platform toolchain permits and sufficient evidence is available, add import, fresh project creation, compilation and round-trip semantic verification, declaring each capability individually.
+3. **Shared collaboration and AI engineering views**: explore cross-platform project queries, source references and AI-assisted review while keeping platform-specific engineering objects and verification rules within their adapters.
+
+The guiding principle is: **evaluate adapters for the platforms we actually encounter, and welcome verified community contributions.** This list is not a fixed schedule. These capabilities are not implemented or verified and carry no fixed delivery dates. Each platform retains its own project format, compiler and verification rules. Sharing IEC 61131-3 or a CODESYS foundation still requires separate qualification. Shared management does not imply direct program conversion between vendors, and passing tests on one platform does not qualify another.
+
+### Adapter PRs are welcome
+
+Contributions may start with read-only parsing, export or Git management and add rebuild and verification later, with explicit supported and unsupported scope for each capability. Include reproducible test steps, self-authored or sanitized fixtures and actual verification evidence from the relevant platform. Rebuild support requires compilation and round-trip verification in the engineering tool; runtime claims additionally require real execution or simulation evidence. Passing tests, clear boundaries and maintainer review make a contribution eligible for merge. See the [contribution guide](CONTRIBUTING.md#plc-platform-adapters).
+
 ## Development and packaging
 
 Target: Windows x64, TIA Portal V21 / Openness, effective Siemens TIA Openness group permissions and Git for Windows. GUI / worker use .NET Framework 4.8; the .NET 8 Gateway host is packaged self-contained.

@@ -110,6 +110,62 @@ Gateway 服务只绑定 localhost。本机桌面 Agent 可以连接；纯云端�
 
 旧验收记录对应其注明的候选版本；不自动视为最新集成版本的真实 TIA 验收。现有 Doctor/SARIF 与 provider-neutral advisory AI 提案仍在独立 PR #7 / #5，未由本次源码发布合并。
 
+## 未来展望与社区适配
+
+长期希望把“工程可读化、Git 版本管理、审查与受验证的重建”逐步扩展到更多 PLC 工程，让不同平台的工程能够纳入统一的项目索引、版本历史与协作流程。适配方向会跟随实际接触的平台、可获得的开发环境和验证条件推进，也欢迎社区基于本项目贡献适配。
+
+### 候选平台与工程环境
+
+以下是未来可评估的方向，均为待适配、待验证的候选；具体型号、软件版本和功能范围在开展适配时确定。清单保持开放，后续接触到的新平台也欢迎加入。
+
+| 平台 / 厂商 | 工程软件 / 目标范围 | 软件桥接的候选入口 |
+| --- | --- | --- |
+| Siemens | TIA Portal（博图），S7-1500 扩展 | 现有 [Openness](https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api?contentId=~~8wSiwSWV3Triktc6ADDw) 桥接；新 CPU/对象逐项验证。 |
+| Beckhoff / 倍福 | TwinCAT 3 XAE / TcXaeShell / Visual Studio 集成 | 评估 [Automation Interface / COM](https://infosys.beckhoff.com/content/1033/tc3_automationinterface/242718859.html)。 |
+| Mitsubishi / 三菱 | [GX Works3 / GX Works2](https://www.mitsubishielectric.com/fa/products/software/plc/index.html)，MELSEC 工程 | 工程自动化 API 待调研；评估官方导入导出与源码文件。 |
+| Omron / 欧姆龙 | [Sysmac Studio](https://www.ia.omron.com/products/category/automation-systems/machine-automation-controllers/software/)（NJ/NX）；[CX-One / CX-Programmer](https://industrial.omron.eu/en/products/cx-one) | 两类工程分别评估；公开工程 API、脚本与文件入口待调研。 |
+| Rockwell / Allen-Bradley / 罗克韦尔 | [Studio 5000 Logix Designer](https://www.rockwellautomation.com/en-us/products/software/factorytalk/designsuite/studio-5000/studio-5000-logix-designer.html)（ControlLogix / CompactLogix） | 评估 [Logix Designer SDK](https://literature.rockwellautomation.com/idc/groups/literature/documents/gr/ldsdk-gr001_-en-p.pdf) 与工程导入导出。 |
+| Schneider Electric / 施耐德 | [EcoStruxure Machine Expert](https://www.se.com/uk/en/product-range/2226-ecostruxure-machine-expert/) / [Control Expert](https://www.se.com/us/en/product-range/548-ecostruxure-control-expert-software/)（Modicon） | Machine Expert 有 [Python / Script Engine](https://product-help.schneider-electric.com/Machine%20Expert/V2.1/en/SoMProg/SoMProg/D-SE-0083846.html) 可评估；Control Expert 接入单独调研。 |
+| B&R / 贝加莱 | [Automation Studio](https://www.br-automation.com/en/products/software/automation-studio/) | 评估厂商公布的 Agentic Bridge / MCP，以及具体版本的构建和工程接口。 |
+| ABB | [Automation Builder](https://www.abb.com/global/en/areas/motion/digital-tools/automation-builder/engineering)（AC500） | 评估厂商工程扩展；脚本、API 和导入导出能力按版本调研。 |
+| CODESYS 生态 | CODESYS Development System / SoftPLC 工程 | 评估 [CODESYS Scripting / ScriptEngine](https://content.helpme-codesys.com/en/CODESYS%20Scripting/_cds_access_cds_func_in_python_scripts.html)、命令行与工程导入导出。 |
+| WAGO / 万可 | [CODESYS V3.5](https://www.wago.com/global/products/automation-technology/discover-software/codesys-v3)；已有 e!COCKPIT 工程 | 评估设备包、库及脚本；旧工程迁移另行验证。 |
+| Bosch Rexroth / 博世力士乐 | [ctrlX PLC Engineering](https://apps.boschrexroth.com/microsites/ctrlx-automation/en/portfolio/ctrlx-plc/) / ctrlX WORKS | 评估 CODESYS 工程脚本与 Rexroth 扩展；运行时 REST 接口另行区分。 |
+| Festo / 费斯托 | [CODESYS provided by Festo](https://www.festo.com/media/catalog/204137_documentation.pdf) 等配套工程环境 | 评估对应版本的脚本、设备描述和厂商库。 |
+| Phoenix Contact / 菲尼克斯电气 | [PLCnext Engineer](https://www.phoenixcontact.com/en-nl/products/programming-software-plcnext-engineer-1046008) | 评估厂商列出的 Application Control Interface（ACI）及工程文件接口。 |
+| Panasonic / 松下 | [Control FPWIN Pro](https://industry.panasonic.eu/products/automation-devices-solutions/programmable-logic-controllers-plc/plc-software/programming-software-control-fpwin-pro)（FP 系列） | 工程 API/脚本待调研；先评估官方导入导出与源码。 |
+| KEYENCE / 基恩士 | [KV STUDIO](https://www.keyence.com/support/user/controls/plc/)（KV 系列） | 工程 API/脚本待调研；先评估工程文件与官方导出。 |
+| LS ELECTRIC | [XG5000](https://sol.ls-electric.com/ww/en/product/category/476)（XGT / XGB 等） | 工程 API/脚本待调研；按系列验证文件和导入导出。 |
+| Delta / 台达 | [ISPSoft](https://www.deltaww.com/en-US/products/PLC-Programmable-Logic-Controllers/3598?categoryCode=060301) / [DIADesigner](https://filecenter.deltaww.com/Products/download/06/060301/Manual/DELTA_IA-PLC_AS_HOM_EN_20220530.pdf)（按系列） | 工程自动化入口待调研；不同软件和 PLC 系列分别验证。 |
+| FATEK / 永宏 | [WinProladder](https://www.fatek.com/en/product.php?act=view&id=162)（FBs / B1 等） | 工程 API/脚本待调研；先评估源码及工程文件。 |
+| Inovance / 汇川 | [InoProShop / AutoShop](https://portal-file.inovance.com/owfile/ProdDoc/CY/19120152-CY/A01/19120152-CY_A01%E3%80%8AExpansion%20Module%20and%20HMI%E3%80%8B-EN-202221116_Web.pdf)（按系列） | 按软件版本研究工程 API、脚本、源码与厂商扩展。 |
+| XINJE / 信捷 | [XDPPro](https://www.xinje.com/web/productInfo/index?indexGroup=0&seriesId=103) / [XCPPro](https://en.xinje.com/web/search/searchData?val=o) 等配套工具 | 公开工程自动化接口待调研；按系列评估文件导出。 |
+| Kinco / 步科 | [KincoBuilder](https://www.kinco.cn/product/155?classification_id=35) 等配套工具 | 工程 API/脚本待调研；验证项目结构与导入导出。 |
+| HollySys / 和利时 | [FA-AutoThink](https://www.hollysys.com/download/products?kw=plc&tp=1&wd=1)（按 PLC 系列） | 工程自动化接口待调研；源码、配置与工具链分别验证。 |
+| SUPCON / 中控 | [G3 / G5 等平台](https://www.global.supcon.com/control-safety-systems/plc)配套工程软件：名称与版本待核实 | 先确认对应工程环境；公开工程 API 与文件入口待调研。 |
+
+### 各家工程软件的 API 桥接
+
+长期适配对象既包括 PLC 工程，也包括创建、编辑和验证这些工程的软件。当前本项目实现的工程软件桥接是 **TIA Portal V21 / Openness**；上表其他软件及接口均为候选方向，尚未在 TIA-Guard 中接入和验证。厂商已有某个 API，不等于本项目已适配。
+
+计划按“工程软件 + 版本 + 设备系列 + 支持能力”建立适配边界，将工程读取、变量/程序查询、修改预览、受控离线修改、编译、导出、重建与验证逐步接到共用的 GUI / CLI / HTTP API / MCP 流程。共用接口与适配器契约需要随实际实现逐步设计，不能假定现有 TIA 接口已经通用于其他软件。
+
+优先评估公开的工程 API / SDK、COM、脚本和插件接口；再按工具实际能力评估命令行、官方导入导出及工程源码文件。没有确认接口的条目先保持待调研，适配器只暴露已验证的能力。还需记录软件版本、所需许可、依赖和可复现的环境条件。
+
+工程软件自动化与 PLC 运行通信分别管理。例如 TwinCAT 的 [Automation Interface](https://infosys.beckhoff.com/content/1033/tc3_automationinterface/242685835.html) 面向 XAE 工程环境，而 [ADS](https://infosys.beckhoff.com/content/1033/tc3_grundlagen/116157835.html) 是 TwinCAT 的通信接口；仅连通 ADS、OPC UA 或 Modbus 不能作为工程软件读取、修改或重建的验收证据。
+
+### 如何逐步纳入管理
+
+1. **可读化与版本管理**：优先研究只读解析、源码或工程导出、工程索引和确定性比较，让适配范围内的程序、变量、配置与变更能被 Git 审查。
+2. **工程重建与验证**：在平台工具链允许且证据充分时，再增加导入、创建新工程、编译和往返语义校验，逐项声明支持能力。
+3. **统一协作与 AI 工程视图**：逐步探索跨平台的工程检索、来源引用和 AI 辅助审查；平台特有的工程对象与验证规则仍由各自适配器处理。
+
+推进原则是：**实际接触什么，就评估适配什么；社区先贡献经过验证的适配，也欢迎纳入。** 清单不是固定排期，以上能力尚未实现或验证，也没有承诺固定交付日期。各平台保留自己的工程格式、编译工具和验证规则；同属 IEC 61131-3 或 CODESYS 生态也需要分别验证。统一管理不代表不同厂商的程序可以直接互相转换，也不能从一个平台的测试结果推断另一个平台已支持。
+
+### 欢迎适配 PR
+
+适配可以从只读解析、工程导出或 Git 管理开始，再逐步增加重建和校验；每项能力都需要写清支持与不支持的范围。PR 应附可复现的测试步骤、自建或脱敏 fixture，以及对应平台的实际验证证据；涉及重建时需要工程工具中的编译和往返校验证据，涉及运行行为时另需真实运行或仿真证据。测试通过、边界清楚并经维护者审查后，可考虑合并。具体要求见 [贡献指南](CONTRIBUTING.md#plc-platform-adapters)。
+
 ## 开发与打包
 
 运行目标：Windows x64、TIA Portal V21 / Openness、有效的 Siemens TIA Openness 组权限、Git for Windows。GUI / Openness worker 使用 .NET Framework 4.8；Gateway host 使用 .NET 8，打包时生成 self-contained host。
