@@ -118,31 +118,41 @@ Gateway 服务只绑定 localhost。本机桌面 Agent 可以连接；纯云端�
 
 以下是未来可评估的方向，均为待适配、待验证的候选；具体型号、软件版本和功能范围在开展适配时确定。清单保持开放，后续接触到的新平台也欢迎加入。
 
-| 平台 / 厂商 | 候选工程范围与参考入口 |
-| --- | --- |
-| Siemens | S7-1500；逐步评估更多 TIA Portal CPU 与工程对象。 |
-| Beckhoff / 倍福 | TwinCAT 3 PLC 工程、ST 源码与工程配置。 |
-| Mitsubishi / 三菱 | MELSEC 工程；从 [GX Works3](https://www.mitsubishielectric.com/fa/products/cnt/plceng/smerit/gx_works3/index.html) 等实际使用的工具版本评估。 |
-| Omron / 欧姆龙 | NJ/NX 与 [Sysmac Studio](https://www.ia.omron.com/products/category/automation-systems/machine-automation-controllers/software/) 等工程环境。 |
-| Rockwell / Allen-Bradley / 罗克韦尔 | ControlLogix、CompactLogix 与 [Studio 5000](https://www.rockwellautomation.com/en-us/products/hardware/programmable-controllers.html) 工程。 |
-| Schneider Electric / 施耐德 | Modicon；分别评估 [Machine Expert](https://www.se.com/uk/en/product-range/2226-ecostruxure-machine-expert/) 与 [Control Expert](https://www.se.com/us/en/product-range/548-ecostruxure-control-expert-software/) 工程。 |
-| B&R / 贝加莱 | [Automation Studio](https://www.br-automation.com/en/products/software/automation-studio/) 工程与 PLC 程序对象。 |
-| ABB | AC500 与 [Automation Builder](https://www.abb.com/global/en/areas/motion/digital-tools/automation-builder/engineering) 工程。 |
-| CODESYS 生态 | [CODESYS](https://www.codesys.com/ecosystem/discover-codesys/codesys-inside/) 工程与 SoftPLC；按厂商扩展、设备描述、库和版本分别验证。 |
-| WAGO / 万可 | [CODESYS 工程环境](https://www.wago.com/global/products/automation-technology/discover-software/codesys-v3)及对应控制器项目。 |
-| Bosch Rexroth / 博世力士乐 | [ctrlX PLC](https://apps.boschrexroth.com/microsites/ctrlx-automation/en/portfolio/ctrlx-plc/) 及实际接触的工程环境。 |
-| Festo / 费斯托 | [CODESYS 控制器](https://www.festo.com/media/catalog/204060_documentation.pdf)及相应厂商工程配置。 |
-| Phoenix Contact / 菲尼克斯电气 | PLCnext 与 [PLCnext Engineer](https://www.phoenixcontact.com/en-de/products/programming-software-plcnext-engineer-1046008) 工程。 |
-| Panasonic / 松下 | FP 系列及 [Control FPWIN Pro](https://industry.panasonic.eu/products/automation-devices-solutions/programmable-logic-controllers-plc/plc-software/programming-software-control-fpwin-pro) 工程。 |
-| KEYENCE / 基恩士 | KV 系列与 [KV STUDIO](https://www.keyence.com/support/user/controls/plc/) 工程。 |
-| LS ELECTRIC | XGT/XGB 等 PLC 与 [XG5000](https://sol.ls-electric.com/ww/en/product/category/476) 工程。 |
-| Delta / 台达 | DVP、AS、AH 等系列与 [ISPSoft](https://www.deltaelectronicsindia.com/en-IN/products/PLC-Programmable-Logic-Controllers/15402) 等工程环境。 |
-| FATEK / 永宏 | FBs/B1 与 [WinProladder](https://www.fatek.com/en/product.php?act=view&id=162) 等工程环境。 |
-| Inovance / 汇川 | [PLC 产品](https://www.inovance.com/product)及实际使用的编程软件；按系列与版本评估。 |
-| XINJE / 信捷 | [可编程控制器](https://www.xinje.com/web/downloadCenter/index)及相应工程软件；按系列与版本评估。 |
-| Kinco / 步科 | [PLC 产品](https://www.kinco.cn/company-introduction)与对应编程环境；按系列与版本评估。 |
-| HollySys / 和利时 | [PLC 工程](https://www.hollysys.com/products/industrial-intelligence/control-safety-systems/plc)与对应工具链；按系列与版本评估。 |
-| SUPCON / 中控 | [PLC 平台](https://www.global.supcon.com/control-safety-systems/plc)及相应工程环境；按系列与版本评估。 |
+| 平台 / 厂商 | 工程软件 / 目标范围 | 软件桥接的候选入口 |
+| --- | --- | --- |
+| Siemens | TIA Portal（博图），S7-1500 扩展 | 现有 [Openness](https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api?contentId=~~8wSiwSWV3Triktc6ADDw) 桥接；新 CPU/对象逐项验证。 |
+| Beckhoff / 倍福 | TwinCAT 3 XAE / TcXaeShell / Visual Studio 集成 | 评估 [Automation Interface / COM](https://infosys.beckhoff.com/content/1033/tc3_automationinterface/242718859.html)。 |
+| Mitsubishi / 三菱 | [GX Works3 / GX Works2](https://www.mitsubishielectric.com/fa/products/software/plc/index.html)，MELSEC 工程 | 工程自动化 API 待调研；评估官方导入导出与源码文件。 |
+| Omron / 欧姆龙 | [Sysmac Studio](https://www.ia.omron.com/products/category/automation-systems/machine-automation-controllers/software/)（NJ/NX）；[CX-One / CX-Programmer](https://industrial.omron.eu/en/products/cx-one) | 两类工程分别评估；公开工程 API、脚本与文件入口待调研。 |
+| Rockwell / Allen-Bradley / 罗克韦尔 | [Studio 5000 Logix Designer](https://www.rockwellautomation.com/en-us/products/software/factorytalk/designsuite/studio-5000/studio-5000-logix-designer.html)（ControlLogix / CompactLogix） | 评估 [Logix Designer SDK](https://literature.rockwellautomation.com/idc/groups/literature/documents/gr/ldsdk-gr001_-en-p.pdf) 与工程导入导出。 |
+| Schneider Electric / 施耐德 | [EcoStruxure Machine Expert](https://www.se.com/uk/en/product-range/2226-ecostruxure-machine-expert/) / [Control Expert](https://www.se.com/us/en/product-range/548-ecostruxure-control-expert-software/)（Modicon） | Machine Expert 有 [Python / Script Engine](https://product-help.schneider-electric.com/Machine%20Expert/V2.1/en/SoMProg/SoMProg/D-SE-0083846.html) 可评估；Control Expert 接入单独调研。 |
+| B&R / 贝加莱 | [Automation Studio](https://www.br-automation.com/en/products/software/automation-studio/) | 评估厂商公布的 Agentic Bridge / MCP，以及具体版本的构建和工程接口。 |
+| ABB | [Automation Builder](https://www.abb.com/global/en/areas/motion/digital-tools/automation-builder/engineering)（AC500） | 评估厂商工程扩展；脚本、API 和导入导出能力按版本调研。 |
+| CODESYS 生态 | CODESYS Development System / SoftPLC 工程 | 评估 [CODESYS Scripting / ScriptEngine](https://content.helpme-codesys.com/en/CODESYS%20Scripting/_cds_access_cds_func_in_python_scripts.html)、命令行与工程导入导出。 |
+| WAGO / 万可 | [CODESYS V3.5](https://www.wago.com/global/products/automation-technology/discover-software/codesys-v3)；已有 e!COCKPIT 工程 | 评估设备包、库及脚本；旧工程迁移另行验证。 |
+| Bosch Rexroth / 博世力士乐 | [ctrlX PLC Engineering](https://apps.boschrexroth.com/microsites/ctrlx-automation/en/portfolio/ctrlx-plc/) / ctrlX WORKS | 评估 CODESYS 工程脚本与 Rexroth 扩展；运行时 REST 接口另行区分。 |
+| Festo / 费斯托 | [CODESYS provided by Festo](https://www.festo.com/media/catalog/204137_documentation.pdf) 等配套工程环境 | 评估对应版本的脚本、设备描述和厂商库。 |
+| Phoenix Contact / 菲尼克斯电气 | [PLCnext Engineer](https://www.phoenixcontact.com/en-nl/products/programming-software-plcnext-engineer-1046008) | 评估厂商列出的 Application Control Interface（ACI）及工程文件接口。 |
+| Panasonic / 松下 | [Control FPWIN Pro](https://industry.panasonic.eu/products/automation-devices-solutions/programmable-logic-controllers-plc/plc-software/programming-software-control-fpwin-pro)（FP 系列） | 工程 API/脚本待调研；先评估官方导入导出与源码。 |
+| KEYENCE / 基恩士 | [KV STUDIO](https://www.keyence.com/support/user/controls/plc/)（KV 系列） | 工程 API/脚本待调研；先评估工程文件与官方导出。 |
+| LS ELECTRIC | [XG5000](https://sol.ls-electric.com/ww/en/product/category/476)（XGT / XGB 等） | 工程 API/脚本待调研；按系列验证文件和导入导出。 |
+| Delta / 台达 | [ISPSoft](https://www.deltaww.com/en-US/products/PLC-Programmable-Logic-Controllers/3598?categoryCode=060301) / [DIADesigner](https://filecenter.deltaww.com/Products/download/06/060301/Manual/DELTA_IA-PLC_AS_HOM_EN_20220530.pdf)（按系列） | 工程自动化入口待调研；不同软件和 PLC 系列分别验证。 |
+| FATEK / 永宏 | [WinProladder](https://www.fatek.com/en/product.php?act=view&id=162)（FBs / B1 等） | 工程 API/脚本待调研；先评估源码及工程文件。 |
+| Inovance / 汇川 | [InoProShop / AutoShop](https://portal-file.inovance.com/owfile/ProdDoc/CY/19120152-CY/A01/19120152-CY_A01%E3%80%8AExpansion%20Module%20and%20HMI%E3%80%8B-EN-202221116_Web.pdf)（按系列） | 按软件版本研究工程 API、脚本、源码与厂商扩展。 |
+| XINJE / 信捷 | [XDPPro](https://www.xinje.com/web/productInfo/index?indexGroup=0&seriesId=103) / [XCPPro](https://en.xinje.com/web/search/searchData?val=o) 等配套工具 | 公开工程自动化接口待调研；按系列评估文件导出。 |
+| Kinco / 步科 | [KincoBuilder](https://www.kinco.cn/product/155?classification_id=35) 等配套工具 | 工程 API/脚本待调研；验证项目结构与导入导出。 |
+| HollySys / 和利时 | [FA-AutoThink](https://www.hollysys.com/download/products?kw=plc&tp=1&wd=1)（按 PLC 系列） | 工程自动化接口待调研；源码、配置与工具链分别验证。 |
+| SUPCON / 中控 | [G3 / G5 等平台](https://www.global.supcon.com/control-safety-systems/plc)配套工程软件：名称与版本待核实 | 先确认对应工程环境；公开工程 API 与文件入口待调研。 |
+
+### 各家工程软件的 API 桥接
+
+长期适配对象既包括 PLC 工程，也包括创建、编辑和验证这些工程的软件。当前本项目实现的工程软件桥接是 **TIA Portal V21 / Openness**；上表其他软件及接口均为候选方向，尚未在 TIA-Guard 中接入和验证。厂商已有某个 API，不等于本项目已适配。
+
+计划按“工程软件 + 版本 + 设备系列 + 支持能力”建立适配边界，将工程读取、变量/程序查询、修改预览、受控离线修改、编译、导出、重建与验证逐步接到共用的 GUI / CLI / HTTP API / MCP 流程。共用接口与适配器契约需要随实际实现逐步设计，不能假定现有 TIA 接口已经通用于其他软件。
+
+优先评估公开的工程 API / SDK、COM、脚本和插件接口；再按工具实际能力评估命令行、官方导入导出及工程源码文件。没有确认接口的条目先保持待调研，适配器只暴露已验证的能力。还需记录软件版本、所需许可、依赖和可复现的环境条件。
+
+工程软件自动化与 PLC 运行通信分别管理。例如 TwinCAT 的 [Automation Interface](https://infosys.beckhoff.com/content/1033/tc3_automationinterface/242685835.html) 面向 XAE 工程环境，而 [ADS](https://infosys.beckhoff.com/content/1033/tc3_grundlagen/116157835.html) 是 TwinCAT 的通信接口；仅连通 ADS、OPC UA 或 Modbus 不能作为工程软件读取、修改或重建的验收证据。
 
 ### 如何逐步纳入管理
 
