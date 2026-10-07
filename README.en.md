@@ -10,7 +10,7 @@ TIA-Guard is an independent **pre-alpha** engineering tool for local **Siemens T
 
 - **Readable engineering source and Git collaboration**: uses TIA Portal V21 / Openness API to convert supported S7-1200 projects into structured engineering source while retaining PLC tags and LAD logic for Git comparison, review and reuse. The Chinese WPF GUI implements GitHub import/rebuild, export/commit and multi-project management.
 - **Round-trip rebuild and verification within supported scope**: completes the `.ap21 → readable engineering source → new .ap21` loop. A self-authored V21 / S7-1200 fixture has real Build / Compile / Verify evidence for supported object logic, structure and engineering semantics. Unsupported objects or insufficient evidence block acceptance.
-- **Local AI engineering Gateway**: implements localhost HTTP / MCP, AI engineering views and a dedicated Skill for Codex, Cursor and Claude Code to query tags, bounded LAD logic and references. It supports edit previews, one-time GUI approval, compilation, rebuild, verification and rollback on failure. GUI / CLI / Gateway source is public; 152 contract tests and 45 Host tests passed. The latest integrated real TIA modification loop still needs requalification.
+- **Local AI engineering Gateway**: inspired by the local bridge and companion Skill model of the [EasyEDA Pro Run API Gateway extension](https://github.com/easyeda/eext-run-api-gateway). It implements localhost HTTP / MCP, AI engineering views and a dedicated Skill for Codex, Cursor and Claude Code to query tags, bounded LAD logic and references. It supports edit previews, one-time GUI approval, compilation, rebuild, verification and rollback on failure. GUI / CLI / Gateway source is public; 152 contract tests and 45 Host tests passed. The latest integrated real TIA modification loop still needs requalification.
 
 ## Download and documentation
 
@@ -109,6 +109,19 @@ The Gateway binds only to localhost. Local desktop agents can connect; installin
 - No online PLC download, start/stop, force or variable writes. Engineering-semantic verification does not prove arbitrary runtime behavior or identical `.ap21` binary bytes.
 
 Older acceptance records apply to their named candidates, not automatically to the latest integrated revision. Doctor/SARIF and provider-neutral advisory AI remain separate PR #7 / #5.
+
+## Existing tools and design references
+
+Valuable tools already address PLC text export, versioning and AI engineering access. Within the supported TIA V21 / S7-1200 subset, TIA-Guard connects canonical source, Git collaboration, fresh reconstruction and semantic verification. Each project has its own platform, capability and acceptance scope.
+
+| Direction | Projects and useful practices |
+| --- | --- |
+| PLC engineering and Git | [CODESCRIBE](https://github.com/greenforge-labs/codescribe): CODESYS text export/import, object-level review and derived diagrams. Official CODESYS File-Based Storage is another entry point to assess. |
+| Languages and diagnostics | [iec-checker](https://github.com/iec-checker/iec-checker), [RuSTy](https://github.com/PLC-lang/rusty), [IronPLC](https://github.com/ironplc/ironplc), [radevgit/plc](https://github.com/radevgit/plc): static checks, compilers/parsers, tests and source locations. Research subjects, not integrated dependencies. |
+| TIA MCP bridges | [Czarnak/tia-portal-mcp](https://github.com/Czarnak/tia-portal-mcp) and [TIA_Portal_Openness_MCP](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP): recorded design studies for binding/workers and broad engineering capabilities. |
+| Local AI Gateway | [EasyEDA Pro Run API Gateway](https://github.com/easyeda/eext-run-api-gateway): Gateway design influence through the external agent/local Bridge/engineering-software/companion Skill model. |
+
+[Related projects, design sources and next improvements](docs/RELATED-PROJECTS.en.md) records pinned sources, scope differences, existing implementation and unverified plans. First complete [#41: current GUI/Gateway real offline TIA requalification](https://github.com/biaobiao2233/tia-guard/issues/41), then improve Git summaries, extend LAD individually and assess one read-only platform adapter when an environment exists. These future capabilities are not complete.
 
 ## Future direction and community adapters
 

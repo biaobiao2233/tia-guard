@@ -31,9 +31,11 @@ v2 将已绑定离线工程导出到 Bridge 拥有的临时 canonical workspace�
 
 两层只通过临时 canonical export 交汇，不能替代权威 round-trip source。
 
+Gateway 的本机桥接与配套 Skill 工作流设计参考[嘉立创 EDA 专业版 Run API Gateway 扩展](https://github.com/easyeda/eext-run-api-gateway)，其[配套 easyeda-api-skill](https://github.com/easyeda/easyeda-api-skill)展示了外部 Agent、Bridge 与工程软件的协作模式。这里声明设计来源，不表示代码、WebSocket 协议或 EDA API 复用。TIA-Guard 使用自己的 HTTP/MCP、net48 Openness worker 和受控离线 patch 流程。各参考项目的范围及后续计划见[相关项目](RELATED-PROJECTS.md)。
+
 设计研究参考了两个 MIT 许可项目：
-- `Czarnak/tia-portal-mcp`：持久 net48 Openness worker、精确工程绑定、目标不明时拒绝操作及写入保护。
-- `bulaofen0036-coder/TIA_Portal_Openness_MCP`：广泛 TIA 能力、stdio/HTTP、声明式流程、LAD/SCL、硬件/HMI 和 VCI/Git。
+- [Czarnak/tia-portal-mcp](https://github.com/Czarnak/tia-portal-mcp)：持久 net48 Openness worker、精确工程绑定、目标不明时拒绝操作及写入保护。
+- [bulaofen0036-coder/TIA_Portal_Openness_MCP](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP)：广泛 TIA 能力、stdio/HTTP、声明式流程、LAD/SCL、硬件/HMI 和 VCI/Git。
 
 TIA-Guard 未整仓复制它们，使用自己的契约和范围边界。
 
