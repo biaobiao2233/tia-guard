@@ -110,6 +110,18 @@ The Gateway binds only to localhost. Local desktop agents can connect; installin
 
 Older acceptance records apply to their named candidates, not automatically to the latest integrated revision. Doctor/SARIF and provider-neutral advisory AI remain separate PR #7 / #5.
 
+## Future direction and community adapters
+
+The long-term goal is to extend readable engineering source, Git versioning, review and verified rebuilds to more PLC projects. Adapter work will follow the platforms we actually use, available engineering environments and opportunities for verification. Community adapters built on this project are welcome.
+
+- **Siemens S7-1500**: extend CPU and engineering-object coverage within TIA Portal, qualifying export, rebuild and semantic verification capabilities individually.
+- **Beckhoff TwinCAT**: explore readable source, Git collaboration and verification for TwinCAT PLC projects through a separate adapter for its project format and toolchain.
+- **Mitsubishi and other PLC platforms**: evaluate them as we learn and use them. Specific controller families, engineering software versions and supported scope will depend on adapter implementations and test evidence.
+
+These are future directions, not implemented or verified capabilities, and carry no fixed delivery dates. Each platform retains its own project format, compiler and verification rules. Its adapter must declare what it can manage; passing tests on one platform does not qualify another.
+
+Adapter PRs are welcome. Contributions may start with read-only parsing, export or Git management and add rebuild and verification later, with explicit supported and unsupported scope for each capability. Include reproducible test steps, self-authored or sanitized fixtures and actual verification evidence from the relevant platform. Rebuild support requires compilation and round-trip verification in the engineering tool; runtime claims additionally require real execution or simulation evidence. Passing tests, clear boundaries and maintainer review make a contribution eligible for merge. See the [contribution guide](CONTRIBUTING.md#plc-platform-adapters).
+
 ## Development and packaging
 
 Target: Windows x64, TIA Portal V21 / Openness, effective Siemens TIA Openness group permissions and Git for Windows. GUI / worker use .NET Framework 4.8; the .NET 8 Gateway host is packaged self-contained.

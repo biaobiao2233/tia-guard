@@ -110,6 +110,18 @@ Gateway 服务只绑定 localhost。本机桌面 Agent 可以连接；纯云端�
 
 旧验收记录对应其注明的候选版本；不自动视为最新集成版本的真实 TIA 验收。现有 Doctor/SARIF 与 provider-neutral advisory AI 提案仍在独立 PR #7 / #5，未由本次源码发布合并。
 
+## 未来展望与社区适配
+
+长期希望把“工程可读化、Git 版本管理、审查与受验证的重建”逐步扩展到更多 PLC 工程。适配方向会跟随实际接触的平台、可获得的开发环境和验证条件推进，也欢迎社区基于本项目贡献适配。
+
+- **Siemens S7-1500**：计划扩展 TIA Portal 内的 CPU 与工程对象覆盖，逐项验证导出、重建和语义校验能力。
+- **Beckhoff TwinCAT**：探索把 TwinCAT PLC 工程纳入可读源码、Git 协作与验证流程，为其工程格式和工具链建立独立适配。
+- **Mitsubishi（三菱）及其他 PLC 平台**：随着实际学习和使用逐步评估；具体系列、工程软件版本和支持范围以适配成果及测试证据为准。
+
+以上是未来方向，尚未实现或验证，也没有承诺固定交付日期。各平台保留自己的工程格式、编译工具和验证规则；能纳入管理的范围应由该平台适配器明确声明，不能从一个平台的测试结果推断另一个平台也已支持。
+
+欢迎提交适配 PR。适配可以从只读解析、工程导出或 Git 管理开始，再逐步增加重建和校验；每项能力都需要写清支持与不支持的范围。PR 应附可复现的测试步骤、自建或脱敏 fixture，以及对应平台的实际验证证据；涉及重建时需要工程工具中的编译和往返校验证据，涉及运行行为时另需真实运行或仿真证据。测试通过、边界清楚并经维护者审查后，可考虑合并。具体要求见 [贡献指南](CONTRIBUTING.md#plc-platform-adapters)。
+
 ## 开发与打包
 
 运行目标：Windows x64、TIA Portal V21 / Openness、有效的 Siemens TIA Openness 组权限、Git for Windows。GUI / Openness worker 使用 .NET Framework 4.8；Gateway host 使用 .NET 8，打包时生成 self-contained host。
