@@ -112,15 +112,49 @@ Gateway 服务只绑定 localhost。本机桌面 Agent 可以连接；纯云端�
 
 ## 未来展望与社区适配
 
-长期希望把“工程可读化、Git 版本管理、审查与受验证的重建”逐步扩展到更多 PLC 工程。适配方向会跟随实际接触的平台、可获得的开发环境和验证条件推进，也欢迎社区基于本项目贡献适配。
+长期希望把“工程可读化、Git 版本管理、审查与受验证的重建”逐步扩展到更多 PLC 工程，让不同平台的工程能够纳入统一的项目索引、版本历史与协作流程。适配方向会跟随实际接触的平台、可获得的开发环境和验证条件推进，也欢迎社区基于本项目贡献适配。
 
-- **Siemens S7-1500**：计划扩展 TIA Portal 内的 CPU 与工程对象覆盖，逐项验证导出、重建和语义校验能力。
-- **Beckhoff TwinCAT**：探索把 TwinCAT PLC 工程纳入可读源码、Git 协作与验证流程，为其工程格式和工具链建立独立适配。
-- **Mitsubishi（三菱）及其他 PLC 平台**：随着实际学习和使用逐步评估；具体系列、工程软件版本和支持范围以适配成果及测试证据为准。
+### 候选平台与工程环境
 
-以上是未来方向，尚未实现或验证，也没有承诺固定交付日期。各平台保留自己的工程格式、编译工具和验证规则；能纳入管理的范围应由该平台适配器明确声明，不能从一个平台的测试结果推断另一个平台也已支持。
+以下是未来可评估的方向，均为待适配、待验证的候选；具体型号、软件版本和功能范围在开展适配时确定。清单保持开放，后续接触到的新平台也欢迎加入。
 
-欢迎提交适配 PR。适配可以从只读解析、工程导出或 Git 管理开始，再逐步增加重建和校验；每项能力都需要写清支持与不支持的范围。PR 应附可复现的测试步骤、自建或脱敏 fixture，以及对应平台的实际验证证据；涉及重建时需要工程工具中的编译和往返校验证据，涉及运行行为时另需真实运行或仿真证据。测试通过、边界清楚并经维护者审查后，可考虑合并。具体要求见 [贡献指南](CONTRIBUTING.md#plc-platform-adapters)。
+| 平台 / 厂商 | 候选工程范围与参考入口 |
+| --- | --- |
+| Siemens | S7-1500；逐步评估更多 TIA Portal CPU 与工程对象。 |
+| Beckhoff / 倍福 | TwinCAT 3 PLC 工程、ST 源码与工程配置。 |
+| Mitsubishi / 三菱 | MELSEC 工程；从 [GX Works3](https://www.mitsubishielectric.com/fa/products/cnt/plceng/smerit/gx_works3/index.html) 等实际使用的工具版本评估。 |
+| Omron / 欧姆龙 | NJ/NX 与 [Sysmac Studio](https://www.ia.omron.com/products/category/automation-systems/machine-automation-controllers/software/) 等工程环境。 |
+| Rockwell / Allen-Bradley / 罗克韦尔 | ControlLogix、CompactLogix 与 [Studio 5000](https://www.rockwellautomation.com/en-us/products/hardware/programmable-controllers.html) 工程。 |
+| Schneider Electric / 施耐德 | Modicon；分别评估 [Machine Expert](https://www.se.com/uk/en/product-range/2226-ecostruxure-machine-expert/) 与 [Control Expert](https://www.se.com/us/en/product-range/548-ecostruxure-control-expert-software/) 工程。 |
+| B&R / 贝加莱 | [Automation Studio](https://www.br-automation.com/en/products/software/automation-studio/) 工程与 PLC 程序对象。 |
+| ABB | AC500 与 [Automation Builder](https://www.abb.com/global/en/areas/motion/digital-tools/automation-builder/engineering) 工程。 |
+| CODESYS 生态 | [CODESYS](https://www.codesys.com/ecosystem/discover-codesys/codesys-inside/) 工程与 SoftPLC；按厂商扩展、设备描述、库和版本分别验证。 |
+| WAGO / 万可 | [CODESYS 工程环境](https://www.wago.com/global/products/automation-technology/discover-software/codesys-v3)及对应控制器项目。 |
+| Bosch Rexroth / 博世力士乐 | [ctrlX PLC](https://apps.boschrexroth.com/microsites/ctrlx-automation/en/portfolio/ctrlx-plc/) 及实际接触的工程环境。 |
+| Festo / 费斯托 | [CODESYS 控制器](https://www.festo.com/media/catalog/204060_documentation.pdf)及相应厂商工程配置。 |
+| Phoenix Contact / 菲尼克斯电气 | PLCnext 与 [PLCnext Engineer](https://www.phoenixcontact.com/en-de/products/programming-software-plcnext-engineer-1046008) 工程。 |
+| Panasonic / 松下 | FP 系列及 [Control FPWIN Pro](https://industry.panasonic.eu/products/automation-devices-solutions/programmable-logic-controllers-plc/plc-software/programming-software-control-fpwin-pro) 工程。 |
+| KEYENCE / 基恩士 | KV 系列与 [KV STUDIO](https://www.keyence.com/support/user/controls/plc/) 工程。 |
+| LS ELECTRIC | XGT/XGB 等 PLC 与 [XG5000](https://sol.ls-electric.com/ww/en/product/category/476) 工程。 |
+| Delta / 台达 | DVP、AS、AH 等系列与 [ISPSoft](https://www.deltaelectronicsindia.com/en-IN/products/PLC-Programmable-Logic-Controllers/15402) 等工程环境。 |
+| FATEK / 永宏 | FBs/B1 与 [WinProladder](https://www.fatek.com/en/product.php?act=view&id=162) 等工程环境。 |
+| Inovance / 汇川 | [PLC 产品](https://www.inovance.com/product)及实际使用的编程软件；按系列与版本评估。 |
+| XINJE / 信捷 | [可编程控制器](https://www.xinje.com/web/downloadCenter/index)及相应工程软件；按系列与版本评估。 |
+| Kinco / 步科 | [PLC 产品](https://www.kinco.cn/company-introduction)与对应编程环境；按系列与版本评估。 |
+| HollySys / 和利时 | [PLC 工程](https://www.hollysys.com/products/industrial-intelligence/control-safety-systems/plc)与对应工具链；按系列与版本评估。 |
+| SUPCON / 中控 | [PLC 平台](https://www.global.supcon.com/control-safety-systems/plc)及相应工程环境；按系列与版本评估。 |
+
+### 如何逐步纳入管理
+
+1. **可读化与版本管理**：优先研究只读解析、源码或工程导出、工程索引和确定性比较，让适配范围内的程序、变量、配置与变更能被 Git 审查。
+2. **工程重建与验证**：在平台工具链允许且证据充分时，再增加导入、创建新工程、编译和往返语义校验，逐项声明支持能力。
+3. **统一协作与 AI 工程视图**：逐步探索跨平台的工程检索、来源引用和 AI 辅助审查；平台特有的工程对象与验证规则仍由各自适配器处理。
+
+推进原则是：**实际接触什么，就评估适配什么；社区先贡献经过验证的适配，也欢迎纳入。** 清单不是固定排期，以上能力尚未实现或验证，也没有承诺固定交付日期。各平台保留自己的工程格式、编译工具和验证规则；同属 IEC 61131-3 或 CODESYS 生态也需要分别验证。统一管理不代表不同厂商的程序可以直接互相转换，也不能从一个平台的测试结果推断另一个平台已支持。
+
+### 欢迎适配 PR
+
+适配可以从只读解析、工程导出或 Git 管理开始，再逐步增加重建和校验；每项能力都需要写清支持与不支持的范围。PR 应附可复现的测试步骤、自建或脱敏 fixture，以及对应平台的实际验证证据；涉及重建时需要工程工具中的编译和往返校验证据，涉及运行行为时另需真实运行或仿真证据。测试通过、边界清楚并经维护者审查后，可考虑合并。具体要求见 [贡献指南](CONTRIBUTING.md#plc-platform-adapters)。
 
 ## 开发与打包
 

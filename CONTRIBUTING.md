@@ -14,7 +14,7 @@ Development principles:
 
 ## PLC platform adapters
 
-Community contributions for S7-1500, Beckhoff TwinCAT, Mitsubishi and other PLC engineering platforms are welcome. These are future directions; the current supported scope remains the V21 / S7-1200 subset documented in the paired READMEs.
+Community adapters for PLC engineering platforms are welcome, including the open candidate list in the [Chinese](README.md#未来展望与社区适配) and [English](README.en.md#future-direction-and-community-adapters) READMEs. Contributions are not restricted to the listed vendors. These are future directions; the current supported scope remains the documented V21 / S7-1200 subset.
 
 An adapter may initially support only read-only parsing, export or Git management. Keep vendor-specific APIs and project formats within the corresponding adapter boundary, following the existing separation of Siemens APIs in `TiaGuard.Openness`. A shared adapter interface is a future design decision; agree on any shared contract changes before implementing them.
 

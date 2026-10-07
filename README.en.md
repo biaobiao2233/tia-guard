@@ -112,15 +112,49 @@ Older acceptance records apply to their named candidates, not automatically to t
 
 ## Future direction and community adapters
 
-The long-term goal is to extend readable engineering source, Git versioning, review and verified rebuilds to more PLC projects. Adapter work will follow the platforms we actually use, available engineering environments and opportunities for verification. Community adapters built on this project are welcome.
+The long-term goal is to extend readable engineering source, Git versioning, review and verified rebuilds to more PLC projects, bringing different platforms into shared project indexing, version history and collaboration workflows. Adapter work will follow the platforms we actually use, available engineering environments and opportunities for verification. Community adapters built on this project are welcome.
 
-- **Siemens S7-1500**: extend CPU and engineering-object coverage within TIA Portal, qualifying export, rebuild and semantic verification capabilities individually.
-- **Beckhoff TwinCAT**: explore readable source, Git collaboration and verification for TwinCAT PLC projects through a separate adapter for its project format and toolchain.
-- **Mitsubishi and other PLC platforms**: evaluate them as we learn and use them. Specific controller families, engineering software versions and supported scope will depend on adapter implementations and test evidence.
+### Candidate platforms and engineering environments
 
-These are future directions, not implemented or verified capabilities, and carry no fixed delivery dates. Each platform retains its own project format, compiler and verification rules. Its adapter must declare what it can manage; passing tests on one platform does not qualify another.
+The following are potential directions, all awaiting implementation and verification. Specific models, software versions and capability boundaries will be determined when adapter work begins. The list stays open to additional platforms encountered in practice.
 
-Adapter PRs are welcome. Contributions may start with read-only parsing, export or Git management and add rebuild and verification later, with explicit supported and unsupported scope for each capability. Include reproducible test steps, self-authored or sanitized fixtures and actual verification evidence from the relevant platform. Rebuild support requires compilation and round-trip verification in the engineering tool; runtime claims additionally require real execution or simulation evidence. Passing tests, clear boundaries and maintainer review make a contribution eligible for merge. See the [contribution guide](CONTRIBUTING.md#plc-platform-adapters).
+| Platform / vendor | Candidate engineering scope and reference |
+| --- | --- |
+| Siemens | S7-1500; progressively evaluate more TIA Portal CPU profiles and engineering objects. |
+| Beckhoff | TwinCAT 3 PLC projects, ST source and project configuration. |
+| Mitsubishi | MELSEC projects; evaluate versions of [GX Works3](https://www.mitsubishielectric.com/fa/products/cnt/plceng/smerit/gx_works3/index.html) and other tools actually used. |
+| Omron | NJ/NX and engineering environments such as [Sysmac Studio](https://www.ia.omron.com/products/category/automation-systems/machine-automation-controllers/software/). |
+| Rockwell / Allen-Bradley | ControlLogix, CompactLogix and [Studio 5000](https://www.rockwellautomation.com/en-us/products/hardware/programmable-controllers.html) projects. |
+| Schneider Electric | Modicon; evaluate [Machine Expert](https://www.se.com/uk/en/product-range/2226-ecostruxure-machine-expert/) and [Control Expert](https://www.se.com/us/en/product-range/548-ecostruxure-control-expert-software/) projects separately. |
+| B&R | [Automation Studio](https://www.br-automation.com/en/products/software/automation-studio/) projects and PLC program objects. |
+| ABB | AC500 and [Automation Builder](https://www.abb.com/global/en/areas/motion/digital-tools/automation-builder/engineering) projects. |
+| CODESYS ecosystem | [CODESYS](https://www.codesys.com/ecosystem/discover-codesys/codesys-inside/) projects and SoftPLCs; qualify vendor extensions, device descriptions, libraries and versions separately. |
+| WAGO | [CODESYS engineering environments](https://www.wago.com/global/products/automation-technology/discover-software/codesys-v3) and corresponding controller projects. |
+| Bosch Rexroth | [ctrlX PLC](https://apps.boschrexroth.com/microsites/ctrlx-automation/en/portfolio/ctrlx-plc/) and engineering environments encountered in practice. |
+| Festo | [CODESYS controllers](https://www.festo.com/media/catalog/204060_documentation.pdf) and their vendor-specific engineering configuration. |
+| Phoenix Contact | PLCnext and [PLCnext Engineer](https://www.phoenixcontact.com/en-de/products/programming-software-plcnext-engineer-1046008) projects. |
+| Panasonic | FP-series and [Control FPWIN Pro](https://industry.panasonic.eu/products/automation-devices-solutions/programmable-logic-controllers-plc/plc-software/programming-software-control-fpwin-pro) projects. |
+| KEYENCE | KV-series and [KV STUDIO](https://www.keyence.com/support/user/controls/plc/) projects. |
+| LS ELECTRIC | XGT/XGB and other PLC projects using [XG5000](https://sol.ls-electric.com/ww/en/product/category/476). |
+| Delta | DVP, AS, AH and other series using [ISPSoft](https://www.deltaelectronicsindia.com/en-IN/products/PLC-Programmable-Logic-Controllers/15402) or other engineering environments. |
+| FATEK | FBs/B1 and engineering environments such as [WinProladder](https://www.fatek.com/en/product.php?act=view&id=162). |
+| Inovance | [PLC products](https://www.inovance.com/product) and the programming tools actually used; evaluate by family and version. |
+| XINJE | [Programmable controllers](https://www.xinje.com/web/downloadCenter/index) and their engineering tools; evaluate by family and version. |
+| Kinco | [PLC products](https://www.kinco.cn/company-introduction) and their programming environments; evaluate by family and version. |
+| HollySys | [PLC projects](https://www.hollysys.com/products/industrial-intelligence/control-safety-systems/plc) and their toolchains; evaluate by family and version. |
+| SUPCON | [PLC platforms](https://www.global.supcon.com/control-safety-systems/plc) and their engineering environments; evaluate by family and version. |
+
+### Bringing projects into management incrementally
+
+1. **Readable source and versioning**: first investigate read-only parsing, source or project export, indexing and deterministic comparison, making programs, tags, configuration and changes within the adapter's scope reviewable in Git.
+2. **Rebuild and verification**: where the platform toolchain permits and sufficient evidence is available, add import, fresh project creation, compilation and round-trip semantic verification, declaring each capability individually.
+3. **Shared collaboration and AI engineering views**: explore cross-platform project queries, source references and AI-assisted review while keeping platform-specific engineering objects and verification rules within their adapters.
+
+The guiding principle is: **evaluate adapters for the platforms we actually encounter, and welcome verified community contributions.** This list is not a fixed schedule. These capabilities are not implemented or verified and carry no fixed delivery dates. Each platform retains its own project format, compiler and verification rules. Sharing IEC 61131-3 or a CODESYS foundation still requires separate qualification. Shared management does not imply direct program conversion between vendors, and passing tests on one platform does not qualify another.
+
+### Adapter PRs are welcome
+
+Contributions may start with read-only parsing, export or Git management and add rebuild and verification later, with explicit supported and unsupported scope for each capability. Include reproducible test steps, self-authored or sanitized fixtures and actual verification evidence from the relevant platform. Rebuild support requires compilation and round-trip verification in the engineering tool; runtime claims additionally require real execution or simulation evidence. Passing tests, clear boundaries and maintainer review make a contribution eligible for merge. See the [contribution guide](CONTRIBUTING.md#plc-platform-adapters).
 
 ## Development and packaging
 
