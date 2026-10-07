@@ -10,7 +10,7 @@ TIA-Guard 是独立的 **pre-alpha** 工程工具，面向本机 **Siemens TIA P
 
 - **工程可读化与 Git 协作**：基于 TIA Portal V21 / Openness API，将受支持的 S7-1200 工程转换为结构化工程源，保留 PLC 变量与 LAD 逻辑，便于 Git 比较、审查和复用；已实现中文 WPF GUI 的 GitHub 导入重建、导出提交及多工程管理。
 - **受支持范围内的往返重建与验证**：完成 `.ap21 → 可读工程源 → 新 .ap21` 的闭环；自建 V21 / S7-1200 fixture 已有真实 Build / Compile / Verify 证据，校验受支持对象的逻辑、结构及工程语义；不支持或证据不足的对象阻断通过。
-- **本地 AI 工程 Gateway**：已实现 localhost HTTP / MCP、AI 工程视图与专用 Skill，供 Codex、Cursor、Claude Code 查询变量、有限 LAD 逻辑和引用；支持修改预览、GUI 单次确认及编译、重建、验证、失败回滚控制。GUI / CLI / Gateway 源码已公开，152 项契约测试及 45 项 Host 测试通过；最新集成版本的真实 TIA 修改闭环待复验。
+- **本地 AI 工程 Gateway**：设计参考[嘉立创 EDA 专业版 Run API Gateway 扩展](https://github.com/easyeda/eext-run-api-gateway)的本机桥接与配套 Skill 模式。已实现 localhost HTTP / MCP、AI 工程视图与专用 Skill，供 Codex、Cursor、Claude Code 查询变量、有限 LAD 逻辑和引用；支持修改预览、GUI 单次确认及编译、重建、验证、失败回滚控制。GUI / CLI / Gateway 源码已公开，152 项契约测试及 45 项 Host 测试通过；最新集成版本的真实 TIA 修改闭环待复验。
 
 ## 下载与使用说明
 
@@ -109,6 +109,19 @@ Gateway 服务只绑定 localhost。本机桌面 Agent 可以连接；纯云端�
 - 没有在线 PLC 下载、启停、force 或在线变量写入。工程语义校验不等于任意运行时行为证明，也不保证所有 `.ap21` 二进制字节相同。
 
 旧验收记录对应其注明的候选版本；不自动视为最新集成版本的真实 TIA 验收。现有 Doctor/SARIF 与 provider-neutral advisory AI 提案仍在独立 PR #7 / #5，未由本次源码发布合并。
+
+## 已有工具与设计参考
+
+PLC 工程文本化、版本管理和 AI 工程接口已有有价值的工具。TIA-Guard 聚焦受支持的 TIA V21 / S7-1200 子集，将 canonical 源、Git 协作、全新工程重建和工程语义验证连接起来。各项目的平台、能力和验收范围不同。
+
+| 参考方向 | 项目与可借鉴的优势 |
+| --- | --- |
+| PLC 工程与 Git | [CODESCRIBE](https://github.com/greenforge-labs/codescribe)：CODESYS 文本导出/导入、对象级审查和派生图形视图；官方 CODESYS File-Based Storage 也是值得评估的入口。 |
+| 语言与诊断 | [iec-checker](https://github.com/iec-checker/iec-checker)、[RuSTy](https://github.com/PLC-lang/rusty)、[IronPLC](https://github.com/ironplc/ironplc)、[radevgit/plc](https://github.com/radevgit/plc)：静态检查、编译/解析、测试与来源定位。它们是生态研究对象，尚未接入本项目。 |
+| TIA MCP 桥接 | [Czarnak/tia-portal-mcp](https://github.com/Czarnak/tia-portal-mcp) 与 [TIA_Portal_Openness_MCP](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP)：已记录的设计研究来源，分别提供工程绑定/worker 和广泛工程能力等参考。 |
+| 本机 AI Gateway | [嘉立创 EDA 专业版 Run API Gateway](https://github.com/easyeda/eext-run-api-gateway)：Gateway 的设计参考；其外部 Agent、本机 Bridge、工程软件与配套 Skill 模式启发了本项目的本机 AI 接入流程。 |
+
+详见[相关项目、设计来源与后续改进](docs/RELATED-PROJECTS.md)：包含固定版本来源、各自范围、已有实现和待验证计划。先完成 [#41：最新 GUI/Gateway 真实 TIA 离线复验](https://github.com/biaobiao2233/tia-guard/issues/41)，再改善 Git 变更摘要、逐项扩展 LAD，并在环境齐备后评估一个只读跨平台适配；这些后续能力尚未完成。
 
 ## 未来展望与社区适配
 

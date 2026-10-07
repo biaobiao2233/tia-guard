@@ -35,10 +35,12 @@ The two surfaces meet only through that temporary canonical export. Neither is a
 
 ## Design sources
 
+The local Gateway and companion Skill workflow were inspired by the [EasyEDA Pro Run API Gateway extension](https://github.com/easyeda/eext-run-api-gateway). Its [easyeda-api-skill](https://github.com/easyeda/easyeda-api-skill) documents the external-agent/Bridge/engineering-software model. This identifies design influence, not code, WebSocket-protocol or EDA-API reuse. TIA-Guard uses its own HTTP/MCP, net48 Openness worker and guarded offline patches. See [related projects](RELATED-PROJECTS.en.md) for scope and future plans.
+
 Two public MIT-licensed TIA MCP projects were studied for architecture and capability coverage:
 
-- `Czarnak/tia-portal-mcp`: persistent .NET Framework Openness worker, exact project binding, fail-closed targeting, and strong write-safety patterns.
-- `bulaofen0036-coder/TIA_Portal_Openness_MCP`: broad TIA capability coverage, stdio + HTTP connectivity, declarative workflows, LAD/SCL generation, hardware/HMI operations, and VCI/Git workflows.
+- [Czarnak/tia-portal-mcp](https://github.com/Czarnak/tia-portal-mcp): persistent .NET Framework Openness worker, exact project binding, fail-closed targeting, and strong write-safety patterns.
+- [bulaofen0036-coder/TIA_Portal_Openness_MCP](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP): broad TIA capability coverage, stdio + HTTP connectivity, declarative workflows, LAD/SCL generation, hardware/HMI operations, and VCI/Git workflows.
 
 TIA-Guard does not copy either repository wholesale. The Bridge keeps its own contracts and remains bounded by TIA-Guard's product invariants.
 
