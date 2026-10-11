@@ -37,6 +37,7 @@ namespace TiaGuard.Openness
     {
         private TiaPortal portal;
         private Project project;
+        internal Project NativeProject => project;
         private PlcSoftware plc;
         public object NativePlc => plc;
         public string ProjectFile { get; private set; }
@@ -67,15 +68,15 @@ namespace TiaGuard.Openness
         public void CreateTagTables(IReadOnlyList<ProjectGenerationEngineTagTable> tables)
         {
             if (plc.TagTableGroup.Groups.Any()) throw new InvalidOperationException("Unexpected fresh tag-table groups.");
-            foreach (var existing in plc.TagTableGroup.TagTables.ToList())
+            var fresh = plc.TagTableGroup.TagTables.ToList();
+            if (fresh.Count != 1 || fresh[0].Tags.Any() || fresh[0].UserConstants.Any() || tables.Count == 0)
+                throw new InvalidOperationException("Expected one empty fresh default tag table and a nonempty table plan.");
+            // V21's default table cannot be deleted. Reuse/rename this freshly observed table.
+            fresh[0].SetAttribute("Name", tables[0].Name);
+            for (int index = 0; index < tables.Count; index++)
             {
-                if (existing.Tags.Any() || existing.UserConstants.Any())
-                    throw new InvalidOperationException("Unexpected nonempty fresh tag table.");
-                existing.Delete();
-            }
-            foreach (var wanted in tables)
-            {
-                var table = plc.TagTableGroup.TagTables.Create(wanted.Name);
+                var wanted = tables[index];
+                var table = index == 0 ? fresh[0] : plc.TagTableGroup.TagTables.Create(wanted.Name);
                 foreach (var tag in wanted.Tags)
                     table.Tags.Create(tag.Name, tag.DataType, tag.LogicalAddress);
             }
@@ -115,6 +116,22 @@ namespace TiaGuard.Openness
                 try
                 {
                     var generated = source.GenerateBlocksFromSource(GenerateBlockOption.None);
+                    if (generated != null)
+                    {
+                        // Numbering is a source-bound build parameter, not an inferred observation.
+                        // V21 documents AutoNumber/Number as RW API attributes. Check identity BEFORE setting.
+                        foreach (var item in generated.OfType<PlcBlock>())
+                        {
+                            var wanted = unit.Expected.SingleOrDefault(o => o.Name == item.Name);
+                            if (wanted == null || Describe(item).Kind != wanted.Kind || item.IsKnowHowProtected)
+                                throw new InvalidOperationException("Generated an undeclared block before numbering.");
+                            if (item.Number != wanted.Number)
+                            {
+                                if ((bool)item.GetAttribute("AutoNumber")) item.SetAttribute("AutoNumber", false);
+                                item.SetAttribute("Number", wanted.Number.Value);
+                            }
+                        }
+                    }
                     return new ProjectGenerationImportResult
                     {
                         State = generated == null ? "Unknown" : "Success",

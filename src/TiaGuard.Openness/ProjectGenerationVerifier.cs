@@ -17,6 +17,9 @@ namespace TiaGuard.Openness
             }
             if (string.IsNullOrWhiteSpace(expected.EvidenceReference))
                 Add(r, "EXPECTATION_EVIDENCE_MISSING", "project", "Record the independent expectation source.", true);
+            r.Normalization = expected.Normalization;
+            if (r.Normalization != "transport-text-v1" && r.Normalization != ProjectGenerationSclProjection.Version)
+                Add(r, "NORMALIZATION_UNPROVEN", "project", "Unsupported source comparison profile.", true);
             if (expected.SourceSha256 != null)
                 r.ExpectedSourceSha256 = new Dictionary<string, string>(expected.SourceSha256, StringComparer.Ordinal);
             Equal(r, "PROJECT_NAME", "project", expected.ProjectName, actual.ProjectName);
@@ -85,12 +88,32 @@ namespace TiaGuard.Openness
                         else if (!a.Documents.ContainsKey(key)) Add(r, "DOCUMENT_MISSING", path + key, "Expected document/resource file missing.");
                         else if (string.IsNullOrWhiteSpace(NormalizeTransportText(e.Documents[key])) || string.IsNullOrWhiteSpace(NormalizeTransportText(a.Documents[key])))
                             Add(r, "DOCUMENT_UNREADABLE", path + key, "Document is missing or empty.", true);
-                        else Equal(r, "SOURCE_TEXT", path + key, NormalizeTransportText(e.Documents[key]), NormalizeTransportText(a.Documents[key]));
+                        else
+                        {
+                            try
+                            {
+                                var sourceProjection = r.Normalization == ProjectGenerationSclProjection.Version && e.ContentFormat == "scl";
+                                Equal(r, "SOURCE_TEXT", path + key,
+                                    sourceProjection ? ProjectGenerationSclProjection.Normalize(e.Documents[key]) : NormalizeTransportText(e.Documents[key]),
+                                    sourceProjection ? ProjectGenerationSclProjection.Normalize(a.Documents[key]) : NormalizeTransportText(a.Documents[key]));
+                            }
+                            catch (Exception ex) { Add(r, "SOURCE_PROJECTION_FAILED", path, ex.GetType().Name + ": " + ex.Message, true); }
+                        }
                     }
                 }
             }
             Coverage(r, e.InterfaceComplete && a.InterfaceComplete, path + ":interface");
-            Equal(r, "INTERFACE", path, NormalizeTransportText(e.InterfaceXml), NormalizeTransportText(a.InterfaceXml));
+            try
+            {
+                if (r.Normalization == ProjectGenerationSclProjection.Version)
+                {
+                    if (e.InterfaceXml == null || a.InterfaceXml == null) Add(r, "INTERFACE_UNREADABLE", path, "Missing interface projection.", true);
+                    else if (e.InterfaceXml != ProjectGenerationSclProjection.XmlInterface(a.InterfaceXml)) Add(r, "INTERFACE_DIFFERENT", path, "Source declarations differ from observed XML interface.");
+                    else r.Compared.Add(path + ":INTERFACE");
+                }
+                else Equal(r, "INTERFACE", path, NormalizeTransportText(e.InterfaceXml), NormalizeTransportText(a.InterfaceXml));
+            }
+            catch (Exception ex) { Add(r, "INTERFACE_PROJECTION_FAILED", path, ex.GetType().Name + ": " + ex.Message, true); }
             Coverage(r, e.InstanceComplete && a.InstanceComplete, path + ":instance");
             if (e.InstanceOfName == null || a.InstanceOfName == null)
                 Add(r, "INSTANCE_UNREADABLE", path, "Instance relationship is unknown.", true);

@@ -7,6 +7,8 @@ namespace TiaGuard.Cli
         internal string Command { get; set; }
         internal string Source { get; set; }
         internal string Target { get; set; }
+        internal string Scratch { get; set; }
+        internal string PublicApi { get; set; }
     }
 
     internal static class CliCommandLine
@@ -19,12 +21,21 @@ namespace TiaGuard.Cli
             "  tia-guard ai-view <tia-source-dir>" + Environment.NewLine +
             "  tia-guard export <project.ap21> <repo-dir>" + Environment.NewLine +
             "  tia-guard build <repo-dir> --output <new-output-dir>" + Environment.NewLine +
+            "  tia-guard build-generation <source-dir> --output <new-output-dir> --scratch <owned-directory> [--api <V21-api-dir>]" + Environment.NewLine +
             "  tia-guard verify <original.ap21> <rebuilt.ap21>";
 
         internal static bool TryParse(string[] args, out CliInvocation invocation)
         {
             invocation = null;
             if (args == null) return false;
+            if ((args.Length == 6 || args.Length == 8) && args[0] == "build-generation" &&
+                args[2] == "--output" && args[4] == "--scratch" && Present(args[1]) && Present(args[3]) && Present(args[5]) &&
+                (args.Length == 6 || args[6] == "--api" && Present(args[7])))
+            {
+                invocation = new CliInvocation { Command = "build-generation", Source = args[1], Target = args[3],
+                    Scratch = args[5], PublicApi = args.Length == 8 ? args[7] : null };
+                return true;
+            }
 
             if (args.Length == 2 && args[0] == "init" && Present(args[1]))
             {

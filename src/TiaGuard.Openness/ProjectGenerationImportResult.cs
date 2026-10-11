@@ -49,6 +49,10 @@ namespace TiaGuard.Openness
     public sealed class ProjectGenerationBuildResult
     {
         public bool Published { get; internal set; }
+        public string Phase { get; internal set; } = "preflight";
+        public string InputHash { get; internal set; }
+        public ProjectGenerationVerificationResult Verification { get; internal set; }
+        public ProjectGenerationVerificationObservation Observation { get; internal set; }
         public string ProjectFile { get; internal set; }
         public string ContractRevision { get; internal set; }
         public string IdentityRevision { get; internal set; }

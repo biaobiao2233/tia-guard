@@ -6,6 +6,7 @@
     <Version>0.1.0</Version>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
     <FileVersion>0.1.0.0</FileVersion>
+    <DefineConstants>$(DefineConstants);PROJECT_GENERATION_SPEC_V1;PROJECT_GENERATION_COMPILATION_V1</DefineConstants>
     <TiaPortalPublicApi Condition="'$(TiaPortalPublicApi)' == ''">$(ProgramFiles)\Siemens\Automation\Portal V21\PublicAPI\V21\net48</TiaPortalPublicApi>
   </PropertyGroup>
   <ItemGroup>

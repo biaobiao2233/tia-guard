@@ -16,6 +16,9 @@ namespace TiaGuard.Openness
         // Import each path ONCE, in this order. All declarations sharing a file are a group.
         public IReadOnlyList<string> OrderedSourcePaths { get; }
         public IReadOnlyDictionary<string, string> SourceSha256 { get; }
+        // Includes the exact manifest as well as sources; binds approval to frozen bytes.
+        public string InputHash => Hash(Encoding.UTF8.GetBytes(string.Join("\n", snapshots.OrderBy(p => p.Key, StringComparer.Ordinal)
+            .Select(p => p.Key.Length + ":" + p.Key + ":" + Hash(p.Value)))));
         private readonly Dictionary<string, byte[]> snapshots;
         internal ProjectGenerationSpecInput(string root, string file, ProjectGenerationSpec spec,
             List<ProjectGenerationArtifact> ordered, List<string> paths, Dictionary<string, byte[]> bytes)

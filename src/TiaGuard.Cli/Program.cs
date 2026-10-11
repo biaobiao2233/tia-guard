@@ -30,6 +30,12 @@ namespace TiaGuard.Cli
 
             try
             {
+                if (invocation.Command == "build-generation")
+                {
+                    var result = ProjectGenerationWorkflow.Build(invocation.Source, invocation.Target, invocation.Scratch, invocation.PublicApi);
+                    Console.WriteLine(new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(result));
+                    return result.Published && result.Verification?.Verdict == "PASS" && result.Failures.Count == 0 && result.CleanupFailures.Count == 0 ? 0 : 5;
+                }
                 if (invocation.Command == "init")
                 {
                     var input = ProjectGenerationInitializer.Initialize(invocation.Target);

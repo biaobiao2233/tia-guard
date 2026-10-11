@@ -12,6 +12,33 @@ namespace TiaGuard.ProjectGeneration.Engine.Tests
 {
     public sealed class EngineTests
     {
+        [Theory]
+        [InlineData("FAIL")]
+        [InlineData("UNKNOWN")]
+        [InlineData(null)]
+        public void CompleteCompilationCannotPublishWithoutFullVerificationPass(string verdict)
+        {
+            using (var f = new Fixture())
+            {
+                var result = f.Build(verify: s => verdict == null ? null : new ProjectGenerationVerificationResult { Verdict = verdict });
+                Assert.False(result.Published); Assert.False(Directory.Exists(f.Output));
+                Assert.Equal("verify", result.Phase); Assert.True(f.Session.Disposed);
+                Assert.NotEmpty(result.Failures);
+            }
+        }
+        [Fact]
+        public void FullVerificationRunsWhileOwnedSessionIsOpenAndPrecedesPublication()
+        {
+            using (var f = new Fixture())
+            {
+                var result = f.Build(verify: s =>
+                {
+                    Assert.False(f.Session.Disposed); Assert.False(Directory.Exists(f.Output));
+                    return new ProjectGenerationVerificationResult { Verdict = "PASS" };
+                });
+                Assert.True(result.Published); Assert.Equal("complete", result.Phase); Assert.Equal("PASS", result.Verification.Verdict);
+            }
+        }
         [Fact]
         public void OrdersTypesThenExplicitDependenciesThenObAndImportsOneMultiObjectSourceOnce()
         {
@@ -353,14 +380,15 @@ namespace TiaGuard.ProjectGeneration.Engine.Tests
                         Number = number, Language = kind == "UDT" ? null : kind == "DB" ? "DB" : "SCL" } };
             }
             internal ProjectGenerationBuildResult Build(string output = null, string scratch = null,
-                Func<IProjectGenerationSession, ProjectGenerationCompileEvidence> compile = null) =>
+                Func<IProjectGenerationSession, ProjectGenerationCompileEvidence> compile = null,
+                Func<IProjectGenerationSession, ProjectGenerationVerificationResult> verify = null) =>
                 ProjectGenerationBuilder.Build(Plan, output ?? Output, scratch ?? Scratch, (stage, plan) =>
                 {
                     FactoryCalled = true; Session.Stage = stage;
                     Session.File = Path.Combine(stage, plan.ProjectName, plan.ProjectName + ".ap21");
                     Directory.CreateDirectory(Path.GetDirectoryName(Session.File)); File.WriteAllText(Session.File, "fake project, no V21 evidence");
                     return Session;
-                }, compile ?? (s => CleanCompile()));
+                }, compile ?? (s => CleanCompile()), verify);
             internal static ProjectGenerationCompileEvidence CleanCompile() => new ProjectGenerationCompileEvidence
             { ProviderRevision = "TEST-C", Executed = true, State = "Success", ErrorCount = 0, WarningCount = 0,
                 DiagnosticsComplete = true, FullResult = "fake diagnostics, no V21 evidence" };

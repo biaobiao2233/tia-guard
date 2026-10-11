@@ -14,7 +14,8 @@ namespace TiaGuard.Openness
         public static ProjectGenerationBuildResult Build(ProjectGenerationBuilderPlan plan,
             string outputDirectory, string ownedScratchRoot,
             Func<string, ProjectGenerationBuilderPlan, IProjectGenerationSession> factory,
-            Func<IProjectGenerationSession, ProjectGenerationCompileEvidence> compile)
+            Func<IProjectGenerationSession, ProjectGenerationCompileEvidence> compile,
+            Func<IProjectGenerationSession, ProjectGenerationVerificationResult> verify = null)
         {
             var result = new ProjectGenerationBuildResult();
             IProjectGenerationSession session = null;
@@ -23,6 +24,7 @@ namespace TiaGuard.Openness
             var publishOwned = false;
             try
             {
+                result.Phase = "preflight";
                 if (factory == null || compile == null)
                     throw new InvalidOperationException("Generation session and C compile adapter are required; no unknown-to-zero fallback.");
                 var units = ProjectGenerationImporter.Plan(plan);
@@ -51,11 +53,19 @@ namespace TiaGuard.Openness
                     if (plan.ValidatedSourceBytes != null)
                         ProjectGenerationImporter.WriteValidatedBytes(plan.ValidatedSourceBytes[unit.SourcePath], unit.Sha256, path);
                     else ProjectGenerationImporter.CopyValidatedSource(root, unit.SourcePath, unit.Sha256, path);
+                    if (unit.Format == "scl")
+                    {
+                        // Siemens requires UTF-8 BOM for non-ANSI external sources.
+                        // Digest the original snapshot first; transform only the private import copy.
+                        var text = new System.Text.UTF8Encoding(false, true).GetString(File.ReadAllBytes(path)).TrimStart('\ufeff');
+                        File.WriteAllText(path, text, new System.Text.UTF8Encoding(true));
+                    }
                     if (unit.ResourcePath != null)
                         ProjectGenerationImporter.CopyValidatedSource(root, unit.ResourcePath, unit.ResourceSha256,
                             Path.Combine(folder, Path.GetFileName(unit.ResourcePath)));
                     sources.Add(unit, path);
                 }
+                result.Phase = "create";
                 session = factory(stage, plan) ?? throw new InvalidOperationException("Missing created session.");
                 if (session.CpuTypeIdentifier != plan.CpuTypeIdentifier)
                     throw new InvalidOperationException("Created CPU identity differs; hardware fallback is forbidden.");
@@ -70,6 +80,7 @@ namespace TiaGuard.Openness
                 var expected = new List<ProjectGenerationObject>();
                 foreach (var unit in units)
                 {
+                    result.Phase = "import:" + unit.SourcePath;
                     var imported = session.Import(unit, sources[unit]);
                     if (imported != null) result.Imports.Add(imported);
                     if (imported == null || imported.State != "Success")
@@ -81,16 +92,25 @@ namespace TiaGuard.Openness
                     ProjectGenerationInventory.RequireExact(expected, session.ReadObjects(), "readback after " + unit.SourcePath);
                 }
                 session.Save();
+                result.Phase = "compile";
                 result.Compile = compile(session);
                 if (result.Compile == null || !result.Compile.AllowsPublication)
                     throw new InvalidOperationException("Compilation missing/failed/incomplete; generated project will not be published.");
                 ProjectGenerationInventory.RequireExact(expected, session.ReadObjects(), "readback after compile");
+                if (verify != null)
+                {
+                    result.Phase = "verify";
+                    result.Verification = verify(session);
+                    if (result.Verification == null || result.Verification.Verdict != "PASS")
+                        throw new InvalidOperationException("Full readback verification did not PASS; no output will be published.");
+                }
                 session.Save();
                 var expectedFile = Path.Combine(stage, plan.ProjectName, plan.ProjectName + ".ap21");
                 if (!string.Equals(Path.GetFullPath(session.ProjectFile), expectedFile, StringComparison.OrdinalIgnoreCase))
                     throw new IOException("Session returned a project outside the owned stage.");
                 FileSystemSafety.RequirePlainFile(expectedFile);
                 session.Dispose(); session = null;
+                result.Phase = "publish";
                 RequireNewOutput(output);
                 var parent = Path.GetDirectoryName(output);
                 publish = Path.Combine(parent, "." + Path.GetFileName(output) + ".generation-" + Guid.NewGuid().ToString("N"));
@@ -102,6 +122,7 @@ namespace TiaGuard.Openness
                 Directory.Move(publish, output); publishOwned = false;
                 result.ProjectFile = Path.Combine(output, plan.ProjectName + ".ap21");
                 result.Published = true;
+                result.Phase = "complete";
             }
             catch (Exception ex) { result.Failures.Add(ex.GetType().Name + ": " + ex.Message); }
             finally

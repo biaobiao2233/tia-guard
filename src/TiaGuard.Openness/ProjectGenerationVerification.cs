@@ -8,6 +8,7 @@ namespace TiaGuard.Openness
     // projections, never by copying the project observation under test.
     public sealed class ProjectGenerationVerificationExpected
     {
+        public string Normalization { get; set; } = "transport-text-v1";
         public string ProjectName { get; set; }
         public string PlcName { get; set; }
         public string CpuTypeIdentifier { get; set; }
@@ -84,7 +85,7 @@ namespace TiaGuard.Openness
     {
         // PASS is comparison-only. It says nothing about compilation or control behavior.
         public string Verdict { get; internal set; } = "UNKNOWN";
-        public string Normalization { get; } = "transport-text-v1";
+        public string Normalization { get; internal set; } = "transport-text-v1";
         public List<ProjectGenerationVerificationFinding> Findings { get; } = new List<ProjectGenerationVerificationFinding>();
         public List<string> Compared { get; } = new List<string>();
         public Dictionary<string, string> ExpectedSourceSha256 { get; internal set; } = new Dictionary<string, string>();

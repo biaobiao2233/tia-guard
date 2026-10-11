@@ -4,6 +4,7 @@
     <LangVersion>latest</LangVersion>
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
+    <GenerationSpecSourceDirectory Condition="'$(GenerationSpecSourceDirectory)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../src/TiaGuard.Openness'))</GenerationSpecSourceDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(GenerationSpecSourceDirectory)' != ''">
     <DefineConstants>$(DefineConstants);PROJECT_GENERATION_SPEC_V1</DefineConstants>
@@ -23,6 +24,7 @@
     <Reference Include="System.Web.Extensions" />
     <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationVerification*.cs" Link="Core/%(Filename)%(Extension)" />
     <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationVerifier*.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationSclProjection.cs" Link="Core/ProjectGenerationSclProjection.cs" />
     <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationReadbackDocuments.cs" Link="Core/ProjectGenerationReadbackDocuments.cs" />
     <Compile Include="../../src/TiaGuard.Openness/FileSystemSafety.cs" Link="Core/FileSystemSafety.cs" />
     <Content Include="../../examples/project-generation-v1/programs/**/*" Link="TestData/programs/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

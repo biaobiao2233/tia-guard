@@ -4,6 +4,8 @@
     <LangVersion>latest</LangVersion>
     <IsTestProject>true</IsTestProject>
     <IsPackable>false</IsPackable>
+    <GenerationSpecRoot Condition="'$(GenerationSpecRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../..'))</GenerationSpecRoot>
+    <GenerationCompilationRoot Condition="'$(GenerationCompilationRoot)' == ''">$(GenerationSpecRoot)</GenerationCompilationRoot>
   </PropertyGroup>
   <PropertyGroup Condition="'$(GenerationSpecRoot)' != ''">
     <DefineConstants>$(DefineConstants);PROJECT_GENERATION_SPEC_V1</DefineConstants>
@@ -19,6 +21,7 @@
     <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationBuilder.cs" Link="Core/ProjectGenerationBuilder.cs" />
     <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationImporter.cs" Link="Core/ProjectGenerationImporter.cs" />
     <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationImportResult.cs" Link="Core/ProjectGenerationImportResult.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationVerification.cs" Link="Core/ProjectGenerationVerification.cs" />
     <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationBuilder.Spec.cs" Link="Core/ProjectGenerationBuilder.Spec.cs" />
     <Reference Include="System.Web.Extensions" />
     <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationBuilder.Compilation.cs" Link="Core/ProjectGenerationBuilder.Compilation.cs" />

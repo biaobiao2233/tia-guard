@@ -16,8 +16,18 @@ jobs:
         run: dotnet test tests/TiaGuard.Contracts.Tests/TiaGuard.Contracts.Tests.csproj -c Release --logger "trx;LogFileName=contracts.trx"
       - name: Test Gateway authorization and product contracts (no Siemens DLLs)
         run: dotnet test tests/TiaGuard.Bridge.Host.Tests/TiaGuard.Bridge.Host.Tests.csproj -c Release --logger "trx;LogFileName=bridge.trx"
+      - name: Test from-zero generation and compilation (no Siemens DLLs)
+        shell: pwsh
+        run: |
+          foreach ($suite in @('Spec', 'Engine', 'Verify', 'Integration')) {
+            dotnet test "tests/TiaGuard.ProjectGeneration.$suite.Tests/TiaGuard.ProjectGeneration.$suite.Tests.csproj" -c Release --logger "trx;LogFileName=generation-$suite.trx"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          dotnet test tests/TiaGuard.Compilation.Tests/TiaGuard.Compilation.Tests.csproj -c Release --logger "trx;LogFileName=compilation.trx"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: python -m pip install jsonschema==4.26.0
       - run: python scripts/test-contract-schemas.py
+      - run: python tests/TiaGuard.ProjectGeneration.Spec.Tests/test_schema.py
