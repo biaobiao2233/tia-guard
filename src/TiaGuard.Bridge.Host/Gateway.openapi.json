@@ -132,6 +132,29 @@
         }
       }
     },
+    "/api/project-generation/preview": {
+      "post": {
+        "operationId": "previewProjectGeneration",
+        "summary": "Inspect editable sources without opening TIA, bind the full input hash and output/scratch/API paths to a single-use token, and request one-shot GUI approval when needed. Requires no connected project.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationRequest" } } } },
+        "responses": {
+          "200": { "description": "Validated creation preview. No engineering project is created or modified.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationPreview" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/project-generation/build": {
+      "post": {
+        "operationId": "buildProjectGeneration",
+        "summary": "Build the exact previewed new offline PLC project after token/GUI approval. Rechecks frozen input hash, rejects a connected old session, compiles and independently verifies before publication.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationBuildRequest" } } } },
+        "responses": {
+          "200": { "description": "Published and independently verified V21 project. success=true only with complete successful compilation, verification PASS and no cleanup failures.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationBuildResult" } } } },
+          "422": { "description": "Creation, compilation, verification or publication failed. Includes the full core reports; a worker protocol success does not mean the project passed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationBuildResult" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/api/v1/ai/patches/preview": {
       "post": {
         "operationId": "previewPatch",
@@ -163,6 +186,60 @@
       }
     },
     "schemas": {
+      "ProjectGenerationRequest": {
+        "type": "object",
+        "required": ["sourceDirectory", "outputDirectory", "ownedScratchRoot"],
+        "properties": {
+          "sourceDirectory": { "type": "string", "description": "Absolute directory containing project-generation.json and editable declared sources." },
+          "outputDirectory": { "type": "string", "description": "Absolute new output directory; must not exist. Must not overlap source or scratch." },
+          "ownedScratchRoot": { "type": "string", "description": "Absolute existing dedicated directory for task-owned temporary projects; must not overlap source/output." },
+          "publicApiDirectory": { "type": "string", "nullable": true, "description": "Optional absolute installed V21 PublicAPI path. Must match preview exactly." }
+        }
+      },
+      "ProjectGenerationBuildRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProjectGenerationRequest" },
+          { "type": "object", "required": ["safetyToken"], "properties": { "safetyToken": { "type": "string", "description": "Single-use token from preview. All request paths and source bytes must still match." } } }
+        ]
+      },
+      "ProjectGenerationPreview": {
+        "type": "object",
+        "required": ["InputHash", "safetyToken", "expiresAt", "request", "status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["previewed"] },
+          "InputHash": { "type": "string", "description": "SHA-256 of the complete frozen engineering input." },
+          "ProjectName": { "type": "string" },
+          "PlcName": { "type": "string" },
+          "ArtifactCount": { "type": "integer" },
+          "TagCount": { "type": "integer" },
+          "request": { "$ref": "#/components/schemas/ProjectGenerationRequest" },
+          "safetyToken": { "type": "string" },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "approvalId": { "type": "string" },
+          "approvalSummary": { "type": "string" },
+          "mutatesProject": { "type": "boolean", "enum": [false] },
+          "savesOriginalProject": { "type": "boolean", "enum": [false] }
+        },
+        "additionalProperties": true
+      },
+      "ProjectGenerationBuildResult": {
+        "type": "object",
+        "required": ["status", "success", "Published", "Phase", "Failures", "CleanupFailures"],
+        "properties": {
+          "status": { "type": "string", "enum": ["published-verified", "generation_failed"] },
+          "success": { "type": "boolean" },
+          "Published": { "type": "boolean", "description": "Core publication observation; use success/status for full acceptance including cleanup." },
+          "ProjectFile": { "type": "string", "nullable": true },
+          "Phase": { "type": "string", "description": "Failure stage, including the source path for import failures." },
+          "Compile": { "type": "object", "nullable": true, "description": "Complete compilation evidence. AllowsPublication is false for incomplete or failed reports; FullResult contains diagnostics." },
+          "Verification": { "type": "object", "nullable": true, "description": "Independent verification report; PASS required, UNKNOWN/FAIL refuse publication." },
+          "Failures": { "type": "array", "items": { "type": "string" } },
+          "CleanupFailures": { "type": "array", "items": { "type": "string" } },
+          "gatewayFailure": { "type": "string" },
+          "savesOriginalProject": { "type": "boolean", "enum": [false] }
+        },
+        "additionalProperties": true
+      },
       "ErrorBody": {
         "type": "object",
         "required": ["error"],

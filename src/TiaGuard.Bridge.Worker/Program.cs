@@ -94,6 +94,7 @@ namespace TiaGuard.Bridge.Worker
                         "open_offline_project",
                         "disconnect",
                         "get_state",
+                        "preview_project_generation",
                         "get_project",
                         "get_project_snapshot",
                         "get_tag_state",
@@ -107,6 +108,7 @@ namespace TiaGuard.Bridge.Worker
                         capabilities.Add("publish_offline_copy");
                         capabilities.Add("preview_engineering_patch");
                         capabilities.Add("apply_engineering_patch");
+                        capabilities.Add("build_project_generation");
                     }
                     return Success(request.Id, Json.Serialize(new
                     {
@@ -143,6 +145,28 @@ namespace TiaGuard.Bridge.Worker
 
                 case "get_state":
                     return Success(request.Id, BuildStatePayload());
+
+                case "preview_project_generation":
+                    var generationPreview = ReadGenerationRequest(request.PayloadJson);
+                    return Success(request.Id, Json.Serialize(
+                        ProjectGenerationWorkflow.Inspect(generationPreview.SourceDirectory)));
+
+                case "build_project_generation":
+                    if (!_allowWrite)
+                        return Failure(request.Id, "write_disabled",
+                            "Bridge write mode is disabled. Restart with --allow-write.");
+                    if (_session != null)
+                        return Failure(request.Id, "binding_conflict",
+                            "Disconnect the bound TIA project explicitly before creating a new offline project.");
+                    var generation = ReadGenerationRequest(request.PayloadJson);
+                    if (string.IsNullOrWhiteSpace(generation.ExpectedInputHash))
+                        return Failure(request.Id, "validation_error",
+                            "A preview input hash is required for project generation.");
+                    // Transport success is distinct from engineering acceptance. The full
+                    // report is preserved even when Published=false; Host/MCP marks failure.
+                    return Success(request.Id, Json.Serialize(ProjectGenerationWorkflow.Build(
+                        generation.SourceDirectory, generation.OutputDirectory, generation.OwnedScratchRoot,
+                        generation.PublicApiDirectory, generation.ExpectedInputHash)));
 
                 case "get_project":
                     EnsureConnected();
@@ -258,6 +282,16 @@ namespace TiaGuard.Bridge.Worker
                 DisposeSession();
                 throw;
             }
+        }
+
+        private static GenerationWorkerRequest ReadGenerationRequest(string payloadJson)
+        {
+            if (string.IsNullOrWhiteSpace(payloadJson))
+                throw new ArgumentException("Project generation request is required.");
+            var request = Json.Deserialize<GenerationWorkerRequest>(payloadJson);
+            if (request == null || string.IsNullOrWhiteSpace(request.SourceDirectory))
+                throw new ArgumentException("A project generation source directory is required.");
+            return request;
         }
 
         private static WorkerResponse OpenOfflineProject(WorkerRequest request)
@@ -394,6 +428,15 @@ namespace TiaGuard.Bridge.Worker
         public string OutputDirectory { get; set; }
         public string OutputName { get; set; }
         public string PayloadJson { get; set; }
+    }
+
+    internal sealed class GenerationWorkerRequest
+    {
+        public string SourceDirectory { get; set; }
+        public string OutputDirectory { get; set; }
+        public string OwnedScratchRoot { get; set; }
+        public string PublicApiDirectory { get; set; }
+        public string ExpectedInputHash { get; set; }
     }
 
     internal sealed class WorkerResponse

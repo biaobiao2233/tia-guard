@@ -1,5 +1,17 @@
 # TIA AI Gateway
 
+## Create a new offline PLC project
+
+The generation endpoints are `POST /api/project-generation/preview` and `POST /api/project-generation/build`, with MCP tools `preview_project_generation` and `build_project_generation`. Start from `tia-guard init <new-directory>` and edit `project-generation.json` and its declared SCL sources. The core derives independent expected content from the frozen input and compares it with actual project readback. This path creates a new WithoutUI TIA session; it does not attach to an existing project or require a template `.ap21`.
+
+Both calls use the same absolute `sourceDirectory`, nonexistent `outputDirectory`, dedicated existing `ownedScratchRoot`, and optional installed V21 `publicApiDirectory`. The directories must not overlap. Explicitly disconnect any old Gateway project binding before generation. Preview inspects input without opening TIA and returns a full input hash and single-use `safetyToken`. Build requires that token, rechecks the input and paths, and matches the frozen source hash again in the core before TIA creation.
+
+HTTP and HTTP MCP build wait for the existing one-shot GUI approval by default. `--allow-write` skips GUI approval but still requires the token. Stdio registers the preview in read-only mode and registers build only with `--allow-write`.
+
+Successful creation returns HTTP 200 with `status=published-verified` and `success=true`, only after complete compilation, independent verification PASS and publication of a new `.ap21`. A failed workflow returns HTTP 422 and MCP `isError=true`, preserving `Phase`, `Compile.FullResult`, `Verification`, `Failures` and `CleanupFailures` so an Agent can edit and request a new preview. Worker protocol success is not engineering success. `Published` describes the core publication observation; also check `success` and `status` for full acceptance.
+
+Current public source input is SCL. Generation does not enable PLC download, start/stop, online writes or control-behavior acceptance. Pure checks, API integration and actual V21 qualification remain distinct evidence.
+
 [中文](TIA-AI-BRIDGE.md) | **English**
 
 [Home](https://github.com/biaobiao2233/tia-guard/blob/main/README.en.md) · [Getting started](GETTING-STARTED.en.md)

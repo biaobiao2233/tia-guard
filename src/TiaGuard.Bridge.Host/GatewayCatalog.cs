@@ -24,13 +24,14 @@ public static class GatewayCatalog
                 "program-graph",
                 "network",
                 "where-used",
-                "refresh"
+                "refresh",
+                "preview_project_generation"
             },
             write = new
             {
                 available = true,
                 authorization = headlessWrite ? "single-use-preview-token" : "one-shot-gui-approval",
-                operations = new[] { "upsert_tag", "replace_output_condition" },
+                operations = new[] { "upsert_tag", "replace_output_condition", "build_project_generation" },
                 supported = new[]
                 {
                     "serial-and",
@@ -38,6 +39,19 @@ public static class GatewayCatalog
                     "negated-nc-read",
                     "ordinary-coil"
                 }
+            },
+            projectGeneration = new
+            {
+                available = true,
+                existingProjectRequired = false,
+                source = "project-generation.json",
+                preview = "/api/project-generation/preview",
+                build = "/api/project-generation/build",
+                inputHashBound = true,
+                outputMustBeNew = true,
+                attachedSessionAllowed = false,
+                supportedSourceFormats = new[] { "SCL" },
+                successRequires = new[] { "published", "complete-successful-compilation", "independent-verification-PASS" }
             },
             unsupported = new[]
             {

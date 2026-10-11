@@ -43,9 +43,12 @@ if (options.Transport == "stdio")
     builder.Services.AddSingleton<IBridgeEngineeringGateway>(services =>
         new BridgeWorkerEngineeringGateway(services.GetRequiredService<BridgeWorkerClient>()));
     builder.Services.AddSingleton<BridgeAiContextService>();
+    builder.Services.AddSingleton<IBridgeProjectGenerationGateway>(services =>
+        new BridgeWorkerProjectGenerationGateway(services.GetRequiredService<BridgeWorkerClient>()));
+    builder.Services.AddSingleton<BridgeWriteSafetyService>();
+    builder.Services.AddSingleton<BridgeProjectGenerationCoordinator>();
     if (options.AllowWrite)
     {
-        builder.Services.AddSingleton<BridgeWriteSafetyService>();
         builder.Services.AddSingleton<BridgeTagWriteCoordinator>();
         builder.Services.AddSingleton<BridgeProjectPublishCoordinator>();
         builder.Services.AddSingleton<BridgePatchCoordinator>();
@@ -55,9 +58,10 @@ if (options.Transport == "stdio")
         .AddMcpServer()
         .WithStdioServerTransport()
         .WithTools<BridgeReadTools>()
-        .WithTools<BridgeAiTools>();
+        .WithTools<BridgeAiTools>()
+        .WithTools<BridgeProjectGenerationReadTools>();
     if (options.AllowWrite)
-        mcp.WithTools<BridgeWriteTools>().WithTools<BridgePatchTools>();
+        mcp.WithTools<BridgeWriteTools>().WithTools<BridgePatchTools>().WithTools<BridgeProjectGenerationWriteTools>();
 
     using var host = builder.Build();
     await host.RunAsync();
@@ -78,6 +82,9 @@ webBuilder.Services.AddSingleton<IBridgeEngineeringGateway>(services =>
     new BridgeWorkerEngineeringGateway(services.GetRequiredService<BridgeWorkerClient>()));
 webBuilder.Services.AddSingleton<BridgeAiContextService>();
 webBuilder.Services.AddSingleton<BridgeWriteSafetyService>();
+webBuilder.Services.AddSingleton<IBridgeProjectGenerationGateway>(services =>
+    new BridgeWorkerProjectGenerationGateway(services.GetRequiredService<BridgeWorkerClient>()));
+webBuilder.Services.AddSingleton<BridgeProjectGenerationCoordinator>();
 webBuilder.Services.AddSingleton(services => new BridgePatchCoordinator(
     services.GetRequiredService<IBridgeEngineeringGateway>(),
     services.GetRequiredService<BridgeWriteSafetyService>(),
@@ -93,7 +100,9 @@ var httpMcp = webBuilder.Services
     .AddMcpServer()
     .WithHttpTransport()
     .WithTools<BridgeReadTools>()
-    .WithTools<BridgeAiTools>();
+    .WithTools<BridgeAiTools>()
+    .WithTools<BridgeProjectGenerationReadTools>()
+    .WithTools<BridgeProjectGenerationWriteTools>();
 if (options.AllowWrite)
     httpMcp.WithTools<BridgeWriteTools>().WithTools<BridgePatchTools>();
 
@@ -124,6 +133,7 @@ app.Use(async (context, next) =>
 });
 
 app.MapMcp("/mcp");
+GatewayProjectGenerationEndpoints.Map(app);
 
 app.MapGet("/health", () => Results.Json(new
 {
