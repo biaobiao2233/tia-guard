@@ -1,6 +1,6 @@
 {
   "status": "CANDIDATE",
-  "inputContract": "docs/contracts/project-generation-v1.md@8b5039fc80e57c543ccb69b8b304fbfde67f7995; A CONTRACT_READY pending",
+  "inputContract": "docs/contracts/project-generation-v1.md@8b5039fc80e57c543ccb69b8b304fbfde67f7995; A CONTRACT_READY@072c14f24fff1dbce712827886c1ba23e17cf5d5 bound by SpecAdapterTests",
   "isProjectGenerationSpec": false,
   "plc": { "name": "PLC_1", "cpuTypeIdentifier": "OrderNumber:6ES7 212-1AE40-0XB0/V4.7" },
   "scenarios": [
@@ -39,5 +39,5 @@
     }
   ],
   "negativeCases": ["source body mutation", "interface mutation", "instance target mutation", "missing object", "undeclared object", "scope change", "tag data type mutation", "tag address mutation", "partial enumeration", "failed export", "extra or missing s7res", "unproven SCL/SD projection"],
-  "pending": ["A CONTRACT_READY binding and executable specs", "B/C exact combined candidate", "V21 source syntax/import/create/compile/readback", "independent read-only review", "TIA resources allocation after #41"]
+  "pending": ["coordinator-owned executable specs and independently proven interface projections", "A SIMATIC SD capability/identity validation", "B/C exact combined candidate", "V21 source syntax/import/create/compile/readback", "independent read-only review", "TIA resources allocation after #41"]
 }
