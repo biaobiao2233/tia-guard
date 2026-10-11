@@ -4,7 +4,7 @@
 
 产品源码绑定 `5aceb1e6a5192fe127bfe75906e5b8316b674d7f`，基线 main 为 `542db2f33770d145ac351e891019501bf5335b1f`。后续包装提交只更新文档、Gateway Skill 和本记录。Session 为 `integrate-43-20261012-0030`；执行资源分配和最终交接以 [#43](https://github.com/biaobiao2233/tia-guard/issues/43) 的 CLAIM/RESULT/RELEASE 为准。
 
-完整结果的 SHA-256、输入身份、对象/变量清单、编译统计、二进制身份、工程目录摘要和清理读数见[机器可读回执](project-generation-integration-20261012.json)。原始报告、工程目录和回读 XML 保存在本轮专属 `E:\AGENT\Workspace\.agent-tmp\tia43-run`，未提交 Siemens DLL、工程二进制、token 或许可证。
+完整结果的 SHA-256、输入身份、对象/变量清单、编译统计、二进制身份、工程目录摘要和清理读数见[机器可读回执](project-generation-integration-20261012.json)。其中 HTTP 状态来自实际 `Invoke-WebRequest.StatusCode` 的已完成终端调用读数，由协调者记录；工程响应 JSON 本身不含 HTTP 状态。原始报告、工程目录和回读 XML 保存在本轮专属 `E:\AGENT\Workspace\.agent-tmp\tia43-run`，未提交 Siemens DLL、工程二进制、token 或许可证。
 
 ## 已接通的产品路径
 

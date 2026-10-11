@@ -43,7 +43,7 @@ GUI 管理的 Gateway 默认要求一次确认；独立 headless 写模式用 `-
 
 请求字段为 `sourceDirectory`、`outputDirectory`、`ownedScratchRoot`、可选 `publicApiDirectory`。build 还需要 preview 返回的 `safetyToken`。Token 绑定输入全部字节、请求路径和 Worker 身份，只能使用一次；源码修改后必须重新 preview。
 
-HTTP 完整成功返回 200；工程失败返回 422 和完整报告。输入、路径或 token 校验拒绝在启动 TIA 前返回 400。MCP 的工程失败设置 `isError=true`。Agent 可读取诊断、修正源码、申请新的 preview，然后构建到另一个新目录。完整请求示例见[Gateway 指南](TIA-AI-BRIDGE.md#从零创建离线-plc-工程)。
+HTTP 完整成功返回 200；创建工作流失败返回 422 和完整报告，包括部分 preflight 失败，具体看 `Phase`。Gateway 入口的请求、token 或会话校验拒绝返回 400。MCP 的工程失败设置 `isError=true`。Agent 可读取诊断、修正源码、申请新的 preview，然后构建到另一个新目录。完整请求示例见[Gateway 指南](TIA-AI-BRIDGE.md#从零创建离线-plc-工程)。
 
 ## 验证和当前边界
 

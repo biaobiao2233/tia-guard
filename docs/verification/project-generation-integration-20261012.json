@@ -7,6 +7,7 @@
   "specSignatureRevision": "072c14f24fff1dbce712827886c1ba23e17cf5d5",
   "compilationProviderRevision": "be8453e79914457901b01eb62420d1699833e492",
   "qualification": "PASS: bounded offline SCL generation, compilation and independent readback; unmerged candidate",
+  "httpStatusEvidenceSource": "Coordinator recorded actual Invoke-WebRequest.StatusCode from completed terminal calls: gateway-void-final=200, gateway-invalid-final=422, gateway-repaired-final=200, gateway-drift-final=400. HTTP status is separate from engineering response JSON.",
   "environment": {
     "tia": "V21",
     "cpu": "OrderNumber:6ES7 212-1AE40-0XB0/V4.7",
