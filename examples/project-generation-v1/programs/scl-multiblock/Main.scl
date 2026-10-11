@@ -1,0 +1,14 @@
+ORGANIZATION_BLOCK "Main"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+BEGIN
+   "LatchInstance"(
+      Enable := "StartRequest",
+      Disable := "StopRequest",
+      FaultInput := "FaultRequest",
+      Reset := "ResetRequest",
+      Active => "Status".Motor.Active,
+      Fault => "Status".Motor.Fault,
+      Healthy => "Status".Motor.Healthy);
+   "RunOutput" := "Status".Motor.Active;
+END_ORGANIZATION_BLOCK

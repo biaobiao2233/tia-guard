@@ -1,0 +1,34 @@
+[
+  {
+    "repository": "heilingbrunner/tiaportal-mcp",
+    "commit": "6824e4d671b403993c35d98dddf104686a950f4e",
+    "path": "src/TiaMcpServer/Siemens/Portal.Documents.cs",
+    "license": "MIT",
+    "gitBlobSha256": "7b3755726cbd1c90a8caa4a25f0e380598e12b640594f769a9a4a6486d0b9f1d",
+    "url": "https://github.com/heilingbrunner/tiaportal-mcp/blob/6824e4d671b403993c35d98dddf104686a950f4e/src/TiaMcpServer/Siemens/Portal.Documents.cs"
+  },
+  {
+    "repository": "heilingbrunner/tiaportal-mcp",
+    "commit": "6824e4d671b403993c35d98dddf104686a950f4e",
+    "path": "src/TiaMcpServer/Siemens/Portal.Sources.cs",
+    "license": "MIT",
+    "gitBlobSha256": "19623d3ed79f0e68cdce15d0b48c8295725a2dc43e5c4ae075f33170ed22f52b",
+    "url": "https://github.com/heilingbrunner/tiaportal-mcp/blob/6824e4d671b403993c35d98dddf104686a950f4e/src/TiaMcpServer/Siemens/Portal.Sources.cs"
+  },
+  {
+    "repository": "bulaofen0036-coder/TIA_Portal_Openness_MCP",
+    "commit": "3e8f8810924657a1adc4b41c0166a0829ad1caf7",
+    "path": "templates/plc/scl-examples/FB_BasicLatch.scl",
+    "license": "MIT",
+    "gitBlobSha256": "2c2df01a43e0b9c5004f5a1276c2d2cf355d014efd40de966faeccd3fc7b3f8d",
+    "url": "https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP/blob/3e8f8810924657a1adc4b41c0166a0829ad1caf7/templates/plc/scl-examples/FB_BasicLatch.scl"
+  },
+  {
+    "repository": "bulaofen0036-coder/TIA_Portal_Openness_MCP",
+    "commit": "3e8f8810924657a1adc4b41c0166a0829ad1caf7",
+    "path": "tools/tiaportal-mcp/skill/lad-cookbook/MCPVerify_FB_LAD_v3.s7dcl",
+    "license": "MIT",
+    "gitBlobSha256": "732e7fa18ae4a644536c3cf9720ff2311a945932e8b40255d6fe84340c993e6c",
+    "url": "https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP/blob/3e8f8810924657a1adc4b41c0166a0829ad1caf7/tools/tiaportal-mcp/skill/lad-cookbook/MCPVerify_FB_LAD_v3.s7dcl"
+  }
+]
