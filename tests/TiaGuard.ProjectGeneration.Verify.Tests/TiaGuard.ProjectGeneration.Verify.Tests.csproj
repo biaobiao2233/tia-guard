@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GenerationSpecSourceDirectory)' != ''">
+    <DefineConstants>$(DefineConstants);PROJECT_GENERATION_SPEC_V1</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(GenerationSpecSourceDirectory)' != ''">
+    <Compile Include="$(GenerationSpecSourceDirectory)/ProjectGenerationSpec*.cs" Link="ProviderA/%(Filename)%(Extension)" />
+    <Compile Include="../../src/TiaGuard.Openness/RoundTripProfile.cs" Link="Core/RoundTripProfile.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SnapshotAddressParser.cs" Link="Core/SnapshotAddressParser.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SnapshotV1.cs" Link="Core/SnapshotV1.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Web.Extensions" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationVerification*.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationVerifier*.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationReadbackDocuments.cs" Link="Core/ProjectGenerationReadbackDocuments.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/FileSystemSafety.cs" Link="Core/FileSystemSafety.cs" />
+    <Content Include="../../examples/project-generation-v1/programs/**/*" Link="TestData/programs/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../examples/project-generation-v1/verification/**/*" Link="TestData/verification/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
