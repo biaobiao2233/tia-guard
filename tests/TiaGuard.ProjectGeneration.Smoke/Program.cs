@@ -20,7 +20,7 @@ internal static class Program
             Directory.CreateDirectory(root);
             // The absent compile adapter must stop execution before creating any TIA instance.
             var result = ProjectGenerationBuilder.Build(null, Path.Combine(root, "output"), root,
-                (stage, plan) => throw new Exception("A TIA factory must never run during this self-test."), null);
+                (stage, plan) => throw new Exception("A TIA factory must never run during this self-test."), null, null);
             if (result.Published || result.Failures.Count == 0) throw new Exception("Unknown compiler was accepted.");
 #if PROJECT_GENERATION_SPEC_V1
             var source = Path.Combine(root, "source"); Directory.CreateDirectory(source);

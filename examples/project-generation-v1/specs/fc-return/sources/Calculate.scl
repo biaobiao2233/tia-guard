@@ -1,0 +1,9 @@
+FUNCTION "Calculate" : Real
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+VAR_INPUT
+   X : Real;
+END_VAR
+BEGIN
+   Calculate := X * 2.0;
+END_FUNCTION
