@@ -60,6 +60,15 @@ namespace TiaGuard.ProjectGeneration.Integration.Tests
             Assert.Equal(ProjectGenerationSclProjection.Normalize("IF #run THEN #x := 'a // b'; END_IF;"),
                 ProjectGenerationSclProjection.Normalize("if (* outer (* nested *) end *) #run then\n#x:='a // b';end_if; // tail"));
         }
+        [Fact]
+        public void V21QualificationIsLimitedToDeclaredLocalReferences()
+        {
+            const string head = "FUNCTION_BLOCK \"Controller\"\nVERSION : 0.1\nVAR_INPUT\nRun : Bool;\nEND_VAR\nVAR\nActive : Bool;\nEND_VAR\nBEGIN\n";
+            var source = head + "Active := Run; END_FUNCTION_BLOCK";
+            var exported = head + "#Active := #Run; END_FUNCTION_BLOCK";
+            Assert.Equal(ProjectGenerationSclProjection.Normalize(source), ProjectGenerationSclProjection.Normalize(exported));
+            Assert.NotEqual(ProjectGenerationSclProjection.Normalize(source), ProjectGenerationSclProjection.Normalize(head + "#Active := \"Run\"; END_FUNCTION_BLOCK"));
+        }
         [Theory]
         [InlineData("IF #run THEN #x := 'a'; END_IF;", "IF NOT #run THEN #x := 'a'; END_IF;")]
         [InlineData("#x := 'a // b';", "#x := 'a';")]

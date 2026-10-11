@@ -108,7 +108,7 @@ namespace TiaGuard.Openness
                 if (r.Normalization == ProjectGenerationSclProjection.Version)
                 {
                     if (e.InterfaceXml == null || a.InterfaceXml == null) Add(r, "INTERFACE_UNREADABLE", path, "Missing interface projection.", true);
-                    else if (e.InterfaceXml != ProjectGenerationSclProjection.XmlInterface(a.InterfaceXml)) Add(r, "INTERFACE_DIFFERENT", path, "Source declarations differ from observed XML interface.");
+                    else if (e.InterfaceXml != ProjectGenerationSclProjection.XmlInterface(a.InterfaceXml, a.Kind)) Add(r, "INTERFACE_DIFFERENT", path, "Source declarations differ from observed XML interface.");
                     else r.Compared.Add(path + ":INTERFACE");
                 }
                 else Equal(r, "INTERFACE", path, NormalizeTransportText(e.InterfaceXml), NormalizeTransportText(a.InterfaceXml));

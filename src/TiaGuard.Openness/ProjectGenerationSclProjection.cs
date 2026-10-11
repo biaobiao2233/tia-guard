@@ -61,6 +61,27 @@ namespace TiaGuard.Openness
         public static string Normalize(string text)
         {
             var tokens = Lex(text);
+            var begin = tokens.FindIndex(t => !t.Quoted && t.Value == "BEGIN");
+            if (begin >= 0)
+            {
+                var locals = new HashSet<string>(StringComparer.Ordinal);
+                bool inDeclarations = false;
+                for (int i = 2; i < begin; i++)
+                {
+                    if (!tokens[i].Quoted && Sections.ContainsKey(tokens[i].Value)) inDeclarations = true;
+                    else if (!tokens[i].Quoted && tokens[i].Value == "END_VAR") inDeclarations = false;
+                    else if (inDeclarations && !tokens[i].Quoted && i + 1 < begin && tokens[i + 1].Value == ":") locals.Add(tokens[i].Value);
+                }
+                if (tokens.Count >= 2 && tokens[0].Value == "FUNCTION") locals.Add(Identifier(tokens[1]).ToUpperInvariant());
+                if (tokens.Count >= 2 && tokens[0].Value == "ORGANIZATION_BLOCK" && Identifier(tokens[1]) == "Main")
+                { locals.Add("INITIAL_CALL"); locals.Add("REMANENCE"); }
+                // V21 qualifies unquoted references to declared locals with '#'. Only
+                // declaration-bound locals in the body qualify; global quoted names,
+                // strings, field selectors and already-qualified locals remain distinct.
+                for (int i = tokens.Count - 1; i > begin; i--)
+                    if (!tokens[i].Quoted && locals.Contains(tokens[i].Value) && tokens[i - 1].Value != "#" && tokens[i - 1].Value != ".")
+                        tokens.Insert(i, new Token { Value = "#" });
+            }
             // Observed on the owned V21/1212C cyclic OB1: TIA adds this default
             // title if omitted. Insert into the expected representation too; never
             // discard a user title or an arbitrary exported title.
@@ -80,7 +101,7 @@ namespace TiaGuard.Openness
             "Input/INITIAL_CALL:" + Pack(new[] { "BOOL" }),
             "Input/REMANENCE:" + Pack(new[] { "BOOL" }) }) + declared;
 
-        public static string XmlInterface(string xml)
+        public static string XmlInterface(string xml, string objectKind = null)
         {
             var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
             using (var reader = XmlReader.Create(new StringReader(xml), settings))
@@ -92,6 +113,7 @@ namespace TiaGuard.Openness
                     !e.Ancestors().Any(a => a.Name.LocalName == "Member")))
                 {
                     var sectionName = (string)section.Attribute("Name");
+                    if (sectionName == "None" && objectKind == "UDT") sectionName = "Static";
                     if (!Sections.Values.Contains(sectionName) && sectionName != "Return") throw new InvalidDataException("Unsupported observed interface section: " + sectionName);
                     foreach (var member in section.Elements().Where(e => e.Name.LocalName == "Member"))
                         XmlMember(member, sectionName, rows);
