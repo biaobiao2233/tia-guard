@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GenerationSpecRoot)' != ''">
+    <DefineConstants>$(DefineConstants);PROJECT_GENERATION_SPEC_V1</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GenerationCompilationRoot)' != ''">
+    <DefineConstants>$(DefineConstants);PROJECT_GENERATION_COMPILATION_V1</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationBuilder.cs" Link="Core/ProjectGenerationBuilder.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationImporter.cs" Link="Core/ProjectGenerationImporter.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationImportResult.cs" Link="Core/ProjectGenerationImportResult.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationBuilder.Spec.cs" Link="Core/ProjectGenerationBuilder.Spec.cs" />
+    <Reference Include="System.Web.Extensions" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGenerationBuilder.Compilation.cs" Link="Core/ProjectGenerationBuilder.Compilation.cs" />
+    <Compile Include="$(GenerationCompilationRoot)/src/TiaGuard.Openness/Compilation*.cs" Exclude="$(GenerationCompilationRoot)/src/TiaGuard.Openness/CompilationService.Openness.cs" Link="Compilation/%(Filename)%(Extension)" Condition="'$(GenerationCompilationRoot)' != ''" />
+    <Compile Include="$(GenerationSpecRoot)/src/TiaGuard.Openness/ProjectGenerationSpec*.cs" Link="Contract/%(Filename)%(Extension)" Condition="'$(GenerationSpecRoot)' != ''" />
+    <Compile Include="../../src/TiaGuard.Openness/FileSystemSafety.cs" Link="Core/FileSystemSafety.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/RoundTripProfile.cs" Link="Core/RoundTripProfile.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SnapshotAddressParser.cs" Link="Core/SnapshotAddressParser.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SnapshotV1.cs" Link="Core/SnapshotV1.cs" />
+  </ItemGroup>
+</Project>
