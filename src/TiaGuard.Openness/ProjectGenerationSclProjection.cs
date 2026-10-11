@@ -12,7 +12,7 @@ namespace TiaGuard.Openness
     // Names, literals and every non-comment token are preserved; only formatting is ignored.
     public static class ProjectGenerationSclProjection
     {
-        public const string Version = "scl-source-v1";
+        public const string Version = "scl-source-v2";
         public sealed class SourceObject
         {
             public string Kind { get; internal set; }
@@ -101,35 +101,166 @@ namespace TiaGuard.Openness
             "Input/INITIAL_CALL:" + Pack(new[] { "BOOL" }),
             "Input/REMANENCE:" + Pack(new[] { "BOOL" }) }) + declared;
 
-        public static string XmlInterface(string xml, string objectKind = null)
+        // WithDefaults is required by the readback adapter. Only the independently
+        // qualified V21 defaults below are accepted; an unknown control attribute
+        // or value is UNKNOWN, never silently discarded from a PASS projection.
+        public static string XmlInterface(string xml, string objectKind = null, bool instanceDb = false)
         {
             var settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null };
             using (var reader = XmlReader.Create(new StringReader(xml), settings))
             {
                 var root = XElement.Load(reader);
-                if (root.Name.LocalName != "Interface") throw new InvalidDataException("Missing observed Interface.");
+                RequireShape(root, "Interface", new string[0], new[] { "Sections" });
+                if (root.Elements().Count() != 1) throw new InvalidDataException("Exactly one interface Sections is required.");
+                var sections = root.Elements().Single();
+                RequireShape(sections, "Sections", new string[0], new[] { "Section" });
                 var rows = new List<string>();
-                foreach (var section in root.Descendants().Where(e => e.Name.LocalName == "Section" &&
-                    !e.Ancestors().Any(a => a.Name.LocalName == "Member")))
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var section in sections.Elements())
                 {
+                    RequireShape(section, "Section", new[] { "Name" }, new[] { "Member" });
                     var sectionName = (string)section.Attribute("Name");
                     if (sectionName == "None" && objectKind == "UDT") sectionName = "Static";
                     if (!Sections.Values.Contains(sectionName) && sectionName != "Return") throw new InvalidDataException("Unsupported observed interface section: " + sectionName);
-                    foreach (var member in section.Elements().Where(e => e.Name.LocalName == "Member"))
-                        XmlMember(member, sectionName, rows);
+                    if (!seen.Add(sectionName)) throw new InvalidDataException("Duplicate interface section.");
+                    foreach (var member in section.Elements()) XmlMember(member, sectionName, rows, objectKind, instanceDb, false);
                 }
-                return Pack(rows);
+                return OrderedInterface(rows);
             }
         }
-        private static void XmlMember(XElement member, string path, List<string> rows)
+        private static void XmlMember(XElement member, string path, List<string> rows, string kind, bool instanceDb, bool expanded)
         {
+            RequireShape(member, "Member", new[] { "Name", "Datatype", "Remanence", "Accessibility", "Informative" },
+                new[] { "AttributeList", "Comment", "Sections" });
             var name = (string)member.Attribute("Name"); var type = (string)member.Attribute("Datatype");
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(type)) throw new InvalidDataException("Unreadable interface member.");
+            ValidateDefaults(member, kind, instanceDb, path, name, expanded);
             path += "/" + name.ToUpperInvariant();
+            if (rows.Any(r => r.StartsWith(path + ":", StringComparison.Ordinal))) throw new InvalidDataException("Duplicate interface member.");
             rows.Add(path + ":" + Pack(Lex(type).Select(t => t.Value)));
-            if (string.Equals(type, "Struct", StringComparison.OrdinalIgnoreCase))
-                foreach (var nested in member.Descendants().Where(e => e.Name.LocalName == "Member" &&
-                    e.Ancestors().First(a => a.Name.LocalName == "Member") == member)) XmlMember(nested, path, rows);
+            foreach (var child in member.Elements())
+            {
+                if (child.Name.LocalName == "Comment")
+                {
+                    RequireShape(child, "Comment", new string[0], new[] { "MultiLanguageText" });
+                    foreach (var text in child.Elements()) RequireShape(text, "MultiLanguageText", new[] { "Lang" }, new string[0], true);
+                }
+                else if (child.Name.LocalName == "Sections")
+                {
+                    RequireShape(child, "Sections", new string[0], new[] { "Section" });
+                    if (child.Elements().Count() != 1) throw new InvalidDataException("Unsupported expanded interface shape.");
+                    var section = child.Elements().Single();
+                    RequireShape(section, "Section", new[] { "Name" }, new[] { "Member" });
+                    if ((string)section.Attribute("Name") != "None") throw new InvalidDataException("Unsupported nested interface section.");
+                    foreach (var nested in section.Elements()) XmlMember(nested, path, rows, kind, instanceDb, true);
+                }
+            }
+        }
+
+        private static void RequireShape(XElement element, string name, string[] attributes, string[] children, bool text = false)
+        {
+            if (element.Name.LocalName != name || element.Attributes().Any(a => !a.IsNamespaceDeclaration &&
+                (a.Name.NamespaceName != "" || !attributes.Contains(a.Name.LocalName))) ||
+                element.Elements().Any(e => !children.Contains(e.Name.LocalName)) ||
+                element.Nodes().Any(n => !(n is XElement) && !(n is XText t && (text || string.IsNullOrWhiteSpace(t.Value)))))
+                throw new InvalidDataException("Unsupported observed interface structure: " + element.Name.LocalName);
+            var ns = element.Name.NamespaceName;
+            if (ns != "" && ns != "http://www.siemens.com/automation/Openness/SW/Interface/v5")
+                throw new InvalidDataException("Unqualified interface schema: " + ns);
+            if (element.Elements().GroupBy(e => e.Name.LocalName).Any(g => g.Count() > 1 &&
+                !new[] { "Section", "Member", "MultiLanguageText", "BooleanAttribute" }.Contains(g.Key)))
+                throw new InvalidDataException("Duplicate interface container.");
+        }
+
+        private static void ValidateDefaults(XElement member, string kind, bool instanceDb, string path, string name, bool expanded)
+        {
+            var expected = new Dictionary<string, string>(StringComparer.Ordinal);
+            var flags = new Dictionary<string, string>(StringComparer.Ordinal);
+            var section = path.Split('/')[0];
+            if (kind == null)
+            {
+                // Shape-only helper for standalone parser callers. Production Compare
+                // always supplies an independently compared, supported object kind.
+                if (member.Attributes().Any(a => !a.IsNamespaceDeclaration && a.Name.LocalName != "Name" && a.Name.LocalName != "Datatype") || member.Elements().Any(e => e.Name.LocalName == "AttributeList"))
+                    throw new InvalidDataException("Metadata requires an explicit qualified object profile.");
+                return;
+            }
+            if (!new[] { "OB", "FC", "FB", "DB", "UDT" }.Contains(kind)) throw new InvalidDataException("Unknown interface object kind.");
+            if (!expanded && section != "Temp" && section != "Constant")
+            {
+                if (kind == "OB")
+                {
+                    if (section != "Input" || !new[] { "Initial_Call", "Remanence" }.Contains(name)) throw new InvalidDataException("Unqualified OB interface member.");
+                    expected["Accessibility"] = "Public"; expected["Informative"] = "true";
+                }
+                else if (kind == "FC") expected["Accessibility"] = "Public";
+                else
+                {
+                    if (kind != "UDT") { expected["Remanence"] = "NonRetain"; expected["Accessibility"] = "Public"; }
+                    flags["ExternalAccessible"] = "true"; flags["ExternalVisible"] = "true"; flags["ExternalWritable"] = "true";
+                    if (section == "Static") flags["SetPoint"] = kind == "DB" && !instanceDb ? "true" : "false";
+                }
+            }
+            foreach (var attr in new[] { "Remanence", "Accessibility", "Informative" })
+                if ((string)member.Attribute(attr) != (expected.TryGetValue(attr, out var value) ? value : null))
+                    throw new InvalidDataException("Unqualified member " + attr + ": " + path + "/" + name);
+            var lists = member.Elements().Where(e => e.Name.LocalName == "AttributeList").ToList();
+            if (lists.Count != (flags.Count == 0 ? 0 : 1)) throw new InvalidDataException("Missing or unexpected member default attributes.");
+            if (lists.Count == 0) return;
+            RequireShape(lists[0], "AttributeList", new string[0], new[] { "BooleanAttribute" });
+            var actual = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var flag in lists[0].Elements())
+            {
+                RequireShape(flag, "BooleanAttribute", new[] { "Name", "SystemDefined" }, new string[0], true);
+                var flagName = (string)flag.Attribute("Name");
+                if ((string)flag.Attribute("SystemDefined") != "true" || flagName == null || actual.ContainsKey(flagName))
+                    throw new InvalidDataException("Unqualified member BooleanAttribute.");
+                actual.Add(flagName, flag.Value);
+            }
+            if (actual.Count != flags.Count || flags.Any(f => !actual.TryGetValue(f.Key, out var v) || v != f.Value))
+                throw new InvalidDataException("Member access/default attributes differ from qualified V21 defaults.");
+        }
+
+        // Expand named UDT members from frozen source declarations, never observed XML.
+        public static string ExpandTypes(string iface, IReadOnlyDictionary<string, string> types)
+        {
+            var rows = new List<string>();
+            ExpandRows(Unpack(iface), "", types, new HashSet<string>(StringComparer.Ordinal), rows);
+            return OrderedInterface(rows);
+        }
+        private static void ExpandRows(IEnumerable<string> source, string prefix, IReadOnlyDictionary<string, string> types, HashSet<string> visiting, List<string> rows)
+        {
+            foreach (var row in source)
+            {
+                int colon = row.IndexOf(':'); if (colon < 0) throw new InvalidDataException("Malformed independent interface.");
+                var path = row.Substring(0, colon); var type = row.Substring(colon + 1);
+                if (prefix.Length != 0) path = prefix + path.Substring(path.IndexOf('/'));
+                rows.Add(path + ":" + type);
+                var tokens = Unpack(type);
+                if (tokens.Count == 1 && tokens[0].StartsWith("\"", StringComparison.Ordinal))
+                {
+                    var name = tokens[0].Substring(1, tokens[0].Length - 2);
+                    if (!types.TryGetValue(name, out var declaration) || !visiting.Add(name)) throw new InvalidDataException("Missing or cyclic independent UDT declaration: " + name);
+                    ExpandRows(Unpack(declaration), path, types, visiting, rows); visiting.Remove(name);
+                }
+            }
+        }
+        private static List<string> Unpack(string packed)
+        {
+            var values = new List<string>();
+            for (int i = 0; i < packed.Length;)
+            {
+                int colon = packed.IndexOf(':', i);
+                if (colon < 0 || !int.TryParse(packed.Substring(i, colon - i), out var length) || length < 0 || length > packed.Length - colon - 1)
+                    throw new InvalidDataException("Malformed independent interface projection.");
+                values.Add(packed.Substring(colon + 1, length)); i = colon + 1 + length;
+            }
+            return values;
+        }
+        private static string OrderedInterface(IEnumerable<string> rows)
+        {
+            var order = new[] { "Input", "Output", "InOut", "Static", "Temp", "Constant", "Return" };
+            return Pack(rows.OrderBy(r => Array.IndexOf(order, r.Substring(0, r.IndexOf('/')))));
         }
         private static string Interface(List<Token> tokens, string kind, string name)
         {
@@ -142,8 +273,8 @@ namespace TiaGuard.Openness
                 else if (Sections.TryGetValue(tokens[i].Value, out var section))
                 {
                     i++;
-                    // RETAIN/NON_RETAIN affects storage, retained in full content comparison.
-                    if (i < tokens.Count && (tokens[i].Value == "RETAIN" || tokens[i].Value == "NON_RETAIN")) i++;
+                    if (i < tokens.Count && tokens[i].Value == "RETAIN") throw new NotSupportedException("RETAIN needs an independently qualified storage profile.");
+                    if (i < tokens.Count && tokens[i].Value == "NON_RETAIN") i++;
                     Members(tokens, ref i, section, "END_VAR", rows);
                 }
             }
@@ -151,11 +282,11 @@ namespace TiaGuard.Openness
             {
                 if (tokens.Count < 2 || tokens[0].Value != ":") throw new InvalidDataException("FC return declaration missing.");
                 int i = 1; var type = new List<Token>();
-                while (i < tokens.Count && (tokens[i].Quoted || tokens[i].Value != "VERSION") && tokens[i].Value != "{") type.Add(tokens[i++]);
+                while (i < tokens.Count && (tokens[i].Quoted || (tokens[i].Value != "VERSION" && tokens[i].Value != "TITLE" && tokens[i].Value != "BEGIN" && !Sections.ContainsKey(tokens[i].Value))) && tokens[i].Value != "{") type.Add(tokens[i++]);
                 if (type.Count == 0) throw new InvalidDataException("FC return type missing.");
-                if (Pack(type.Select(t => t.Value)) != Pack(new[] { "VOID" })) rows.Insert(0, "Return/" + name.ToUpperInvariant() + ":" + Pack(type.Select(t => t.Value)));
+                rows.Add("Return/RET_VAL:" + Pack(type.Select(t => t.Value)));
             }
-            return Pack(rows);
+            return OrderedInterface(rows);
         }
         private static void Members(List<Token> tokens, ref int i, string path, string end, List<string> rows)
         {
@@ -176,7 +307,7 @@ namespace TiaGuard.Openness
                     if (type.Count == 0) throw new InvalidDataException("Missing interface data type.");
                     rows.Add(path + "/" + name + ":" + Pack(type.Select(t => t.Value)));
                 }
-                // Initial values remain significant in full source comparison.
+                if (i < tokens.Count && tokens[i].Value == ":=") throw new NotSupportedException("Declaration start values need an independently qualified storage profile.");
                 while (i < tokens.Count && tokens[i].Value != ";") i++;
                 if (i == tokens.Count) throw new InvalidDataException("Unterminated SCL declaration."); i++;
             }

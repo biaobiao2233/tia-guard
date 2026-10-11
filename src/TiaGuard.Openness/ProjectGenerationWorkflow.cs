@@ -69,6 +69,7 @@ namespace TiaGuard.Openness
                     if (!artifact.DependsOn.Contains(fb.Id)) throw new InvalidDataException("Instance DB must declare its FB dependency.");
                     iface = parsed[fb.Id].Interface;
                 }
+                iface = ProjectGenerationSclProjection.ExpandTypes(iface, parsed.Values.Where(o => o.Kind == "UDT").ToDictionary(o => o.Name, o => o.Interface, StringComparer.Ordinal));
                 var obj = new ProjectGenerationVerificationObject { Scope = source.Kind == "UDT" ? "types" : "blocks",
                     Kind = source.Kind, Name = source.Name, Number = identity.Number,
                     Language = source.Kind == "UDT" ? "UDT" : identity.Language, ContentFormat = "scl",
