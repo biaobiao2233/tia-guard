@@ -1,0 +1,8 @@
+TYPE "MotorStatus"
+VERSION : 0.1
+   STRUCT
+      Active : Bool;
+      Fault : Bool;
+      Healthy : Bool;
+   END_STRUCT;
+END_TYPE
