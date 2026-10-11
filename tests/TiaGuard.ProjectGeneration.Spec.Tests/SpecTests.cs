@@ -99,6 +99,7 @@ namespace TiaGuard.ProjectGeneration.Spec.Tests
         [InlineData("// ORGANIZATION_BLOCK \"Main\" END_ORGANIZATION_BLOCK")]
         [InlineData("ORGANIZATION_BLOCK \"Main\" BEGIN 'unterminated END_ORGANIZATION_BLOCK")]
         [InlineData("(* unterminated")]
+        [InlineData("ORGANIZATION_BLOCK 'Main' BEGIN END_ORGANIZATION_BLOCK")]
         public void RejectsIdentityOrEnvelopeMismatch(string text) { Source(text); Assert.Throws<InvalidDataException>(() => Load()); }
         [Fact] public void CommentAndLiteralMarkersAreIgnored()
         { Source("(* FUNCTION \"Hidden\" END_FUNCTION *)\nORGANIZATION_BLOCK \"Main\" BEGIN 'FUNCTION \"Hidden\" END_FUNCTION'; END_ORGANIZATION_BLOCK"); Assert.Single(Load().Spec.Artifacts); }
@@ -108,6 +109,37 @@ namespace TiaGuard.ProjectGeneration.Spec.Tests
             Edit(j => { var main = Artifact(j); main["dependsOn"] = new[] { "helper" }; j["artifacts"] = new object[] { main,
                 new { id = "helper", kind = "FC", name = "Helper", format = "scl", sourcePath = "sources/Main.scl", dependsOn = new string[0] } }; });
             var input = Load(); Assert.Equal(new[] { "helper", "main" }, input.OrderedArtifacts.Select(x => x.Id)); Assert.Single(input.OrderedSourcePaths);
+        }
+        [Fact] public void AllFiveSclObjectKindsHaveExplicitInputEnvelopes()
+        {
+            Source("TYPE \"DataType\" STRUCT value : Bool; END_STRUCT; END_TYPE\nDATA_BLOCK \"Data\" BEGIN END_DATA_BLOCK\nFUNCTION_BLOCK \"Worker\" BEGIN END_FUNCTION_BLOCK\nFUNCTION \"Helper\" : Void BEGIN END_FUNCTION\nORGANIZATION_BLOCK \"Main\" BEGIN END_ORGANIZATION_BLOCK");
+            Edit(j => j["artifacts"] = new object[] {
+                new { id = "main", kind = "OB", name = "Main", format = "scl", sourcePath = "sources/Main.scl", dependsOn = new[] { "helper", "worker", "data" } },
+                new { id = "worker", kind = "FB", name = "Worker", format = "scl", sourcePath = "sources/Main.scl", dependsOn = new[] { "type" } },
+                new { id = "helper", kind = "FC", name = "Helper", format = "scl", sourcePath = "sources/Main.scl", dependsOn = new string[0] },
+                new { id = "data", kind = "DB", name = "Data", format = "scl", sourcePath = "sources/Main.scl", dependsOn = new[] { "type" } },
+                new { id = "type", kind = "UDT", name = "DataType", format = "scl", sourcePath = "sources/Main.scl", dependsOn = new string[0] } });
+            Assert.Equal(5, Load().Spec.Artifacts.Count);
+        }
+        [Fact] public void SourceGroupCycleIsRejectedEvenWhenArtifactGraphIsAcyclic()
+        {
+            Source("FUNCTION \"Helper\" : Void BEGIN END_FUNCTION\nORGANIZATION_BLOCK \"Main\" BEGIN END_ORGANIZATION_BLOCK");
+            File.WriteAllText(Path.Combine(root, "input", "sources", "Worker.scl"), "FUNCTION_BLOCK \"Worker\" BEGIN END_FUNCTION_BLOCK");
+            Edit(j => j["artifacts"] = new object[] {
+                new { id = "main", kind = "OB", name = "Main", format = "scl", sourcePath = "sources/Main.scl", dependsOn = new[] { "worker" } },
+                new { id = "worker", kind = "FB", name = "Worker", format = "scl", sourcePath = "sources/Worker.scl", dependsOn = new[] { "helper" } },
+                new { id = "helper", kind = "FC", name = "Helper", format = "scl", sourcePath = "sources/Main.scl", dependsOn = new string[0] } });
+            Assert.Throws<InvalidDataException>(() => Load());
+        }
+        [Fact] public void ConcurrentInitPublishesExactlyOnceWithoutPartialOutput()
+        {
+            var output = Path.Combine(root, "race"); var successes = 0;
+            System.Threading.Tasks.Parallel.For(0, 8, _ => {
+                try { ProjectGenerationInitializer.Initialize(output); System.Threading.Interlocked.Increment(ref successes); }
+                catch (IOException) { }
+            });
+            Assert.Equal(1, successes); ProjectGenerationSpecLoader.Load(Path.Combine(output, ProjectGenerationSpecLoader.DefaultSpecFileName));
+            Assert.Empty(Directory.GetDirectories(root, ".tia-guard-init-*"));
         }
         [Theory][InlineData("minimal")][InlineData("multi-object")]
         public void ShippedFixturesLoad(string name)
@@ -134,7 +166,13 @@ namespace TiaGuard.ProjectGeneration.Spec.Tests
             var link = Path.Combine(root, "input", "redirected");
             using (var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c mklink /J \"" + link + "\" \"" + outside + "\"") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true }))
             { p.WaitForExit(); Assert.Equal(0, p.ExitCode); }
-            try { Assert.Throws<InvalidDataException>(() => Load()); Assert.Throws<IOException>(() => ProjectGenerationInitializer.Initialize(Path.Combine(link, "new"))); }
+            try {
+                Assert.Throws<InvalidDataException>(() => Load());
+                Assert.Throws<IOException>(() => ProjectGenerationInitializer.Initialize(Path.Combine(link, "new")));
+                File.WriteAllText(Path.Combine(outside, "Main.scl"), "ORGANIZATION_BLOCK \"Main\" BEGIN END_ORGANIZATION_BLOCK");
+                Edit(j => Artifact(j)["sourcePath"] = "redirected/Main.scl");
+                Assert.Throws<IOException>(() => Load());
+            }
             finally { Directory.Delete(link); }
         }
         [Fact] public void CliParsesInitAndPreservesOldCommands()

@@ -107,7 +107,9 @@ namespace TiaGuard.Openness
             { bytes.Add(path, Read(root, path)); ProjectGenerationSpecSource.Validate(bytes[path], groups[path]); }
             CheckFiles(root, bytes.Keys);
             var spec = new ProjectGenerationSpec(name, plc, tables, artifacts);
-            return new ProjectGenerationSpecInput(root, file, spec, ordered, paths, bytes);
+            var input = new ProjectGenerationSpecInput(root, file, spec, ordered, paths, bytes);
+            input.ValidateUnchanged();
+            return input;
         }
         private static List<T> Sort<T>(List<T> values, Func<T, string> key, Func<T, IReadOnlyList<string>> deps)
         {
@@ -129,21 +131,34 @@ namespace TiaGuard.Openness
         internal static byte[] Read(string root, string relative)
         {
             CheckRelative(relative); var path = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar));
-            FileSystemSafety.RequirePlainFile(path); var info = new FileInfo(path);
-            Require(info.Length > 0 && info.Length <= 8 * 1024 * 1024, "Input file size outside limit.");
-            return File.ReadAllBytes(path);
+            FileSystemSafety.RequirePlainFile(path);
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                // Pin the file while reading: concurrent writes/deletion are refused on Windows.
+                Require(stream.Length > 0 && stream.Length <= 8 * 1024 * 1024, "Input file size outside limit.");
+                var bytes = new byte[(int)stream.Length]; var offset = 0;
+                while (offset < bytes.Length)
+                {
+                    var count = stream.Read(bytes, offset, bytes.Length - offset);
+                    Require(count > 0, "Input changed/truncated while reading."); offset += count;
+                }
+                Require(stream.ReadByte() == -1, "Input grew while reading.");
+                FileSystemSafety.RequirePlainFile(path);
+                return bytes;
+            }
         }
         internal static void CheckFiles(string root, IEnumerable<string> expected)
         {
-            var actual = new List<string>(); Walk(new DirectoryInfo(root), "", actual);
+            var actual = new List<string>(); Walk(new DirectoryInfo(root), "", actual, 0);
             Require(new HashSet<string>(expected, StringComparer.Ordinal).SetEquals(actual), "Undeclared or missing input files.");
         }
-        private static void Walk(DirectoryInfo dir, string prefix, List<string> files)
+        private static void Walk(DirectoryInfo dir, string prefix, List<string> files, int depth)
         {
+            Require(depth <= 64, "Input directory nesting exceeds limit.");
             foreach (var child in dir.GetFileSystemInfos())
             {
                 Require((child.Attributes & FileAttributes.ReparsePoint) == 0, "Input tree contains a reparse point.");
-                if (child is DirectoryInfo nested) Walk(nested, prefix + child.Name + "/", files);
+                if (child is DirectoryInfo nested) Walk(nested, prefix + child.Name + "/", files, depth + 1);
                 else files.Add(prefix + child.Name);
             }
         }
