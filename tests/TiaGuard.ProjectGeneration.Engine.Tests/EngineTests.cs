@@ -233,8 +233,28 @@ namespace TiaGuard.ProjectGeneration.Engine.Tests
             using (var f = new Fixture())
             {
                 var r = ProjectGenerationBuilder.Build(f.Plan, f.Output, f.Scratch, (p, plan) =>
-                    throw new Exception("must not be called"), null);
+                    throw new Exception("must not be called"), null, s => Fixture.VerificationPass());
                 Assert.False(r.Published); Assert.Empty(Directory.GetDirectories(f.Scratch));
+            }
+        }
+
+        [Fact]
+        public void MissingVerificationAdapterFailsBeforeStageCreationSessionFactoryOrCompiler()
+        {
+            using (var f = new Fixture())
+            {
+                bool created = false, compiled = false;
+                var result = ProjectGenerationBuilder.Build(f.Plan, f.Output, f.Scratch,
+                    (stage, plan) => { created = true; throw new Exception("must not create a session"); },
+                    session => { compiled = true; return Fixture.CleanCompile(); }, null);
+                Assert.False(result.Published);
+                Assert.Equal("preflight", result.Phase);
+                Assert.Null(result.Verification);
+                Assert.Contains(result.Failures, failure => failure.Contains("verification adapter is required"));
+                Assert.False(created);
+                Assert.False(compiled);
+                Assert.False(Directory.Exists(f.Output));
+                Assert.Empty(Directory.GetDirectories(f.Scratch));
             }
         }
 
@@ -388,7 +408,10 @@ namespace TiaGuard.ProjectGeneration.Engine.Tests
                     Session.File = Path.Combine(stage, plan.ProjectName, plan.ProjectName + ".ap21");
                     Directory.CreateDirectory(Path.GetDirectoryName(Session.File)); File.WriteAllText(Session.File, "fake project, no V21 evidence");
                     return Session;
-                }, compile ?? (s => CleanCompile()), verify);
+                }, compile ?? (s => CleanCompile()), verify ?? (s => VerificationPass()));
+            // Explicit synthetic acceptance for pure engine tests, never V21 evidence.
+            internal static ProjectGenerationVerificationResult VerificationPass() =>
+                new ProjectGenerationVerificationResult { Verdict = "PASS" };
             internal static ProjectGenerationCompileEvidence CleanCompile() => new ProjectGenerationCompileEvidence
             { ProviderRevision = "TEST-C", Executed = true, State = "Success", ErrorCount = 0, WarningCount = 0,
                 DiagnosticsComplete = true, FullResult = "fake diagnostics, no V21 evidence" };

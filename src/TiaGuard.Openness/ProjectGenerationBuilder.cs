@@ -15,7 +15,7 @@ namespace TiaGuard.Openness
             string outputDirectory, string ownedScratchRoot,
             Func<string, ProjectGenerationBuilderPlan, IProjectGenerationSession> factory,
             Func<IProjectGenerationSession, ProjectGenerationCompileEvidence> compile,
-            Func<IProjectGenerationSession, ProjectGenerationVerificationResult> verify = null)
+            Func<IProjectGenerationSession, ProjectGenerationVerificationResult> verify)
         {
             var result = new ProjectGenerationBuildResult();
             IProjectGenerationSession session = null;
@@ -27,6 +27,8 @@ namespace TiaGuard.Openness
                 result.Phase = "preflight";
                 if (factory == null || compile == null)
                     throw new InvalidOperationException("Generation session and C compile adapter are required; no unknown-to-zero fallback.");
+                if (verify == null)
+                    throw new InvalidOperationException("Independent full readback verification adapter is required; compilation alone cannot publish.");
                 var units = ProjectGenerationImporter.Plan(plan);
                 result.ContractRevision = plan.ContractRevision;
                 result.IdentityRevision = plan.IdentityRevision;
@@ -97,13 +99,10 @@ namespace TiaGuard.Openness
                 if (result.Compile == null || !result.Compile.AllowsPublication)
                     throw new InvalidOperationException("Compilation missing/failed/incomplete; generated project will not be published.");
                 ProjectGenerationInventory.RequireExact(expected, session.ReadObjects(), "readback after compile");
-                if (verify != null)
-                {
-                    result.Phase = "verify";
-                    result.Verification = verify(session);
-                    if (result.Verification == null || result.Verification.Verdict != "PASS")
-                        throw new InvalidOperationException("Full readback verification did not PASS; no output will be published.");
-                }
+                result.Phase = "verify";
+                result.Verification = verify(session);
+                if (result.Verification == null || result.Verification.Verdict != "PASS")
+                    throw new InvalidOperationException("Full readback verification did not PASS; no output will be published.");
                 session.Save();
                 var expectedFile = Path.Combine(stage, plan.ProjectName, plan.ProjectName + ".ap21");
                 if (!string.Equals(Path.GetFullPath(session.ProjectFile), expectedFile, StringComparison.OrdinalIgnoreCase))

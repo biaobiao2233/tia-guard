@@ -19,17 +19,20 @@ namespace TiaGuard.Openness
     {
         public static ProjectGenerationBuildResult BuildOffline(ProjectGenerationBuilderPlan plan,
             string outputDirectory, string ownedScratchRoot, string publicApiDirectory,
-            Func<PlcSoftware, ProjectGenerationCompileEvidence> compile)
+            Func<PlcSoftware, ProjectGenerationCompileEvidence> compile,
+            Func<IProjectGenerationSession, ProjectGenerationVerificationResult> verify)
         {
             if (compile == null)
-                return new ProjectGenerationBuildResult { Failures = { "C compile adapter is not bound." } };
+                return new ProjectGenerationBuildResult { Phase = "preflight", Failures = { "C compile adapter is not bound." } };
+            if (verify == null)
+                return new ProjectGenerationBuildResult { Phase = "preflight", Failures = { "Independent full readback verification adapter is required; compilation alone cannot publish." } };
             // Runtime initialization and instance creation happen only inside the preflighted factory.
             return Build(plan, outputDirectory, ownedScratchRoot, (stage, input) =>
             {
                 OpennessAccess.RequireAccess();
                 OpennessRuntime.Initialize(publicApiDirectory);
                 return new ProjectGenerationOpennessSession(stage, input);
-            }, session => compile((PlcSoftware)session.NativePlc));
+            }, session => compile((PlcSoftware)session.NativePlc), verify);
         }
     }
 
