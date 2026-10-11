@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "tiaVersion": "V21",
+  "projectName": "NewProject",
+  "plc": {
+    "name": "PLC_1",
+    "cpuTypeIdentifier": "OrderNumber:6ES7 212-1AE40-0XB0/V4.7"
+  },
+  "tagTables": [],
+  "artifacts": [
+    {
+      "id": "main",
+      "kind": "OB",
+      "name": "Main",
+      "format": "scl",
+      "sourcePath": "sources/Main.scl",
+      "dependsOn": []
+    }
+  ]
+}

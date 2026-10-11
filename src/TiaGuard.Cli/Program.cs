@@ -30,6 +30,15 @@ namespace TiaGuard.Cli
 
             try
             {
+                if (invocation.Command == "init")
+                {
+                    var input = ProjectGenerationInitializer.Initialize(invocation.Target);
+                    Console.WriteLine("specFile=" + System.IO.Path.Combine(input.SourceRoot, ProjectGenerationSpecLoader.DefaultSpecFileName));
+                    Console.WriteLine("template=" + ProjectGenerationInitializer.TemplateIdentity);
+                    Console.WriteLine("validation=offline-input-only; V21 creation/compile/readback required");
+                    return 0;
+                }
+
                 if (invocation.Command == "ai-view")
                 {
                     Console.WriteLine("aiDirectory=" + AiEngineeringPublisher.Generate(invocation.Source));
