@@ -1,0 +1,493 @@
+{
+  "receiptVersion": "1.0",
+  "session": "integrate-43-20261012-0030",
+  "date": "2026-10-12",
+  "productSourceRevision": "5aceb1e6a5192fe127bfe75906e5b8316b674d7f",
+  "baseMainRevision": "542db2f33770d145ac351e891019501bf5335b1f",
+  "specSignatureRevision": "072c14f24fff1dbce712827886c1ba23e17cf5d5",
+  "compilationProviderRevision": "be8453e79914457901b01eb62420d1699833e492",
+  "qualification": "PASS: bounded offline SCL generation, compilation and independent readback; unmerged candidate",
+  "environment": {
+    "tia": "V21",
+    "cpu": "OrderNumber:6ES7 212-1AE40-0XB0/V4.7",
+    "dotnetSdk": "8.0.425",
+    "siemensDllsBundled": false,
+    "accessScope": "Task-owned WithoutUI instances only; no permission or persistent whitelist changes by the agent"
+  },
+  "tests": [
+    {
+      "suite": "contracts",
+      "total": 152,
+      "passed": 152,
+      "failed": 0,
+      "trxSha256": "d0be0e76e175d727981dd344800803b1adfef3f2309d0cc55955c4e92aefe1fa"
+    },
+    {
+      "suite": "Spec",
+      "total": 84,
+      "passed": 84,
+      "failed": 0,
+      "trxSha256": "311568b6ff6d5102278dfbc02297e7904d5feec1452e30d1e462d78e95601080"
+    },
+    {
+      "suite": "Engine",
+      "total": 80,
+      "passed": 80,
+      "failed": 0,
+      "trxSha256": "5acbfee4c3367a84d5ae2a455520bba0203be5e15cbcf409cde4a96f8965110f"
+    },
+    {
+      "suite": "Verify",
+      "total": 63,
+      "passed": 63,
+      "failed": 0,
+      "trxSha256": "dc7c0ba7e4acfdf635e640548ca72e84f92af0317ccab0a25f7a07196f0c34c9"
+    },
+    {
+      "suite": "Integration",
+      "total": 30,
+      "passed": 30,
+      "failed": 0,
+      "trxSha256": "5eaa239bf716059f00b0c07a2e159b3c7a5bec9e3c4830d8815e2722ce80e19d"
+    },
+    {
+      "suite": "Compilation",
+      "total": 52,
+      "passed": 52,
+      "failed": 0,
+      "trxSha256": "185a190c3576b610ab794a716697e47a8300e0f978a918f86b7769175cac4439"
+    },
+    {
+      "suite": "Bridge.Host",
+      "total": 76,
+      "passed": 76,
+      "failed": 0,
+      "trxSha256": "747929f828324251f47b71dd24ba02c3560ae466ddb49e93c3c5773f9377374c"
+    }
+  ],
+  "totalTests": 537,
+  "schemaChecks": "PASS: three existing schemas; generation 3 positive fixtures and 34 negative cases",
+  "releaseBuilds": "PASS, 0 warnings/errors: CLI, Openness, Worker, Host, GUI, generation Smoke",
+  "smokeSelfTest": "PASS: source/compilation provider bindings and missing-service gates; no TIA started by self-test",
+  "review": {
+    "sourceRevision": "5aceb1e6a5192fe127bfe75906e5b8316b674d7f",
+    "verdict": "PASS",
+    "independentAgent": "generation_review",
+    "negativeMutations": [
+      "Instance DB Remanence => UNKNOWN",
+      "Instance DB ExternalAccessible => UNKNOWN",
+      "StartValue/unknown nested member => UNKNOWN",
+      "Named UDT child type change => FAIL",
+      "Int/Void FC section reordering matches independent source",
+      "Null verifier blocks all public generation publication APIs before staging"
+    ]
+  },
+  "realV21Runs": [
+    {
+      "id": "minimal-final2",
+      "inputHash": "e53b302caf213d35d9650d4131ea9569fb56e543f385e74b0ca63fe3bf392f70",
+      "published": true,
+      "phase": "complete",
+      "httpStatus": null,
+      "status": null,
+      "compileState": "Success",
+      "compileErrors": 0,
+      "compileWarnings": 0,
+      "diagnosticsComplete": true,
+      "allowsPublication": true,
+      "diagnosticCount": 4,
+      "errors": [],
+      "verdict": "PASS",
+      "normalization": "scl-source-v2",
+      "findingCount": 0,
+      "failures": [],
+      "cleanupFailures": [],
+      "capturedAtUtc": "2026-10-11T17:44:25.7148621Z",
+      "apiVersion": "21.0.0.0",
+      "objectCount": 1,
+      "objects": [
+        {
+          "Scope": "blocks",
+          "Kind": "OB",
+          "Name": "Main",
+          "Number": 1,
+          "Language": "SCL",
+          "InstanceOfName": ""
+        }
+      ],
+      "tags": [],
+      "hardwareComplete": true,
+      "objectsComplete": true,
+      "tagTablesComplete": true,
+      "originalResultSha256": "6d51cf9c3ea1fcb8793d3e7e5208b99c2d0130df063de7589421f5880de1d24d",
+      "projectFile": "NewProject.ap21",
+      "projectFileExists": true,
+      "projectTreeSha256": "dd2a65b8230eb09bf16c60308e0a67a0cf57a54137b3ed90980e7dabec149ba3"
+    },
+    {
+      "id": "motor-final",
+      "inputHash": "91b543460a0c5ed7fe667635862d59358688f54bce4d700b6fac1758a3428c97",
+      "published": true,
+      "phase": "complete",
+      "httpStatus": null,
+      "status": null,
+      "compileState": "Success",
+      "compileErrors": 0,
+      "compileWarnings": 0,
+      "diagnosticsComplete": true,
+      "allowsPublication": true,
+      "diagnosticCount": 9,
+      "errors": [],
+      "verdict": "PASS",
+      "normalization": "scl-source-v2",
+      "findingCount": 0,
+      "failures": [],
+      "cleanupFailures": [],
+      "capturedAtUtc": "2026-10-11T17:45:27.2055081Z",
+      "apiVersion": "21.0.0.0",
+      "objectCount": 5,
+      "objects": [
+        {
+          "Scope": "blocks",
+          "Kind": "FB",
+          "Name": "FB_BasicLatch",
+          "Number": 100,
+          "Language": "SCL",
+          "InstanceOfName": ""
+        },
+        {
+          "Scope": "blocks",
+          "Kind": "DB",
+          "Name": "LatchInstance",
+          "Number": 100,
+          "Language": "DB",
+          "InstanceOfName": "FB_BasicLatch"
+        },
+        {
+          "Scope": "blocks",
+          "Kind": "DB",
+          "Name": "Status",
+          "Number": 101,
+          "Language": "DB",
+          "InstanceOfName": ""
+        },
+        {
+          "Scope": "blocks",
+          "Kind": "OB",
+          "Name": "Main",
+          "Number": 1,
+          "Language": "SCL",
+          "InstanceOfName": ""
+        },
+        {
+          "Scope": "types",
+          "Kind": "UDT",
+          "Name": "MotorStatus",
+          "Number": null,
+          "Language": "UDT",
+          "InstanceOfName": ""
+        }
+      ],
+      "tags": [
+        {
+          "Name": "StartRequest",
+          "DataType": "Bool",
+          "LogicalAddress": "%I0.0"
+        },
+        {
+          "Name": "StopRequest",
+          "DataType": "Bool",
+          "LogicalAddress": "%I0.1"
+        },
+        {
+          "Name": "FaultRequest",
+          "DataType": "Bool",
+          "LogicalAddress": "%I0.2"
+        },
+        {
+          "Name": "ResetRequest",
+          "DataType": "Bool",
+          "LogicalAddress": "%I0.3"
+        },
+        {
+          "Name": "RunOutput",
+          "DataType": "Bool",
+          "LogicalAddress": "%Q0.0"
+        }
+      ],
+      "hardwareComplete": true,
+      "objectsComplete": true,
+      "tagTablesComplete": true,
+      "originalResultSha256": "70adcc04bbc966ea60fc5318d51b12bc429109bbed6a2e61424e585a22579d5e",
+      "projectFile": "MotorControl.ap21",
+      "projectFileExists": true,
+      "projectTreeSha256": "318a8d818069c4710df1d5cf26835b1f1cbefe1b35081b6670f5520d7c4a6f7d"
+    },
+    {
+      "id": "return-final",
+      "inputHash": "a2672bdd9839b678c0bec545c661731fe24177708724f95231aa8e88aabe5b27",
+      "published": true,
+      "phase": "complete",
+      "httpStatus": null,
+      "status": null,
+      "compileState": "Success",
+      "compileErrors": 0,
+      "compileWarnings": 0,
+      "diagnosticsComplete": true,
+      "allowsPublication": true,
+      "diagnosticCount": 5,
+      "errors": [],
+      "verdict": "PASS",
+      "normalization": "scl-source-v2",
+      "findingCount": 0,
+      "failures": [],
+      "cleanupFailures": [],
+      "capturedAtUtc": "2026-10-11T17:46:21.6350682Z",
+      "apiVersion": "21.0.0.0",
+      "objectCount": 2,
+      "objects": [
+        {
+          "Scope": "blocks",
+          "Kind": "FC",
+          "Name": "Calculate",
+          "Number": 100,
+          "Language": "SCL",
+          "InstanceOfName": ""
+        },
+        {
+          "Scope": "blocks",
+          "Kind": "OB",
+          "Name": "Main",
+          "Number": 1,
+          "Language": "SCL",
+          "InstanceOfName": ""
+        }
+      ],
+      "tags": [
+        {
+          "Name": "Result",
+          "DataType": "Real",
+          "LogicalAddress": "%MD0"
+        }
+      ],
+      "hardwareComplete": true,
+      "objectsComplete": true,
+      "tagTablesComplete": true,
+      "originalResultSha256": "6bcf83bc21e50c89d4861efe091a159b0431e03b621fbfa2e870aef8c98352c3",
+      "projectFile": "FunctionReturn.ap21",
+      "projectFileExists": true,
+      "projectTreeSha256": "14ce5e3f3f6f916e2601c3572cd7a60b8efac42c563856e6581ed2529aec85ba"
+    },
+    {
+      "id": "gateway-void-final",
+      "inputHash": "a63fcdea6e5b9aca626fc697107b31db90ab1a0cb533b85c297db4a60b6cb903",
+      "published": true,
+      "phase": "complete",
+      "httpStatus": 200,
+      "status": "published-verified",
+      "compileState": "Success",
+      "compileErrors": 0,
+      "compileWarnings": 0,
+      "diagnosticsComplete": true,
+      "allowsPublication": true,
+      "diagnosticCount": 5,
+      "errors": [],
+      "verdict": "PASS",
+      "normalization": "scl-source-v2",
+      "findingCount": 0,
+      "failures": [],
+      "cleanupFailures": [],
+      "capturedAtUtc": "2026-10-11T17:48:10.3393937Z",
+      "apiVersion": "21.0.0.0",
+      "objectCount": 2,
+      "objects": [
+        {
+          "Scope": "blocks",
+          "Kind": "FC",
+          "Name": "FC_BasicScaleLimit",
+          "Number": 100,
+          "Language": "SCL",
+          "InstanceOfName": ""
+        },
+        {
+          "Scope": "blocks",
+          "Kind": "OB",
+          "Name": "Main",
+          "Number": 1,
+          "Language": "SCL",
+          "InstanceOfName": ""
+        }
+      ],
+      "tags": [
+        {
+          "Name": "Start",
+          "DataType": "Bool",
+          "LogicalAddress": "%I0.0"
+        },
+        {
+          "Name": "Speed",
+          "DataType": "Real",
+          "LogicalAddress": "%MD10"
+        }
+      ],
+      "hardwareComplete": true,
+      "objectsComplete": true,
+      "tagTablesComplete": true,
+      "originalResultSha256": "9234cfc5f67529dcda0b2ca3975bbfd3c5d73361331974710a5b9dcf74bed6f9",
+      "projectFile": "MultipleObjects.ap21",
+      "projectFileExists": true,
+      "projectTreeSha256": "f817b22b8ff76bf73086a224073a5f62078b2e5a13e9128a650eaedc88cafed6"
+    },
+    {
+      "id": "gateway-invalid-final",
+      "inputHash": "5083e44d30c517dbc26d5b40532c21fa56e3090d127d8dccd7d4506b83c3d5c6",
+      "published": false,
+      "phase": "compile",
+      "httpStatus": 422,
+      "status": "generation_failed",
+      "compileState": "Error",
+      "compileErrors": 1,
+      "compileWarnings": 0,
+      "diagnosticsComplete": true,
+      "allowsPublication": false,
+      "diagnosticCount": 5,
+      "errors": [
+        {
+          "Id": 3,
+          "ParentId": 2,
+          "Description": "Tag \"MissingSignal\" not defined.",
+          "EngineeringPath": "2"
+        },
+        {
+          "Id": 4,
+          "ParentId": null,
+          "Description": "Compiling finished (errors: 1; warnings: 0)",
+          "EngineeringPath": null
+        }
+      ],
+      "verdict": null,
+      "normalization": null,
+      "findingCount": 0,
+      "failures": [
+        "InvalidOperationException: Compilation missing/failed/incomplete; generated project will not be published."
+      ],
+      "cleanupFailures": [],
+      "capturedAtUtc": null,
+      "apiVersion": null,
+      "objectCount": 0,
+      "objects": [],
+      "tags": [],
+      "hardwareComplete": null,
+      "objectsComplete": null,
+      "tagTablesComplete": null,
+      "originalResultSha256": "dd1e74c172486c8b5ed141cbc7c81d0d1190adab95e61e33de43119928170079",
+      "projectFile": null,
+      "projectFileExists": false,
+      "projectTreeSha256": null
+    },
+    {
+      "id": "gateway-repaired-final",
+      "inputHash": "1ac30fa8b69f04d744d526a32397eca27ce75a328fe0532c2420bf26fef5002b",
+      "published": true,
+      "phase": "complete",
+      "httpStatus": 200,
+      "status": "published-verified",
+      "compileState": "Success",
+      "compileErrors": 0,
+      "compileWarnings": 0,
+      "diagnosticsComplete": true,
+      "allowsPublication": true,
+      "diagnosticCount": 4,
+      "errors": [],
+      "verdict": "PASS",
+      "normalization": "scl-source-v2",
+      "findingCount": 0,
+      "failures": [],
+      "cleanupFailures": [],
+      "capturedAtUtc": "2026-10-11T17:50:47.6615923Z",
+      "apiVersion": "21.0.0.0",
+      "objectCount": 1,
+      "objects": [
+        {
+          "Scope": "blocks",
+          "Kind": "OB",
+          "Name": "Main",
+          "Number": 1,
+          "Language": "SCL",
+          "InstanceOfName": ""
+        }
+      ],
+      "tags": [
+        {
+          "Name": "MissingSignal",
+          "DataType": "Bool",
+          "LogicalAddress": "%M0.0"
+        }
+      ],
+      "hardwareComplete": true,
+      "objectsComplete": true,
+      "tagTablesComplete": true,
+      "originalResultSha256": "c0bc3749f644cd51747729250c080747b18751c892a557dada9e0ace1755d0f7",
+      "projectFile": "NewProject.ap21",
+      "projectFileExists": true,
+      "projectTreeSha256": "0811e8c0525a96bd6202fd9591f3a3d03d621d3a9fe595b87bc1bb562bba7d55"
+    }
+  ],
+  "sourceDrift": {
+    "httpStatus": 400,
+    "error": "The target tag state changed after preview. Request a new preview.",
+    "outputExists": false,
+    "originalResultSha256": "29bd204fa04bf2916c96b913f0ceec5cc0e9e01080be40eecde986732844ac6d"
+  },
+  "mcp": {
+    "protocolVersion": "2025-06-18",
+    "tools": [
+      "preview_project_generation",
+      "build_project_generation"
+    ],
+    "previewStatus": "previewed",
+    "inputHash": "e53b302caf213d35d9650d4131ea9569fb56e543f385e74b0ca63fe3bf392f70",
+    "mutatesProject": false,
+    "outputExists": false,
+    "isError": null
+  },
+  "binaries": [
+    {
+      "path": "src/TiaGuard.Cli/bin/Release/net48/tia-guard.exe",
+      "sha256": "c5b437a5060e90c6dc573c2a8579eb05bff36e3706743b99e421087cfbd8b28a"
+    },
+    {
+      "path": "src/TiaGuard.Cli/bin/Release/net48/TiaGuard.Openness.dll",
+      "sha256": "f59b7bf303afa10c3c33baf503a6241437bce915740ac80c8ac05c70450162e0"
+    },
+    {
+      "path": "src/TiaGuard.Bridge.Host/bin/Release/net8.0/tia-guard-bridge.dll",
+      "sha256": "3f2acf594e3b88be363cd300e5f53a9ca3d0ee68422ba6045208dacf7034e4c1"
+    },
+    {
+      "path": "src/TiaGuard.Bridge.Host/bin/Release/net8.0/TiaGuard.Bridge.Worker.exe",
+      "sha256": "a2e0806cf43c07c5adca1814b6ce82ef995a03658c4874e0515a82e7906151b0"
+    },
+    {
+      "path": "src/TiaGuard.Gui/bin/Release/net48/TiaGuard.exe",
+      "sha256": "f231b1f501232992657a487bac051797490defd9c684f951b488764cc277bb00"
+    }
+  ],
+  "cleanup": {
+    "observedAtUtc": "2026-10-11T17:53:13.1999704Z",
+    "ownHostStopped": true,
+    "ownWorkerStopped": true,
+    "ownPortalCount": 0,
+    "port18843Closed": true,
+    "remainingBuildStageCount": 0,
+    "verifiedOutputsAndReadbackEvidenceRetained": true
+  },
+  "remaining": [
+    "PLCSIM scan-cycle behavior not tested",
+    "Legacy GUI/Gateway patch Issue #41 not requalified",
+    "No merge/Release/real PLC download or online operation",
+    "RETAIN/start-value and unsupported XML shapes are rejected/UNKNOWN",
+    "Same-file 100+ same-kind blocks may safely fail temporary numbering",
+    "LAD/SD public generation, extra hardware modules, other CPU profiles remain unqualified"
+  ]
+}

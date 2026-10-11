@@ -17,6 +17,7 @@ TIA-Guard is an independent **pre-alpha** engineering tool for local **Siemens T
 - [Releases](https://github.com/biaobiao2233/tia-guard/releases): downloadable preview packages and checksums.
 - [Getting started](docs/GETTING-STARTED.en.md): requirements, extraction, GUI workflows and troubleshooting.
 - [AI Gateway guide](docs/TIA-AI-BRIDGE.en.md): desktop agents, MCP and guarded offline edits.
+- [Create a PLC project from source](docs/PROJECT-GENERATION.md): candidate CLI / HTTP / MCP workflow for creating, compiling and independently verifying a new `.ap21` from SCL; see the guide for evidence and scope.
 
 The first release is a pre-alpha preview. The Windows GUI is currently Chinese; these links switch repository documentation languages.
 
@@ -27,7 +28,7 @@ The source includes the implementations below. Capability boundaries and evidenc
 | Module | Current implementation |
 | --- | --- |
 | Windows GUI | Chinese WPF interface with a custom title bar; GitHub → TIA rebuild and TIA → GitHub export/commit; multiple projects per repository |
-| CLI | `doctor`, `--version`, `export`, `build`, `verify`, `ai-view` |
+| CLI | `doctor`, `--version`, `export`, `build`, `verify`, `ai-view`, `init`, `build-generation` |
 | AI engineering view | Derived JSON / Markdown, symbol tables, bounded LAD graphs and source references from validated canonical source |
 | API Gateway | GUI starts `127.0.0.1:18761`; capability discovery, engineering context, program graphs, reference queries and guarded patches |
 | MCP | stdio and Streamable HTTP; read-only tools by default, opt-in write tools retain preview / apply validation |
