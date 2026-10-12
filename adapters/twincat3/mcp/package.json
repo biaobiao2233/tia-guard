@@ -7,7 +7,7 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "start": "node index.js",
-    "test": "node --test ../tests/Mcp/*.test.js",
+    "test": "node --test --test-concurrency=1 ../tests/Mcp/*.test.js",
     "check": "node --check index.js && node --check toolSchemas.js && node --check daemonClient.js && node --check providerClient.js && node --check result.js"
   },
   "dependencies": {
