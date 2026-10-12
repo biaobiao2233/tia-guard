@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0",
+  "solutionName": "SingleError",
+  "configurationName": "TwinCATConfiguration",
+  "plcProjectName": "PLC",
+  "environment": {
+    "requestedBuild": "3.1.4026.0",
+    "dteProgId": "TcXaeShell.DTE.17.0",
+    "provider": "dte",
+    "targetPlatform": "TwinCAT RT (x64)",
+    "buildConfiguration": "Release",
+    "plcTemplate": "Empty PLC Template"
+  },
+  "artifacts": [
+    { "id": "main", "name": "MAIN", "kind": "program", "declarationFile": "MAIN.decl.st", "implementationFile": "MAIN.impl.st" }
+  ],
+  "tasks": [ { "name": "PlcTask", "cycleTimeUs": 10000, "priority": 20, "programs": [ "MAIN" ] } ],
+  "libraries": []
+}

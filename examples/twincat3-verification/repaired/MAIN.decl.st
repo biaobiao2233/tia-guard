@@ -1,0 +1,4 @@
+PROGRAM MAIN
+VAR
+    MissingSignal : BOOL;
+END_VAR
