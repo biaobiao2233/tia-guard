@@ -38,8 +38,8 @@ public sealed class PipelineTests : IDisposable
 
     public void Dispose() => Directory.Delete(root, true);
     private GenerationRequest Request => new() { SourceDirectory = input, OutputDirectory = output };
-    private EngineeringPipeline Pipeline(IEngineeringCompiler? build = null, IProjectCaptureService? observe = null, IProjectComparer? compare = null)
-        => new(new EngineeringAllocation(root, scratch), leases, new ExecutionGrantStore(true), creator,
+    private EngineeringPipeline Pipeline(IEngineeringCompiler? build = null, IProjectCaptureService? observe = null, IProjectComparer? compare = null, ExecutionGrantStore? authority = null)
+        => new(new EngineeringAllocation(root, scratch), leases, authority ?? new ExecutionGrantStore(true), creator,
             build ?? compiler, observe ?? capture, compare ?? comparer);
     private (GenerationPreview Preview, string Grant) Preview(EngineeringPipeline pipeline)
     {
@@ -69,6 +69,47 @@ public sealed class PipelineTests : IDisposable
         Assert.Equal(EngineeringPipeline.HashTree(output), result.ArtifactTreeHash);
         Assert.Equal(1, creator.Calls); Assert.Equal(1, compiler.Calls); Assert.Equal(1, capture.Calls); Assert.Equal(1, comparer.Calls);
         Assert.Empty(Directory.EnumerateDirectories(scratch));
+    }
+
+    [Fact] public async Task PublishedRawEvidenceRemainsReadableAfterMovingStage()
+    {
+        capture.Customize = report =>
+        {
+            string evidence = Path.Combine(Directory.GetDirectories(scratch).Single(), "raw", "tasks.xml");
+            Directory.CreateDirectory(Path.GetDirectoryName(evidence)!);
+            File.WriteAllText(evidence, "<actual-task />");
+            return report with { RawEvidencePaths = new[] { evidence } };
+        };
+        var pipeline = Pipeline(); var preview = Preview(pipeline);
+        var result = await pipeline.BuildAsync(Request, preview.Preview.PreviewId, preview.Grant, session);
+        Assert.True(result.Success, string.Join(";", result.Failures));
+        Assert.Equal(Path.Combine(output, "raw", "tasks.xml"), Assert.Single(result.Capture!.RawEvidencePaths));
+        Assert.Equal("<actual-task />", File.ReadAllText(result.Capture.RawEvidencePaths[0]));
+    }
+
+    [Fact] public async Task ForeignRawEvidencePreventsPublication()
+    {
+        capture.Customize = report => report with { RawEvidencePaths = new[] { Path.Combine(input, "main.impl.st") } };
+        var pipeline = Pipeline(); var preview = Preview(pipeline);
+        var result = await pipeline.BuildAsync(Request, preview.Preview.PreviewId, preview.Grant, session);
+        Assert.False(result.Published); Assert.False(Directory.Exists(output));
+    }
+
+    [Fact] public async Task WorkerCanLimitGrantToRemainingPreviewLifetime()
+    {
+        var clock = new GrantClock();
+        var pipeline = Pipeline(authority: new ExecutionGrantStore(true, clock));
+        var preview = pipeline.Preview(Request, session);
+        var token = pipeline.IssueGrant(preview.PreviewId, session.SessionId, TimeSpan.FromSeconds(2));
+        clock.Now += TimeSpan.FromSeconds(3);
+        var result = await pipeline.BuildAsync(Request, preview.PreviewId, token, session);
+        Assert.False(result.Published); Assert.Equal(0, creator.Calls);
+    }
+
+    private sealed class GrantClock : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
+        public override DateTimeOffset GetUtcNow() => Now;
     }
 
     [Theory] [InlineData("compiler")] [InlineData("capture")] [InlineData("compare")]

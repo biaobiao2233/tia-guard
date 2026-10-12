@@ -99,13 +99,13 @@ public sealed class EngineeringPipeline
         return preview;
     }
 
-    public string IssueGrant(string previewId, string sessionId)
+    public string IssueGrant(string previewId, string sessionId, TimeSpan? lifetime = null)
     {
         lock (previewSync)
         {
             if (!previews.TryGetValue(previewId, out FrozenPreview? preview) || preview.Public.SessionId != sessionId)
                 throw new InvalidOperationException("A preview from this owned worker session is required.");
-            return grants.Issue(sessionId, preview.Public.RequestHash);
+            return grants.Issue(sessionId, preview.Public.RequestHash, lifetime);
         }
     }
 
@@ -182,9 +182,15 @@ public sealed class EngineeringPipeline
             allocation.CheckStage(stage);
             EngineeringPaths.CheckTree(stage);
             treeHash = HashTree(stage);
+            var publishedCapture = observed is null ? null : observed with
+            {
+                RawEvidencePaths = observed.RawEvidencePaths.Select(path => Path.Combine(output,
+                    Path.GetRelativePath(stage, EngineeringPaths.RequireUnder(path, stage, true)))).ToArray()
+            };
             cancellationToken.ThrowIfCancellationRequested();
             Directory.Move(stage, output);
             published = true;
+            observed = publishedCapture;
             phase = "complete";
         }
         catch (Exception exception)
