@@ -1,0 +1,41 @@
+{
+  "status": "candidate",
+  "issue": "https://github.com/biaobiao2233/tia-guard/issues/55",
+  "session": "tc3-55-20261012-engineering-1805",
+  "observedAtUtc": "2026-10-12T14:43:09Z",
+  "productCommit": "d5116892d5e156165b41b85f067bf3706f3214b2",
+  "contractCommit": "b39178a9c69c4e94060abd5124342968644c81d9",
+  "framework": "net8.0-windows",
+  "architecture": "x64",
+  "checks": {
+    "pureEngineeringTests": { "total": 59, "passed": 59, "failed": 0, "skipped": 0 },
+    "trxPath": "E:/AGENT/Workspace/.agent-tmp/twincat3-55-engineering/results/engineering-pure.trx",
+    "trxSha256": "14e385a4969ce5a6b5b274d2b020bd5c249cf54d37bb77b6ecad197fabe1435c",
+    "releaseNativeBuild": { "warnings": 0, "errors": 0, "result": "pass" },
+    "releasePureBuild": { "warnings": 0, "errors": 0, "result": "pass" },
+    "diffCheck": "pass"
+  },
+  "machineInterop": {
+    "path": "E:/AGENT/Workspace/.agent-tmp/tc53-run/interop/TCatSysManagerLib.dll",
+    "typeLibraryVersion": "3.4",
+    "sha256": "68c66fe84b606c3f80854e70632fc6c2ca4b75bfec69d86c9c854398d96f8172",
+    "committed": false,
+    "copiedToBuildOutput": false
+  },
+  "fixture": {
+    "path": "examples/twincat3-generation/motor",
+    "requestedBuild": "4026.27",
+    "artifacts": [ "MAIN", "FB_Motor", "GVL_Signals", "ST_MotorStatus" ],
+    "task": { "name": "MotorTask", "cycleTimeUs": 10000, "priority": 20, "programs": [ "MAIN" ] },
+    "library": { "name": "Tc2_Standard", "version": "3.4.7.0", "vendor": "Beckhoff Automation GmbH" }
+  },
+  "actualNativeXaeEngineeringRun": false,
+  "runtimeTouched": false,
+  "userProjectsTouched": false,
+  "limitations": [
+    "Fake-provider tests qualify authorization/pipeline gates, not native XAE project validity.",
+    "Coordinator must bind A owned-session, C compiler/capture/comparer and D transport and perform fresh native closed-loop qualification.",
+    "Task 621/622 actual call inventory, library resolution and template defaults still need raw XAE evidence.",
+    "No runtime activation, download, ADS routes, licenses, hardware scan or physical PLC operations are included."
+  ]
+}
