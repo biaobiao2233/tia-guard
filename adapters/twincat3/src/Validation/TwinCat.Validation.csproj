@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TwinCatInteropAssemblyPath Condition="'$(TwinCatInteropAssemblyPath)' == ''">$(TwinCatMachineInteropAssembly)</TwinCatInteropAssemblyPath>
+  </PropertyGroup>
+  <ItemGroup Condition="Exists('../../contracts/TwinCat3.Contracts.csproj')">
+    <ProjectReference Include="../../contracts/TwinCat3.Contracts.csproj" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(TwinCatVsPublicAssemblies)' != ''">
+    <DefineConstants>$(DefineConstants);TWINCAT_DTE</DefineConstants>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TwinCatVsPublicAssemblies)' != ''">
+    <Reference Include="EnvDTE"><HintPath>$(TwinCatVsPublicAssemblies)/envdte.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="EnvDTE80"><HintPath>$(TwinCatVsPublicAssemblies)/envdte80.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Microsoft.VisualStudio.Interop"><HintPath>$(TwinCatVsPublicAssemblies)/Microsoft.VisualStudio.Interop.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <PropertyGroup Condition="'$(TwinCatInteropAssemblyPath)' != ''">
+    <DefineConstants>$(DefineConstants);TWINCAT_COM</DefineConstants>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TwinCatInteropAssemblyPath)' != ''">
+    <Reference Include="TCatSysManagerLib"><HintPath>$(TwinCatInteropAssemblyPath)</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>
