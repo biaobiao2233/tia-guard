@@ -1,0 +1,18 @@
+{
+  "name": "@tia-guard/twincat3-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Owned offline TwinCAT engineering MCP stdio adapter",
+  "type": "commonjs",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test ../tests/Mcp/*.test.js",
+    "check": "node --check index.js && node --check toolSchemas.js && node --check daemonClient.js && node --check providerClient.js && node --check result.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.3.1",
+    "zod": "4.6.6"
+  },
+  "devDependencies": { "@modelcontextprotocol/client": "2.3.1" }
+}
