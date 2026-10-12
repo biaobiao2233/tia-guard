@@ -9,7 +9,7 @@ namespace TiaGuard.TwinCat.Validation;
 internal static class NativeDteBuild
 {
     // Adapted API calls from eponce BuildCommand / Edge XaeActions, with strict fresh-build correlation.
-    public static CompilationEvidence Build(object nativeDte, string solutionPath, string stageRoot,
+    public static CompilationEvidence Build(object nativeDte, string solutionPath, string twinCatProjectPath, string stageRoot,
         string configurationName, string plcName, string buildConfiguration, string targetPlatform,
         TimeSpan timeout, CancellationToken cancellationToken)
     {
@@ -22,6 +22,9 @@ internal static class NativeDteBuild
         var completed = false;
         var timedOut = false;
         var foreignEvent = false;
+        PlcProjectBuildTracker? plcEvents = null;
+        PlcContextEvidence? plcContextBefore = null;
+        PlcContextEvidence? plcContextAfter = null;
         BuildEvents? events = null;
         OutputWindowPane? buildPane = null;
         var baselineEmpty = false;
@@ -31,14 +34,18 @@ internal static class NativeDteBuild
         DiagnosticCollection? diagnostics = null;
         void Begin(vsBuildScope scope, vsBuildAction action)
         {
-            if (!invoked || scope != vsBuildScope.vsBuildScopeSolution || action != vsBuildAction.vsBuildActionBuild) foreignEvent = true;
+            if (!invoked || started || completed || scope != vsBuildScope.vsBuildScopeSolution || action != vsBuildAction.vsBuildActionBuild) foreignEvent = true;
             else started = true;
         }
         void Done(vsBuildScope scope, vsBuildAction action)
         {
-            if (!invoked || !started || scope != vsBuildScope.vsBuildScopeSolution || action != vsBuildAction.vsBuildActionBuild) foreignEvent = true;
+            if (!invoked || !started || completed || scope != vsBuildScope.vsBuildScopeSolution || action != vsBuildAction.vsBuildActionBuild) foreignEvent = true;
             else completed = true;
         }
+        void ProjectBegin(string project, string projectConfig, string platform, string solutionConfig)
+            => plcEvents?.Begin(project, projectConfig, platform, solutionConfig, invoked && started && !completed);
+        void ProjectDone(string project, string projectConfig, string platform, string solutionConfig, bool success)
+            => plcEvents?.Done(project, projectConfig, platform, solutionConfig, success, invoked && started && !completed);
         bool IsSolution() => string.Equals(Path.GetFullPath(dte.Solution.FullName), Path.GetFullPath(solutionPath), StringComparison.OrdinalIgnoreCase);
         bool IsConfiguration() => string.Equals(build.ActiveConfiguration.Name, buildConfiguration, StringComparison.Ordinal);
         bool IsPlatform() => string.Equals(((SolutionConfiguration2)build.ActiveConfiguration).PlatformName, targetPlatform, StringComparison.Ordinal);
@@ -46,6 +53,22 @@ internal static class NativeDteBuild
         {
             if (!IsSolution() || !IsConfiguration() || !IsPlatform()) throw new InvalidOperationException("Owned solution/configuration/platform differs from the frozen request.");
             if (build.BuildState == vsBuildState.vsBuildStateInProgress) throw new InvalidOperationException("The owned solution is already building.");
+            var plcProjects = Directory.EnumerateFiles(stageRoot, "*.plcproj", SearchOption.AllDirectories).ToArray();
+            if (plcProjects.Length != 1 || !string.Equals(Path.GetFileName(plcProjects[0]), plcName + ".plcproj", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The owned stage does not contain exactly one intended PLC project.");
+            var plcProjectPath = Path.GetFullPath(plcProjects[0]);
+            PlcContextEvidence ReadPlcContext()
+            {
+                var contexts = new List<PlcSolutionContext>();
+                foreach (SolutionContext context in build.ActiveConfiguration.SolutionContexts)
+                    contexts.Add(new(context.ProjectName, context.ConfigurationName, context.PlatformName, context.ShouldBuild));
+                return PlcBuildIdentity.CheckContexts(solutionPath, plcProjectPath, buildConfiguration, targetPlatform, contexts);
+            }
+            plcContextBefore = ReadPlcContext();
+            problems.AddRange(plcContextBefore.Problems);
+            if (!plcContextBefore.IntendedProject || !plcContextBefore.BuildEnabled)
+                throw new InvalidOperationException("The intended PLC project context is missing, different, or disabled for this build.");
+            plcEvents = new(solutionPath, plcProjectPath, buildConfiguration, targetPlatform, twinCatProjectPath);
             var list = dte.ToolWindows.ErrorList ?? throw new InvalidOperationException("DTE2 Error List is unavailable.");
             list.ShowErrors = list.ShowWarnings = list.ShowMessages = true;
             if (list.ErrorItems.Count != 0)
@@ -62,6 +85,8 @@ internal static class NativeDteBuild
             events = dte.Events.BuildEvents;
             events.OnBuildBegin += Begin;
             events.OnBuildDone += Done;
+            events.OnBuildProjConfigBegin += ProjectBegin;
+            events.OnBuildProjConfigDone += ProjectDone;
             invoked = true;
             var clock = Stopwatch.StartNew();
             build.Build(false);
@@ -69,11 +94,12 @@ internal static class NativeDteBuild
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 PumpMessages();
-                if (build.BuildState == vsBuildState.vsBuildStateInProgress) started = true;
                 System.Threading.Thread.Sleep(30);
             }
             PumpMessages();
             timedOut = !completed;
+            plcContextAfter = ReadPlcContext();
+            problems.AddRange(plcContextAfter.Problems);
             if (foreignEvent) problems.Add("Unexpected/uncorrelated build event.");
             if (completed && build.BuildState != vsBuildState.vsBuildStateDone) problems.Add("BuildDone event contradicts SolutionBuild.BuildState.");
             failedProjectCount = completed ? build.LastBuildInfo : null;
@@ -106,6 +132,10 @@ internal static class NativeDteBuild
             {
                 BuildInvoked = invoked, BuildStarted = started, BuildCompleted = completed, TimedOut = timedOut,
                 IntendedSolution = IsSolution(), IntendedConfiguration = IsConfiguration(), IntendedPlatform = IsPlatform(),
+                IntendedPlcProject = plcContextBefore.IntendedProject && plcContextAfter.IntendedProject,
+                PlcProjectBuildEnabled = plcContextBefore.BuildEnabled && plcContextAfter.BuildEnabled,
+                PlcProjectBuildStarted = plcEvents.Started, PlcProjectBuildCompleted = plcEvents.Completed,
+                PlcProjectBuildSucceeded = plcEvents.Succeeded, PlcProjectEventsCorrelated = plcEvents.Correlated,
                 FreshDiagnosticBaseline = baselineEmpty, FailedProjectCount = failedProjectCount,
                 ErrorList = diagnostics, BuildOutputComplete = outputFresh && buildPane != null && completed,
                 BuildOutput = output, CollectorProblems = problems
@@ -117,6 +147,10 @@ internal static class NativeDteBuild
             observations = new()
             {
                 BuildInvoked = invoked, BuildStarted = started, BuildCompleted = completed, TimedOut = timedOut,
+                IntendedPlcProject = plcContextBefore?.IntendedProject == true && plcContextAfter?.IntendedProject == true,
+                PlcProjectBuildEnabled = plcContextBefore?.BuildEnabled == true && plcContextAfter?.BuildEnabled == true,
+                PlcProjectBuildStarted = plcEvents?.Started == true, PlcProjectBuildCompleted = plcEvents?.Completed == true,
+                PlcProjectBuildSucceeded = plcEvents?.Succeeded, PlcProjectEventsCorrelated = plcEvents?.Correlated == true,
                 FreshDiagnosticBaseline = baselineEmpty, FailedProjectCount = failedProjectCount,
                 ErrorList = diagnostics, BuildOutput = output, CollectorProblems = problems
             };
@@ -125,9 +159,17 @@ internal static class NativeDteBuild
         {
             if (events != null)
             {
-                try { events.OnBuildBegin -= Begin; events.OnBuildDone -= Done; }
-                catch (Exception ex) { problems.Add("Build event cleanup failed: " + ex.Message); }
+                void Detach(Action detach)
+                {
+                    try { detach(); }
+                    catch (Exception ex) { problems.Add("Build event cleanup failed: " + ex.Message); }
+                }
+                Detach(() => events.OnBuildBegin -= Begin);
+                Detach(() => events.OnBuildDone -= Done);
+                Detach(() => events.OnBuildProjConfigBegin -= ProjectBegin);
+                Detach(() => events.OnBuildProjConfigDone -= ProjectDone);
             }
+            if (plcEvents != null) problems.AddRange(plcEvents.Problems);
         }
         return CompilationGate.Evaluate(observations with { CollectorProblems = problems });
     }

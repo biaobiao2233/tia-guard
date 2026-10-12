@@ -35,6 +35,12 @@ public sealed record BuildObservation
     public bool IntendedSolution { get; init; }
     public bool IntendedConfiguration { get; init; }
     public bool IntendedPlatform { get; init; }
+    public bool IntendedPlcProject { get; init; }
+    public bool PlcProjectBuildEnabled { get; init; }
+    public bool PlcProjectBuildStarted { get; init; }
+    public bool PlcProjectBuildCompleted { get; init; }
+    public bool? PlcProjectBuildSucceeded { get; init; }
+    public bool PlcProjectEventsCorrelated { get; init; }
     public bool FreshDiagnosticBaseline { get; init; }
     public int? FailedProjectCount { get; init; }
     public DiagnosticCollection? ErrorList { get; init; }
@@ -74,6 +80,12 @@ public static class CompilationGate
         Require(observation.IntendedSolution, "Solution identity is missing or different.");
         Require(observation.IntendedConfiguration, "Configuration identity is missing or different.");
         Require(observation.IntendedPlatform, "Platform identity is missing or different.");
+        Require(observation.IntendedPlcProject, "The intended PLC project context/path/configuration/platform is missing or different.");
+        Require(observation.PlcProjectBuildEnabled, "The intended PLC project is not enabled for this build (ShouldBuild).");
+        Require(observation.PlcProjectBuildStarted, "No correlated PLC project build-start event.");
+        Require(observation.PlcProjectBuildCompleted, "No correlated PLC project build-completion event.");
+        Require(observation.PlcProjectBuildSucceeded.HasValue, "PLC project build success result is missing.");
+        Require(observation.PlcProjectEventsCorrelated, "PLC project build events are foreign, ambiguous, or out of order.");
         Require(observation.FreshDiagnosticBaseline, "Diagnostics cannot be correlated to a fresh build.");
         Require(observation.FailedProjectCount >= 0, "LastBuildInfo is missing or invalid.");
         Require(observation.ErrorList?.Complete == true, "Error List capture is incomplete or uncorrelated.");
@@ -85,11 +97,92 @@ public static class CompilationGate
         var warnings = items.Count(x => x.Severity == DiagnosticSeverity.Warning);
         var complete = problems.Count == 0;
         var verdict = !complete ? CompilationVerdict.Unknown :
-            errors > 0 || observation.FailedProjectCount > 0 ? CompilationVerdict.Error : CompilationVerdict.Success;
+            errors > 0 || observation.FailedProjectCount > 0 || observation.PlcProjectBuildSucceeded == false
+                ? CompilationVerdict.Error : CompilationVerdict.Success;
         return new CompilationEvidence(verdict, observation.BuildStarted, observation.BuildCompleted,
             observation.FailedProjectCount, complete, errors, warnings, items,
             observation.BuildOutput, problems.Distinct(StringComparer.Ordinal).ToArray())
             { OutputCaptureComplete = observation.BuildOutputComplete && !string.IsNullOrWhiteSpace(observation.BuildOutput) };
+    }
+}
+
+public sealed record PlcSolutionContext(string ProjectName, string Configuration, string Platform, bool ShouldBuild);
+public sealed record PlcContextEvidence(bool IntendedProject, bool BuildEnabled, IReadOnlyList<string> Problems);
+
+// Solution success can exclude a disabled PLC. Resolve the actual plcproj context independently.
+public static class PlcBuildIdentity
+{
+    public static bool MatchesProject(string solutionPath, string intendedProjectPath, string observedProject)
+    {
+        if (string.IsNullOrWhiteSpace(observedProject)) return false;
+        try
+        {
+            var solutionDirectory = Path.GetDirectoryName(Path.GetFullPath(solutionPath))!;
+            var observedPath = Path.GetFullPath(observedProject, solutionDirectory);
+            return string.Equals(observedPath, Path.GetFullPath(intendedProjectPath), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
+    }
+
+    public static PlcContextEvidence CheckContexts(string solutionPath, string projectPath, string configuration,
+        string platform, IEnumerable<PlcSolutionContext> contexts)
+    {
+        var matches = contexts.Where(x => MatchesProject(solutionPath, projectPath, x.ProjectName)).ToArray();
+        if (matches.Length != 1)
+            return new(false, false, new[] { $"Expected exactly one SolutionContext for the intended PLC project; found {matches.Length}." });
+        var context = matches[0];
+        var problems = new List<string>();
+        var identity = context.Configuration == configuration && context.Platform == platform;
+        if (!identity) problems.Add($"PLC SolutionContext identity differs: {context.ProjectName} | {context.Configuration} | {context.Platform}.");
+        if (!context.ShouldBuild) problems.Add($"PLC SolutionContext.ShouldBuild is false: {context.ProjectName}.");
+        return new(identity, identity && context.ShouldBuild, problems);
+    }
+}
+
+// Only exact PLC path/configuration/platform events count. The owned tsproj may also emit events.
+public sealed class PlcProjectBuildTracker(string solutionPath, string projectPath, string configuration,
+    string platform, string configurationProjectPath)
+{
+    private readonly List<string> problems = new();
+    public bool Started { get; private set; }
+    public bool Completed { get; private set; }
+    public bool? Succeeded { get; private set; }
+    public bool Correlated => problems.Count == 0;
+    public IReadOnlyList<string> Problems => problems;
+
+    private bool IsIntended(string project, string projectConfiguration, string observedPlatform, string solutionConfiguration,
+        bool currentSolutionBuild)
+    {
+        if (!currentSolutionBuild)
+        {
+            problems.Add("Project build event occurred outside the invoked solution build.");
+            return false;
+        }
+        var isConfigurationProject = PlcBuildIdentity.MatchesProject(solutionPath, configurationProjectPath, project);
+        if ((!isConfigurationProject && !PlcBuildIdentity.MatchesProject(solutionPath, projectPath, project)) || projectConfiguration != configuration ||
+            observedPlatform != platform || solutionConfiguration != configuration)
+        {
+            problems.Add($"Uncorrelated PLC project event: {project} | {projectConfiguration} | {observedPlatform} | {solutionConfiguration}.");
+            return false;
+        }
+        return !isConfigurationProject;
+    }
+
+    public void Begin(string project, string projectConfiguration, string observedPlatform, string solutionConfiguration,
+        bool currentSolutionBuild)
+    {
+        if (!IsIntended(project, projectConfiguration, observedPlatform, solutionConfiguration, currentSolutionBuild)) return;
+        if (Started || Completed) { problems.Add("Duplicate/out-of-order PLC project build-start event."); return; }
+        Started = true;
+    }
+
+    public void Done(string project, string projectConfiguration, string observedPlatform, string solutionConfiguration,
+        bool success, bool currentSolutionBuild)
+    {
+        if (!IsIntended(project, projectConfiguration, observedPlatform, solutionConfiguration, currentSolutionBuild)) return;
+        if (!Started || Completed) { problems.Add("Duplicate/out-of-order PLC project build-completion event."); return; }
+        Completed = true;
+        Succeeded = success;
     }
 }
 

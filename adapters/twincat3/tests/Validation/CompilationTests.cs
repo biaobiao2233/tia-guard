@@ -13,6 +13,9 @@ public class CompilationTests
     {
         BuildInvoked = true, BuildStarted = true, BuildCompleted = true,
         IntendedSolution = true, IntendedConfiguration = true, IntendedPlatform = true,
+        IntendedPlcProject = true, PlcProjectBuildEnabled = true,
+        PlcProjectBuildStarted = true, PlcProjectBuildCompleted = true,
+        PlcProjectBuildSucceeded = true, PlcProjectEventsCorrelated = true,
         FreshDiagnosticBaseline = true, FailedProjectCount = 0,
         ErrorList = new(diagnostics.Length, diagnostics.Length, diagnostics, Array.Empty<string>()),
         BuildOutputComplete = true, BuildOutput = "Build started; build completed."
@@ -43,6 +46,8 @@ public class CompilationTests
     [InlineData("solution")] [InlineData("configuration")] [InlineData("platform")]
     [InlineData("baseline")] [InlineData("lastbuildinfo")] [InlineData("output")]
     [InlineData("emptyoutput")] [InlineData("errorlist")] [InlineData("collector")]
+    [InlineData("plccontext")] [InlineData("plcdisabled")] [InlineData("plcstart")]
+    [InlineData("plcdone")] [InlineData("plcresult")] [InlineData("plcforeign")]
     public void MissingRequiredEvidenceCannotPass(string fault)
     {
         var baseline = Valid();
@@ -60,6 +65,12 @@ public class CompilationTests
             "output" => baseline with { BuildOutputComplete = false },
             "emptyoutput" => baseline with { BuildOutput = "" },
             "errorlist" => baseline with { ErrorList = null },
+            "plccontext" => baseline with { IntendedPlcProject = false },
+            "plcdisabled" => baseline with { PlcProjectBuildEnabled = false },
+            "plcstart" => baseline with { PlcProjectBuildStarted = false },
+            "plcdone" => baseline with { PlcProjectBuildCompleted = false },
+            "plcresult" => baseline with { PlcProjectBuildSucceeded = null },
+            "plcforeign" => baseline with { PlcProjectEventsCorrelated = false },
             _ => baseline with { CollectorProblems = new[] { "capture failed" } }
         };
         var result = CompilationGate.Evaluate(invalid);
@@ -70,6 +81,12 @@ public class CompilationTests
     {
         var result = CompilationGate.Evaluate(Valid() with { FailedProjectCount = 1 });
         Assert.Equal(CompilationVerdict.Error, result.Verdict); Assert.False(result.Success);
+    }
+    [Fact] public void PlcProjectFailureOverridesZeroSolutionErrors()
+    {
+        var result = CompilationGate.Evaluate(Valid() with { PlcProjectBuildSucceeded = false });
+        Assert.Equal(CompilationVerdict.Error, result.Verdict);
+        Assert.False(result.Success);
     }
     [Theory] [InlineData(DiagnosticCorrelation.Stale)] [InlineData(DiagnosticCorrelation.Foreign)] [InlineData(DiagnosticCorrelation.Unknown)]
     public void UncorrelatedErrorCannotBecomeComplete(DiagnosticCorrelation correlation)

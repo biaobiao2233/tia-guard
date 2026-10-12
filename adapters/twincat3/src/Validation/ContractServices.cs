@@ -21,7 +21,7 @@ public sealed class NativeEngineeringCompiler : C.IEngineeringCompiler
                 ValidateBinding(context, project);
                 LoadInterop(context);
                 var manifest = input.Manifest;
-                var evidence = NativeDteBuild.Build(context.Dte!, project.SolutionPath, project.StageRoot,
+                var evidence = NativeDteBuild.Build(context.Dte!, project.SolutionPath, project.TwinCatProjectPath, project.StageRoot,
                     manifest.ConfigurationName, manifest.PlcProjectName,
                     manifest.Environment.BuildConfiguration, manifest.Environment.TargetPlatform, timeout, cancellationToken);
                 return new C.CompilationReport
