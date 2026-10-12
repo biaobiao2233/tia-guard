@@ -32,20 +32,30 @@ internal static class NativeDteBuild
         var output = "";
         int? failedProjectCount = null;
         DiagnosticCollection? diagnostics = null;
+        var collectorPhase = "identity";
+        var nativeTrace = new List<object>();
         void Begin(vsBuildScope scope, vsBuildAction action)
         {
+            nativeTrace.Add(new { kind = "solution-begin", scope = scope.ToString(), action = action.ToString() });
             if (!invoked || started || completed || scope != vsBuildScope.vsBuildScopeSolution || action != vsBuildAction.vsBuildActionBuild) foreignEvent = true;
             else started = true;
         }
         void Done(vsBuildScope scope, vsBuildAction action)
         {
+            nativeTrace.Add(new { kind = "solution-done", scope = scope.ToString(), action = action.ToString() });
             if (!invoked || !started || completed || scope != vsBuildScope.vsBuildScopeSolution || action != vsBuildAction.vsBuildActionBuild) foreignEvent = true;
             else completed = true;
         }
         void ProjectBegin(string project, string projectConfig, string platform, string solutionConfig)
-            => plcEvents?.Begin(project, projectConfig, platform, solutionConfig, invoked && started && !completed);
+        {
+            nativeTrace.Add(new { kind = "project-begin", project, projectConfig, platform, solutionConfig });
+            plcEvents?.Begin(project, projectConfig, platform, solutionConfig, invoked && started && !completed);
+        }
         void ProjectDone(string project, string projectConfig, string platform, string solutionConfig, bool success)
-            => plcEvents?.Done(project, projectConfig, platform, solutionConfig, success, invoked && started && !completed);
+        {
+            nativeTrace.Add(new { kind = "project-done", project, projectConfig, platform, solutionConfig, success });
+            plcEvents?.Done(project, projectConfig, platform, solutionConfig, success, invoked && started && !completed);
+        }
         bool IsSolution() => string.Equals(Path.GetFullPath(dte.Solution.FullName), Path.GetFullPath(solutionPath), StringComparison.OrdinalIgnoreCase);
         bool IsConfiguration() => string.Equals(build.ActiveConfiguration.Name, buildConfiguration, StringComparison.Ordinal);
         bool IsPlatform() => string.Equals(((SolutionConfiguration2)build.ActiveConfiguration).PlatformName, targetPlatform, StringComparison.Ordinal);
@@ -57,11 +67,13 @@ internal static class NativeDteBuild
             if (plcProjects.Length != 1 || !string.Equals(Path.GetFileName(plcProjects[0]), plcName + ".plcproj", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("The owned stage does not contain exactly one intended PLC project.");
             var plcProjectPath = Path.GetFullPath(plcProjects[0]);
+            collectorPhase = "plc-context";
             PlcContextEvidence ReadPlcContext()
             {
                 var contexts = new List<PlcSolutionContext>();
                 foreach (SolutionContext context in build.ActiveConfiguration.SolutionContexts)
                     contexts.Add(new(context.ProjectName, context.ConfigurationName, context.PlatformName, context.ShouldBuild));
+                nativeTrace.Add(new { kind = "solution-contexts", contexts });
                 return PlcBuildIdentity.CheckContexts(solutionPath, plcProjectPath, buildConfiguration, targetPlatform, contexts);
             }
             plcContextBefore = ReadPlcContext();
@@ -69,25 +81,35 @@ internal static class NativeDteBuild
             if (!plcContextBefore.IntendedProject || !plcContextBefore.BuildEnabled)
                 throw new InvalidOperationException("The intended PLC project context is missing, different, or disabled for this build.");
             plcEvents = new(solutionPath, plcProjectPath, buildConfiguration, targetPlatform, twinCatProjectPath);
+            collectorPhase = "error-list-access";
             var list = dte.ToolWindows.ErrorList ?? throw new InvalidOperationException("DTE2 Error List is unavailable.");
+            collectorPhase = "error-list-filters";
             list.ShowErrors = list.ShowWarnings = list.ShowMessages = true;
+            collectorPhase = "error-list-baseline";
             if (list.ErrorItems.Count != 0)
             {
                 // Only this task's fresh owned IDE is reachable here; do not clear the user's IDE.
+                collectorPhase = "error-list-clear-command";
                 dte.ExecuteCommand("OtherContextMenus.ErrorList.Clear", "");
             }
             baselineEmpty = list.ErrorItems.Count == 0;
             if (!baselineEmpty) throw new InvalidOperationException("Could not establish an empty fresh Error List baseline.");
-            buildPane = FindBuildPane(dte);
+            collectorPhase = "output-window-initialization";
+            dte.ExecuteCommand("View.Output", "");
+            dte.MainWindow.Visible = false;
+            collectorPhase = "build-output-baseline";
+            buildPane = FindBuildPane(dte, phase => collectorPhase = phase, entry => nativeTrace.Add(entry));
             if (buildPane != null) { buildPane.Clear(); outputFresh = string.IsNullOrWhiteSpace(ReadOutput(buildPane)); }
             else outputFresh = true; // No preexisting pane; a pane created by this build has no old output.
             if (!outputFresh) throw new InvalidOperationException("Could not clear the owned Build Output pane.");
+            collectorPhase = "build-event-subscription";
             events = dte.Events.BuildEvents;
             events.OnBuildBegin += Begin;
             events.OnBuildDone += Done;
             events.OnBuildProjConfigBegin += ProjectBegin;
             events.OnBuildProjConfigDone += ProjectDone;
             invoked = true;
+            collectorPhase = "build-invoke";
             var clock = Stopwatch.StartNew();
             build.Build(false);
             while (!completed && clock.Elapsed < timeout)
@@ -97,13 +119,14 @@ internal static class NativeDteBuild
                 System.Threading.Thread.Sleep(30);
             }
             PumpMessages();
+            collectorPhase = "build-completion-capture";
             timedOut = !completed;
             plcContextAfter = ReadPlcContext();
             problems.AddRange(plcContextAfter.Problems);
             if (foreignEvent) problems.Add("Unexpected/uncorrelated build event.");
             if (completed && build.BuildState != vsBuildState.vsBuildStateDone) problems.Add("BuildDone event contradicts SolutionBuild.BuildState.");
             failedProjectCount = completed ? build.LastBuildInfo : null;
-            buildPane ??= FindBuildPane(dte);
+            buildPane ??= FindBuildPane(dte, phase => collectorPhase = phase, entry => nativeTrace.Add(entry));
             if (buildPane != null) output = ReadOutput(buildPane);
             diagnostics = OneBasedErrorCollector.Read(() => list.ErrorItems.Count, index =>
             {
@@ -143,7 +166,7 @@ internal static class NativeDteBuild
         }
         catch (Exception ex)
         {
-            problems.Add($"Native DTE build/capture failed: {ex.GetType().Name}: {ex.Message}");
+            problems.Add($"Native DTE build/capture failed at {collectorPhase}: {ex.GetType().Name}: {ex.Message}");
             observations = new()
             {
                 BuildInvoked = invoked, BuildStarted = started, BuildCompleted = completed, TimedOut = timedOut,
@@ -170,14 +193,33 @@ internal static class NativeDteBuild
                 Detach(() => events.OnBuildProjConfigDone -= ProjectDone);
             }
             if (plcEvents != null) problems.AddRange(plcEvents.Problems);
+            try
+            {
+                var rawDirectory = Path.Combine(stageRoot, "_build-evidence");
+                Directory.CreateDirectory(rawDirectory);
+                File.WriteAllText(Path.Combine(rawDirectory, Guid.NewGuid().ToString("N") + ".json"),
+                    System.Text.Json.JsonSerializer.Serialize(new { collectorPhase, nativeTrace, problems }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch (Exception ex) { problems.Add("Build trace could not be retained: " + ex.Message); }
         }
         return CompilationGate.Evaluate(observations with { CollectorProblems = problems });
     }
 
-    private static OutputWindowPane? FindBuildPane(DTE2 dte)
+    private static OutputWindowPane? FindBuildPane(DTE2 dte, Action<string>? phase = null, Action<object>? trace = null)
     {
-        foreach (OutputWindowPane pane in dte.ToolWindows.OutputWindow.OutputWindowPanes)
-            if (string.Equals(pane.Guid, "{1BD8A850-02D1-11D1-BEE7-00A0C913D1F8}", StringComparison.OrdinalIgnoreCase) || pane.Name == "Build") return pane;
+        phase?.Invoke("output-window-access");
+        var output = dte.ToolWindows.OutputWindow;
+        phase?.Invoke("output-window-panes");
+        var panes = output.OutputWindowPanes;
+        foreach (OutputWindowPane pane in panes)
+        {
+            phase?.Invoke("output-pane-identity");
+            string name = pane.Name;
+            trace?.Invoke(new { kind = "output-pane", name, localeId = dte.LocaleID });
+            if (name == "Build" || (dte.LocaleID == 2052 && name == "生成")) return pane;
+            try { if (string.Equals(pane.Guid, "{1BD8A850-02D1-11D1-BEE7-00A0C913D1F8}", StringComparison.OrdinalIgnoreCase)) return pane; }
+            catch (COMException ex) { trace?.Invoke(new { kind = "output-pane-guid-unavailable", name, hresult = ex.HResult }); }
+        }
         return null;
     }
     private static string ReadOutput(OutputWindowPane pane) => pane.TextDocument.StartPoint.CreateEditPoint().GetText(pane.TextDocument.EndPoint);

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Environment/TwinCat3.Environment.csproj" />
+    <ProjectReference Include="../../src/Engineering/TwinCat3.Engineering.csproj" />
+    <ProjectReference Include="../../src/Validation/TwinCat.Validation.csproj" />
+  </ItemGroup>
+</Project>

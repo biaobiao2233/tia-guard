@@ -70,6 +70,8 @@ internal static class NativeReadback
             context.BoundProjectIdentity = projectIdentity;
             context.BoundProjectPath = project.FullName;
             platform = ((SolutionConfiguration2)dte.Solution.SolutionBuild.ActiveConfiguration).PlatformName;
+            var actualTargetPlatform = ((ITcConfigManager)((ITcSysManager7)manager).ConfigurationManager).ActiveTargetPlatform;
+            if (platform != actualTargetPlatform) failures.Add("VS build platform differs from actual TwinCAT target platform.");
             toolBuild = ReadXml(handle.TwinCatProjectPath).Root?.Attribute("TcVersion")?.Value;
             if (string.IsNullOrWhiteSpace(toolBuild)) failures.Add("Actual project TcVersion could not be captured.");
             var plcProject = (ITcSmTreeItem)((ITcProjectRoot)plcRoot).NestedProject;
@@ -94,7 +96,8 @@ internal static class NativeReadback
                 var programs = new List<string>();
                 foreach (var child in Children(task))
                 {
-                    if (child.ItemType != 622) { unsupported.Add("Unexpected PLC task child: " + child.PathName + ":" + child.ItemType); continue; }
+                    if (child.ItemType != (int)TREEITEMTYPES.TREEITEMTYPE_PLCPROGREF)
+                    { SaveXml("unknown-task-child-" + task.Name + "-" + child.Name, child.ProduceXml()); unsupported.Add("Unexpected PLC task child: " + child.PathName + ":" + child.ItemType); continue; }
                     // Read the native reference name in COM child order, never populate from input.
                     programs.Add(child.Name);
                     SaveXml("task-program-" + task.Name + "-" + child.Name, child.ProduceXml());
@@ -155,7 +158,7 @@ internal static class NativeReadback
                 var kind = type switch { 602 => C.ArtifactKind.Program, 603 => C.ArtifactKind.Function,
                     604 => C.ArtifactKind.FunctionBlock, 615 => C.ArtifactKind.GlobalVariableList,
                     606 => C.ArtifactKind.Struct, 605 => C.ArtifactKind.Enum, _ => (C.ArtifactKind?)null };
-                if (kind == null) { unsupported.Add("Unsupported PLC inventory: " + child.PathName + ":" + type); continue; }
+                if (kind == null) { SaveXml("unknown-item-" + child.Name, child.ProduceXml()); unsupported.Add("Unsupported PLC inventory: " + child.PathName + ":" + type); continue; }
                 var declaration = ((ITcPlcDeclaration)child).DeclarationText;
                 string? implementation = null;
                 var opaque = false;

@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using TwinCat3.Contracts;
 #if TWINCAT_NATIVE_INTEROP
 using TCatSysManagerLib;
+using EnvDTE80;
 #endif
 
 namespace TwinCat3.Engineering;
@@ -85,9 +86,9 @@ public sealed class NativeEngineeringCreator : IEngineeringCreator
         context.BoundProjectIdentity = NativeProjectHandle.ComputeIdentity(projectPath, manifest.ConfigurationName, manifest.PlcProjectName);
         ITcSmTreeItem plcRoot = manager.LookupTreeItem("TIPC").CreateChild(manifest.PlcProjectName, 0, "", manifest.Environment.PlcTemplate);
         AssertChild(plcRoot, manifest.PlcProjectName, "TIPC");
-        ITcSmTreeItem plcProject = manager.LookupTreeItem(plcRoot.PathName + "^" + manifest.PlcProjectName + " Project");
-        if (plcProject.Name != manifest.PlcProjectName + " Project")
-            throw new InvalidOperationException("The new PLC nested project has an unexpected identity.");
+        ITcSmTreeItem plcProject = (ITcSmTreeItem)((ITcProjectRoot)plcRoot).NestedProject;
+        if (!plcProject.PathName.StartsWith(plcRoot.PathName + "^", StringComparison.Ordinal))
+            throw new InvalidOperationException("The new PLC nested project is outside the owned PLC root.");
 
         ITcSmTreeItem pous = GetOrCreateFolder(plcProject, "POUs");
         ITcSmTreeItem gvls = GetOrCreateFolder(plcProject, "GVLs");
@@ -148,6 +149,28 @@ public sealed class NativeEngineeringCreator : IEngineeringCreator
                 throw new InvalidOperationException("A fixed installed library version is required.");
             libraries.AddLibrary(library.Name, library.Version, library.Vendor);
         }
+        // Offline build selection; this never selects or activates a live target device.
+        var configurationManager = (ITcConfigManager)((ITcSysManager7)manager).ConfigurationManager;
+        configurationManager.ActiveTargetPlatform = manifest.Environment.TargetPlatform;
+        if (configurationManager.ActiveTargetPlatform != manifest.Environment.TargetPlatform)
+            throw new InvalidOperationException("The owned configuration did not select the requested target platform.");
+        dynamic build = solution.SolutionBuild;
+        dynamic configurations = build.SolutionConfigurations;
+        bool selected = false;
+        var available = new List<string>();
+        for (int index = 1; index <= (int)configurations.Count; index++)
+        {
+            var configuration = (SolutionConfiguration2)configurations.Item(index);
+            string name = configuration.Name;
+            string platform = configuration.PlatformName;
+            available.Add(name + "|" + platform);
+            if (name == manifest.Environment.BuildConfiguration && platform == manifest.Environment.TargetPlatform)
+            { configuration.Activate(); selected = true; }
+        }
+        if (!selected) throw new NotSupportedException("The requested build configuration/platform is absent: " + string.Join(", ", available));
+        if ((string)build.ActiveConfiguration.Name != manifest.Environment.BuildConfiguration
+            || ((SolutionConfiguration2)build.ActiveConfiguration).PlatformName != manifest.Environment.TargetPlatform)
+            throw new InvalidOperationException("The active build configuration differs from the frozen request.");
         // Save only: never generate boot projects, activate configuration or invoke a live target.
         dte.ExecuteCommand("File.SaveAll");
         solution.SaveAs(solutionPath);
