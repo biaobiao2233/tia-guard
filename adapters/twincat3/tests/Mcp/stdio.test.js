@@ -89,8 +89,10 @@ test("expired handles, foreign worker identity and unsupported compiler are expl
   const expired = await fixture(t, { write: true, scenario: "expiry" });
   const grant = await authorize(expired); await new Promise(r => setTimeout(r, 300));
   assert.equal((await expired.call("build_twincat_generation", grant)).isError, true);
+  await expired.close();
   const foreign = await fixture(t, { scenario: "foreign" });
   assert.equal((await foreign.call("doctor_twincat")).structuredContent.failures[0].code, "provider-session-mismatch");
+  await foreign.close();
   const missing = await fixture(t, { write: true, scenario: "missing-compiler" });
   const compileGrant = await authorize(missing, { ...missing.request, operation: "compile", projectPath: missing.source });
   assert.equal((await missing.call("compile_twincat_project", compileGrant)).structuredContent.failures[0].code, "provider-capability-unavailable");
@@ -100,6 +102,7 @@ test("partial, unknown and cleanup failure remain MCP errors despite success:tru
     const f = await fixture(t, { write: true, scenario }); const grant = await authorize(f);
     const r = await f.call("build_twincat_generation", grant); assert.equal(r.isError, true, scenario);
     assert.equal(r.structuredContent.success, true); // preserve contradictory backend evidence, flag it
+    await f.close();
   }
 });
 test("tool allowlist and strict schemas reject injected runtime actions or worker tokens", async t => {
