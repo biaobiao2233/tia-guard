@@ -55,7 +55,11 @@ public sealed class PipelineTests : IDisposable
         Assert.Equal(10000, frozen.Manifest.Tasks.Single().CycleTimeUs);
         Assert.Equal(20, frozen.Manifest.Tasks.Single().Priority);
         Assert.Equal("MAIN", frozen.Manifest.Tasks.Single().Programs.Single());
-        Assert.Equal("3.4.7.0", frozen.Manifest.Libraries.Single().Version);
+        Assert.Equal(3, frozen.Manifest.Libraries.Count);
+        Assert.Equal("3.4.7.0", frozen.Manifest.Libraries.Single(l => l.Name == "Tc2_Standard").Version);
+        Assert.Equal("3.10.2.0", frozen.Manifest.Libraries.Single(l => l.Name == "Tc2_System").Version);
+        Assert.Equal("3.4.7.0", frozen.Manifest.Libraries.Single(l => l.Name == "Tc3_Module").Version);
+        Assert.Equal("TwinCAT OS (x64)", frozen.Manifest.Environment.TargetPlatform);
         Assert.Equal("4026.27", frozen.Manifest.Environment.RequestedBuild);
         Assert.Equal(64, frozen.InputHash.Length);
     }
