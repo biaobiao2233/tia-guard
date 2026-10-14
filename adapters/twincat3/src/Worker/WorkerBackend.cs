@@ -401,12 +401,14 @@ public sealed class WorkerBackend : IAsyncDisposable
         if (!simulations.TryGetValue(id, out var state) || state.Prepared is not { } prepared)
             throw new InvalidOperationException("Unknown prepared simulation; a running or foreign handle cannot be resumed.");
         state.Runtime.RequireLive();
+        CompilationReport? compiled = null;
         try
         {
             // Human licensing/UI work must not silently alter the frozen program.
             await state.Runtime.EnterConfigAsync(cancellationToken).ConfigureAwait(false);
             await NativeSimulationDeployment.SelectOwnedTargetAsync(prepared.Project, session, state.Runtime, cancellationToken).ConfigureAwait(false);
-            var compiled = await compiler.CompileAsync(state.Input, prepared.Project, session, cancellationToken).ConfigureAwait(false);
+            compiled = await compiler.CompileAsync(state.Input, prepared.Project, session, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(prepared.Root, "resume-compilation.json"), JsonSerializer.Serialize(compiled, Json), cancellationToken).ConfigureAwait(false);
             if (!compiled.Passed) throw new InvalidOperationException("Prepared simulation did not compile after user interaction.");
             var observed = await capture.CaptureAsync(state.Input, prepared.Project, session, cancellationToken).ConfigureAwait(false);
             var verified = comparer.Compare(state.Input, observed);
@@ -422,6 +424,7 @@ public sealed class WorkerBackend : IAsyncDisposable
             await File.WriteAllTextAsync(Path.Combine(prepared.Root, "resume-failure.log"), ex.ToString(), CancellationToken.None).ConfigureAwait(false);
             return Envelope("resume-simulation", new { Phase = "resume-failed", Success = false, SimulationId = id,
                 state.Input.InputHash, ExecutionReady = false,
+                Compilation = compiled,
                 Failures = new[] { ex.GetType().Name + ": " + ex.Message } });
         }
     }
