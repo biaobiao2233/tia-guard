@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Xml;
 using TwinCAT.Ads;
+using TwinCAT.TypeSystem;
 using TwinCat3.Contracts;
 using TwinCat3.Engineering;
 
@@ -130,7 +131,7 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
     private static void ValidateSymbol(AdsClient ads, string name, string type, bool writing)
     {
         var symbol = ads.ReadSymbol(name); _ = SimulationPolicy.ScalarType(type);
-        if (!symbol.IsPrimitiveType || symbol.IsPointer || symbol.IsReference || symbol.IsProperty ||
+        if (!symbol.IsAtomicType() || symbol.IsPointer || symbol.IsReference || symbol.IsProperty ||
             !symbol.TypeName.Equals(type, StringComparison.OrdinalIgnoreCase) || (writing && symbol.IsReadOnly))
             throw new InvalidDataException("Actual PLC symbol type/access differs from the requested scalar.");
     }
