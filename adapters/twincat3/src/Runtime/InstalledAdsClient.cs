@@ -53,6 +53,9 @@ public sealed class InstalledAdsClient : IDisposable
         dynamic actual = client.ReadState();
         return new StateInfo((AdsState)Convert.ToInt16(actual.AdsState), Convert.ToUInt16(actual.DeviceState));
     });
+    // Official Beckhoff ADS LicenseAccess reads only the online count here;
+    // no license contents, system identifiers, installation or activation.
+    internal uint ReadOnlineLicenseCount() => Invoke(() => (uint)client.ReadAny((uint)0x01010006, (uint)0, typeof(uint)));
     public void WriteControl(StateInfo requested) => Invoke(() =>
     {
         var legacyState = Activator.CreateInstance(stateType,

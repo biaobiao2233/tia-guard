@@ -116,6 +116,11 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
         RequireLive(); if (port is not (851 or 10000)) throw new InvalidDataException("Unsupported simulation port.");
         return new InstalledAdsClient(this, port);
     }
+    public uint ReadOnlineLicenseCount()
+    {
+        RequireLive(); using var licenseServer = new InstalledAdsClient(this, 30);
+        return licenseServer.ReadOnlineLicenseCount();
+    }
     public object ReadSymbol(FrozenGenerationInput input, string symbol, string type)
     {
         SimulationPolicy.RequireSymbol(input, symbol, false);
