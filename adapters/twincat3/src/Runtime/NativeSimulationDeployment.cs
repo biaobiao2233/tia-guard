@@ -26,7 +26,7 @@ public static class NativeSimulationDeployment
 #if TWINCAT_RUNTIME_NATIVE
             runtime.RequireLive(); RequireBinding(context, project);
             SimulationPolicy.RequireNoHardware(project.TwinCatProjectPath);
-            var manager = (ITcSysManager)context.SystemManager!;
+            var manager = (ITcSysManager2)context.SystemManager!;
             if (manager.LookupTreeItem("TIID").ChildCount != 0 || manager.LookupTreeItem("TINC").ChildCount != 0)
                 throw new NotSupportedException("Native hardware/motion inventory is not empty.");
             var config = (ITcConfigManager)((ITcSysManager7)manager).ConfigurationManager;
@@ -52,7 +52,7 @@ public static class NativeSimulationDeployment
             if (!compiled.Passed || !verified.Passed || compiled.InputHash != project.InputHash || compiled.ProjectIdentity != project.ProjectIdentity)
                 throw new InvalidOperationException("Actual compilation and independent verification must precede activation.");
             SimulationPolicy.RequireNoHardware(project.TwinCatProjectPath);
-            var manager = (ITcSysManager)context.SystemManager!;
+            var manager = (ITcSysManager2)context.SystemManager!;
             if (manager.GetTargetNetId() != runtime.NetId) throw new InvalidOperationException("Refusing a foreign target.");
             var plc = (ITcPlcProject)manager.LookupTreeItem("TIPC^" + project.PlcProjectName);
             if (!plc.BootProjectAutostart) throw new InvalidOperationException("Owned PLC boot autostart is not enabled.");
