@@ -17,6 +17,11 @@ public static class NativeSimulationDeployment
             var manager = (ITcSysManager18)context.SystemManager!;
             if (manager.GetTargetNetId() != runtime.NetId) throw new InvalidOperationException("Refusing a foreign licensing target.");
             var dte = (DTE2)context.Dte!;
+            GetWindowThreadProcessId(new IntPtr(dte.MainWindow.HWnd), out var processId);
+            if (processId == 0) throw new InvalidOperationException("Owned licensing IDE identity is unavailable.");
+            using var process = System.Diagnostics.Process.GetProcessById((int)processId);
+            File.WriteAllText(Path.Combine(runtime.InstanceRoot, "ide-ownership.json"), System.Text.Json.JsonSerializer.Serialize(new
+                { OwnedProcessId = processId, session.SessionId, Started = process.StartTime, runtime.SimulationId }));
             dte.SuppressUI = false; dte.MainWindow.Visible = true;
             manager.SelectTreeItem("TIRC^License");
             return true; // Selection only. No license request/generation/copy.
@@ -82,6 +87,8 @@ public static class NativeSimulationDeployment
 #endif
         }, cancellationToken);
 #if TWINCAT_RUNTIME_NATIVE
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
     private static void RequireBinding(NativeEngineeringContext context, NativeProjectHandle project)
     {
         if (context.SystemManager is null || context.Dte is null || context.BoundProjectIdentity != project.ProjectIdentity ||

@@ -42,6 +42,18 @@ public sealed class WorkerTests : IDisposable
     private JsonElement PreviewPayload(WorkerBackend backend) => Payload(backend,
         new { operation = "build-generation", inputDirectory = input, outputDirectory = Path.Combine(root, "output") });
 
+    [Fact] public async Task EveryAdvertisedOperationIsAcceptedByTheWireAllowlist()
+    {
+        await using var backend = Backend();
+        foreach (var capability in backend.Hello()["capabilities"]!.AsObject())
+        {
+            var frame = JsonSerializer.SerializeToUtf8Bytes(new { id = "contract", identity = "bound-test",
+                action = capability.Key, payload = new { } });
+            Assert.Equal(capability.Key, WorkerProtocol.Parse(frame, "bound-test").Action);
+        }
+        Assert.Equal(0, environment.Created); // Framing does not authorize execution.
+    }
+
     [Fact] public async Task OfflineModeDoesNotPermitRuntimeActionsOrCreateProcesses()
     {
         await using var backend = Backend(writes: true, native: true);

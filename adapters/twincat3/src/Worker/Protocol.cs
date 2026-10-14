@@ -12,7 +12,7 @@ public static class WorkerProtocol
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private static readonly HashSet<string> Actions = new(StringComparer.Ordinal)
         { "hello", "doctor", "inspect", "preview", "authorize", "build-generation", "compile", "verify", "dispose",
-            "start-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation" };
+            "start-simulation", "prepare-simulation", "resume-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation" };
 
     public static WorkerRequest Parse(byte[] frame, string identity)
     {
