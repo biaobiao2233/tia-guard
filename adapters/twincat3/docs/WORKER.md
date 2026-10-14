@@ -46,7 +46,7 @@ node --test adapters/twincat3/tests/Worker/native-mcp.test.js
 
 应用身份核对区分官方 `_AppInfo.AppName`（本切片为 `Port_851`）、`ProjectName`（冻结输入的 PLC 工程名）与 `AdsPort`（851）。变量元数据通过已安装 ADS 4 的官方 SymbolLoader 和公共接口读取，校验原始类型、字节数、指针/引用和只读标记；旧版 `ReadSymbolInfo` 的 Type/Size 契约不能按新 SDK 的 TypeName/ByteSize 动态访问。字段定义见 [官方 PlcAppSystemInfo](https://infosys.beckhoff.com/content/1033/tc3_plc_intro/714818699.html)。
 
-`TC3_RUNTIME_HUMAN_LICENSE=1` 让原生运行测试使用 prepare/resume 流程。prepare 保留本会话拥有的进程与 IDE，返回明确的 `executionReady=false`；用户处理官方许可并确认后，验证操作者在本次新测试根目录写入 `runtime-license-ready.txt`，测试才调用 resume。等待最多 10 分钟，超时维持失败并清理自有资源。该文件是测试协调信号，不是 MCP 接口或许可证。
+`TC3_RUNTIME_HUMAN_LICENSE=1` 让原生运行测试使用 prepare/resume 流程。prepare 保留本会话拥有的进程与 IDE，返回明确的 `executionReady=false`；用户处理官方许可并确认后，验证操作者在本次新测试根目录写入 `runtime-license-ready.txt`，测试才调用 resume。等待最多 30 分钟，超时维持失败并显式清理自有资源。该文件是测试协调信号，不是 MCP 接口或许可证。
 
 运行库使用官方 NuGet `Beckhoff.TwinCAT.Ads` 7.0.389 的状态契约；在已验证主机上，通信复用本机 XAE 安装的官方 ADS 4 客户端和 `Common64/TcAdsDll.dll`。现代 SDK 的默认路由通道未能解析该主机的新建 Usermode 地址，因此不能仅凭 NuGet 恢复成功认为通信可用。旧版客户端隔离加载，禁用 GUI 同步；供应商 DLL 不随项目分发。Worker 需要 .NET 8 Windows Desktop Runtime，Usermode 可执行文件与 ADS 客户端需来自官方安装。
 

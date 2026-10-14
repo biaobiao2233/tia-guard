@@ -63,7 +63,7 @@ public sealed class WindowsEngineeringEnvironment : IEngineeringEnvironment
                         if (processId == 0 || preexisting.Contains((int)processId))
                             throw new InvalidOperationException("COM activation did not prove a fresh owned IDE process; refusing to take control.");
                         context.Dte = factory;
-                        session.OwnedProcessId = (int)processId;
+                        session.HoldFreshProcess((int)processId);
                         dte.SuppressUI = true; ((dynamic)window).Visible = false; dte.UserControl = false;
                     }
                     finally
@@ -96,7 +96,14 @@ public sealed class WindowsEngineeringEnvironment : IEngineeringEnvironment
         private readonly StaDispatcher dispatcher;
         private readonly NativeEngineeringContext context;
         private int disposing;
-        public int? OwnedProcessId { get; set; }
+        private Process? ownedProcess;
+        private DateTime ownedStart;
+        public void HoldFreshProcess(int processId)
+        {
+            ownedProcess = Process.GetProcessById(processId);
+            ownedStart = ownedProcess.StartTime;
+            _ = ownedProcess.Handle; // Hold the original OS process, including across PID reuse.
+        }
         public string SessionId { get; } = "tc3-" + Guid.NewGuid().ToString("N");
         public EnvironmentReport Environment => context.Environment;
         public OwnedSession(StaDispatcher dispatcher, NativeEngineeringContext context)
@@ -117,6 +124,7 @@ public sealed class WindowsEngineeringEnvironment : IEngineeringEnvironment
                     var failures = new List<Exception>();
                     if (context.Dte is { } raw)
                     {
+                        try { ((dynamic)raw).SuppressUI = true; } catch (Exception ex) { failures.Add(ex); }
                         try { ((dynamic)raw).Solution.Close(false); } catch (Exception ex) { failures.Add(ex); }
                         try { ((dynamic)raw).Quit(); } catch (Exception ex) { failures.Add(ex); }
                     }
@@ -130,18 +138,28 @@ public sealed class WindowsEngineeringEnvironment : IEngineeringEnvironment
                 }).WaitAsync(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
             }
             catch (Exception ex) { failure = ex; }
-            try { await dispatcher.DisposeAsync().ConfigureAwait(false); }
-            catch (Exception ex) { failure = failure is null ? ex : new AggregateException(failure, ex); }
-            if (OwnedProcessId is { } processId)
+            if (ownedProcess is { } process)
             {
                 try
                 {
-                    using var process = Process.GetProcessById(processId);
-                    await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+                    try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false); }
+                    catch (TimeoutException)
+                    {
+                        // This held process was proved fresh at COM activation.
+                        // Never look up/kill an arbitrary PID or a user's IDE.
+                        process.Refresh();
+                        if (process.StartTime != ownedStart) throw new InvalidOperationException("Owned IDE identity changed during cleanup.");
+                        process.Kill(entireProcessTree: false);
+                        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                    }
                 }
-                catch (ArgumentException) { /* Owned process already exited. */ }
                 catch (Exception ex) { failure = failure is null ? ex : new AggregateException(failure, ex); }
+                finally { process.Dispose(); ownedProcess = null; }
             }
+            // Terminating a hung owned IDE releases a blocked COM callback;
+            // keep its failure evidence even when the process exit is confirmed.
+            try { await dispatcher.DisposeAsync().ConfigureAwait(false); }
+            catch (Exception ex) { failure = failure is null ? ex : new AggregateException(failure, ex); }
             if (failure is not null) throw failure;
         }
     }

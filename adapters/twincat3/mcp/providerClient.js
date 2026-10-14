@@ -52,6 +52,8 @@ class ProviderClient {
   }
   async dispatchOnce(action, payload) {
     if (!allowed.has(action)) throw new BridgeError("operation-not-allowed", "authorization");
+    if (action === "dispose" && (!this.session || this.closed || !this.transport))
+      throw new BridgeError("no-active-session", "cleanup");
     if ((simulationActions.has(action) || (action === "preview" && payload.operation === "start-simulation")) &&
         (!this.runtimeWrites || !this.offlineWrites)) throw new BridgeError("simulation-mode-required", "authorization");
     if (["authorize", "build-generation", "compile", "verify"].includes(action) && !this.offlineWrites)
@@ -88,7 +90,8 @@ class ProviderClient {
     if (action === "resume-simulation" && !this.simulations.get(payload.simulationId)?.prepared)
       throw new BridgeError("unknown-prepared-simulation", "authorization");
     let msg;
-    try { msg = await this.transport.call(action, { ...request, sessionId: session.sessionId, providerId: session.providerId }); }
+    try { msg = await this.transport.call(action, { ...request, sessionId: session.sessionId, providerId: session.providerId },
+      action === "dispose" ? 120000 : undefined); }
     catch (err) { this.invalidate(); throw err; }
     // ok is a transport flag only. Preserve business failure reports even for ok:false.
     const r = msg?.result;
@@ -102,6 +105,7 @@ class ProviderClient {
     if (isFailure(r, action) || !msg.ok) {
       const report = sanitize(r, [...this.secrets]);
       if (!msg.ok && report.success === true) { report.success = false; report.failures.push({ code: "provider-transport-failure" }); }
+      if (action === "dispose") this.invalidate();
       return report;
     }
     if (action === "preview") {
@@ -154,7 +158,9 @@ class ProviderClient {
       }
       if (action === "stop-simulation") this.simulations.delete(payload.simulationId);
     }
-    return sanitize(r, [...this.secrets]);
+    const sanitized = sanitize(r, [...this.secrets]);
+    if (action === "dispose") this.invalidate();
+    return sanitized;
   }
   expireHandles() {
     for (const [id, p] of this.previews) if (Date.parse(p.expiresAtUtc) <= Date.now()) this.previews.delete(id);
@@ -165,7 +171,7 @@ class ProviderClient {
     // Use an already authenticated session only: shutdown must not spawn/reconnect.
     if (!this.closed && this.session && this.transport) {
       try {
-        const msg = await this.transport.call("dispose", { sessionId: this.session.sessionId, providerId: this.session.providerId }, 35000);
+        const msg = await this.transport.call("dispose", { sessionId: this.session.sessionId, providerId: this.session.providerId }, 120000);
         if (msg?.ok !== true || msg.result?.success !== true) report = failure("dispose", "cleanup-failed", "cleanup");
       } catch { report = failure("dispose", "cleanup-indeterminate", "cleanup"); }
     }

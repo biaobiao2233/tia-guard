@@ -25,6 +25,11 @@ const previewRequest = z.strictObject({
 const simulation = { simulationId: handle };
 const scalar = { ...simulation, symbol: name, type: z.enum(["BOOL", "INT", "UINT", "DINT", "UDINT", "REAL", "LREAL"]) };
 const definitions = {
+  dispose_twincat_session: {
+    action: "dispose", readOnly: false,
+    description: "Explicitly dispose the already authenticated private Worker and all of this session's owned Runtime/IDE resources BEFORE closing MCP stdio. Does not spawn/reconnect or affect any other session. Inspect the actual cleanup result.",
+    inputSchema: z.strictObject({})
+  },
   doctor_twincat: {
     action: "doctor", readOnly: true,
     description: "Inspect environment and report backend capabilities as supported, unavailable or untested. Registration/transport success is not a functional probe.",

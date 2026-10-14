@@ -7,7 +7,7 @@ const { randomUUID, createHash } = require("node:crypto");
 const identity = process.env.TC3_IDENTITY;
 const providerId = "fixture-only"; const sessionId = randomUUID();
 const previews = new Map(); const grants = new Map(); const executions = new Map();
-const actions = ["doctor", "inspect", "preview", "authorize", "build-generation", "compile", "verify"];
+const actions = ["doctor", "inspect", "preview", "authorize", "build-generation", "compile", "verify", "dispose"];
 const scenario = process.env.TC3_FAKE_SCENARIO;
 const envelope = (operation, props = {}) => ({ schemaVersion: "1.0", operation, sessionId, providerId,
   phase: operation, success: true, published: false, failures: [], cleanup: [], ...props });

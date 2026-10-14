@@ -7,6 +7,13 @@ const { ProviderClient } = require(path.join(mcpRoot, "providerClient.js"));
 const { toolSchemas } = require(path.join(mcpRoot, "toolSchemas.js"));
 const { isFailure } = require(path.join(mcpRoot, "result.js"));
 
+test("explicit session disposal cannot create or reconnect a Worker", async () => {
+  let contacted = false;
+  const provider = new ProviderClient({ transport: { call() { contacted = true; }, close() {} } });
+  await assert.rejects(provider.dispatch("dispose", {}), { code: "no-active-session" });
+  assert.equal(contacted, false);
+});
+
 test("offline authorization alone cannot dispatch runtime operations", async () => {
   let contacted = false;
   const provider = new ProviderClient({ offlineWrites: true, transport: { call() { contacted = true; }, close() {} } });

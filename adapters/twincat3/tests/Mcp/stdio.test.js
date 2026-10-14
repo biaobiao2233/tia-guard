@@ -122,3 +122,15 @@ test("MCP process restart cannot reuse local preview/grant or foreign execution 
   assert.equal((await second.call("build_twincat_generation", grant)).structuredContent.failures[0].code, "missing-preview");
   assert.equal((await second.call("verify_twincat_project", { executionId: "foreign" })).structuredContent.failures[0].code, "unknown-owned-execution");
 });
+
+test("explicit disposal precedes SDK close and invalidates all session authority", async t => {
+  const f = await fixture(t, { write: true });
+  const grant = await authorize(f);
+  const disposed = await f.call("dispose_twincat_session");
+  assert.equal(disposed.isError, false);
+  assert.equal(disposed.structuredContent.operation, "dispose");
+  const after = await f.call("build_twincat_generation", grant);
+  assert.equal(after.isError, true);
+  assert.equal(after.structuredContent.failures[0].code, "session-closed");
+  await f.close();
+});

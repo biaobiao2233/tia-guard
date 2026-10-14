@@ -74,11 +74,11 @@ public sealed class WorkerBackend : IAsyncDisposable
     private JsonObject Capabilities()
     {
         var result = new JsonObject();
-        foreach (string action in new[] { "doctor", "inspect", "preview", "authorize", "build-generation", "compile", "verify",
+        foreach (string action in new[] { "doctor", "inspect", "preview", "authorize", "build-generation", "compile", "verify", "dispose",
             "start-simulation", "prepare-simulation", "resume-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation" })
         {
             bool readOnly = action is "doctor" or "inspect" or "preview";
-            bool available = readOnly || nativeBinding && configuration.OfflineWrites;
+            bool available = action == "dispose" || readOnly || nativeBinding && configuration.OfflineWrites;
             if (IsSimulationAction(action)) available = configuration.RuntimeWrites && configuration.OfflineWrites && nativeBinding &&
                 NativeSimulationDeployment.NativeBuilt && OwnedUsermodeRuntime.Installed(session.Environment.InstallDirectory);
             result[action] = new JsonObject
