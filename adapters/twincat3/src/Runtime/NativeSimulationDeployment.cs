@@ -8,6 +8,22 @@ namespace TwinCat3.Runtime;
 
 public static class NativeSimulationDeployment
 {
+    public static Task ShowOwnedLicensePageAsync(NativeProjectHandle project, IOwnedEngineeringSession session,
+        OwnedUsermodeRuntime runtime, CancellationToken cancellationToken)
+        => session.InvokeAsync<bool>(context =>
+        {
+#if TWINCAT_RUNTIME_NATIVE
+            runtime.RequireLive(); RequireBinding(context, project);
+            var manager = (ITcSysManager18)context.SystemManager!;
+            if (manager.GetTargetNetId() != runtime.NetId) throw new InvalidOperationException("Refusing a foreign licensing target.");
+            var dte = (DTE2)context.Dte!;
+            dte.SuppressUI = false; dte.MainWindow.Visible = true;
+            manager.SelectTreeItem("TIRC^License");
+            return true; // Selection only. No license request/generation/copy.
+#else
+            throw new NotSupportedException("Native licensing page requires the local XAE interop.");
+#endif
+        }, cancellationToken);
     public static bool NativeBuilt
     {
         get

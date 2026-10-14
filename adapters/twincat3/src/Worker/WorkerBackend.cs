@@ -31,7 +31,10 @@ public sealed class WorkerBackend : IAsyncDisposable
     private readonly Dictionary<string, GrantState> tokens = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ExecutionState> executions = new(StringComparer.Ordinal);
     private readonly HashSet<string> secrets = new(StringComparer.Ordinal);
-    private sealed record SimulationState(OwnedUsermodeRuntime Runtime, FrozenGenerationInput Input, string ProjectIdentity);
+    private sealed record PreparedSimulation(NativeProjectHandle Project, CompilationReport Compilation,
+        VerificationReport Verification, string Root, string ProbeSymbol);
+    private sealed record SimulationState(OwnedUsermodeRuntime Runtime, FrozenGenerationInput Input, string ProjectIdentity,
+        PreparedSimulation? Prepared = null);
     private readonly Dictionary<string, SimulationState> simulations = new(StringComparer.Ordinal);
     private bool disposed;
     private static readonly JsonSerializerOptions Json = new(ContractJson.Options) { WriteIndented = false };
@@ -72,7 +75,7 @@ public sealed class WorkerBackend : IAsyncDisposable
     {
         var result = new JsonObject();
         foreach (string action in new[] { "doctor", "inspect", "preview", "authorize", "build-generation", "compile", "verify",
-            "start-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation" })
+            "start-simulation", "prepare-simulation", "resume-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation" })
         {
             bool readOnly = action is "doctor" or "inspect" or "preview";
             bool available = readOnly || nativeBinding && configuration.OfflineWrites;
@@ -99,6 +102,8 @@ public sealed class WorkerBackend : IAsyncDisposable
             if (Text(payload, "providerId") != ProviderId || Text(payload, "sessionId") != session.SessionId)
                 throw new InvalidOperationException("Session binding is invalid.");
             if (IsSimulationAction(action)) RequireRuntimeMode();
+            if (simulations.Values.Any(s => s.Prepared is not null) && action is "build-generation" or "compile" or "verify")
+                throw new InvalidOperationException("Complete or stop the prepared simulation before replacing its owned IDE session.");
             if (action is "authorize" or "build-generation" or "compile" or "verify")
             {
                 if (!configuration.OfflineWrites) throw new InvalidOperationException("Offline writes are disabled.");
@@ -114,6 +119,8 @@ public sealed class WorkerBackend : IAsyncDisposable
                 "compile" => await CompileAsync(payload, cancellationToken).ConfigureAwait(false),
                 "verify" => await VerifyAsync(payload, cancellationToken).ConfigureAwait(false),
                 "start-simulation" => await StartSimulationAsync(payload, cancellationToken).ConfigureAwait(false),
+                "prepare-simulation" => await StartSimulationAsync(payload, cancellationToken, prepareOnly: true).ConfigureAwait(false),
+                "resume-simulation" => await ResumeSimulationAsync(payload, cancellationToken).ConfigureAwait(false),
                 "simulation-status" or "simulation-state" or "simulation-read" or "simulation-write" or "stop-simulation"
                     => await SimulationActionAsync(action, payload).ConfigureAwait(false),
                 "dispose" => await DisposeReportAsync().ConfigureAwait(false),
@@ -324,7 +331,7 @@ public sealed class WorkerBackend : IAsyncDisposable
             Failures = passed ? Array.Empty<string>() : new[] { "Independent owned-copy capture did not completely match the original frozen source input." } });
     }
 
-    private static bool IsSimulationAction(string action) => action is "start-simulation" or "simulation-status" or
+    private static bool IsSimulationAction(string action) => action is "start-simulation" or "prepare-simulation" or "resume-simulation" or "simulation-status" or
         "simulation-state" or "simulation-read" or "simulation-write" or "stop-simulation";
     private void RequireRuntimeMode()
     {
@@ -332,7 +339,7 @@ public sealed class WorkerBackend : IAsyncDisposable
             !NativeSimulationDeployment.NativeBuilt || !OwnedUsermodeRuntime.Installed(session.Environment.InstallDirectory))
             throw new InvalidOperationException("Explicit owned-simulation mode and installed native Runtime binding are required.");
     }
-    private async Task<JsonObject> StartSimulationAsync(JsonElement payload, CancellationToken cancellationToken)
+    private async Task<JsonObject> StartSimulationAsync(JsonElement payload, CancellationToken cancellationToken, bool prepareOnly = false)
     {
         var preview = ConsumeHostGrant(payload, "start-simulation");
         grants.Consume(Text(payload, "grantToken"), session.SessionId, preview.RequestHash);
@@ -363,50 +370,104 @@ public sealed class WorkerBackend : IAsyncDisposable
                 throw new InvalidOperationException("Independent simulation-copy verification failed.");
             phase = "simulation-activation";
             await NativeSimulationDeployment.ActivateAsync(handle, session, runtime, compilation, verification, cancellationToken).ConfigureAwait(false);
+            var prepared = new PreparedSimulation(handle, compilation, verification, root, Text(payload, "probeSymbol"));
+            if (prepareOnly)
+            {
+                await NativeSimulationDeployment.ShowOwnedLicensePageAsync(handle, session, runtime, cancellationToken).ConfigureAwait(false);
+                simulations.Add(runtime.SimulationId, new(runtime, preview.Input, handle.ProjectIdentity, prepared));
+                return Envelope("prepare-simulation", new { Phase = "awaiting-user-license", Success = true,
+                    ExecutionReady = false, runtime.SimulationId, runtime.NetId, runtime.ProcessId,
+                    preview.Input.InputHash, handle.ProjectIdentity, Compilation = compilation, Verification = verification,
+                    SolutionPath = handle.SolutionPath,
+                    NextAction = "Handle official licensing in this owned IDE, then resume this simulation handle. No license is generated by the adapter." });
+            }
             phase = "simulation-run";
-            await runtime.EnterRunAsync(cancellationToken).ConfigureAwait(false);
-            string probeSymbol = Text(payload, "probeSymbol");
-            uint before = (uint)runtime.ReadSymbol(preview.Input, probeSymbol, "UDINT");
-            uint after = before;
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-            while (after == before && watch.Elapsed < TimeSpan.FromSeconds(5))
-            {
-                await Task.Delay(50, cancellationToken).ConfigureAwait(false);
-                after = (uint)runtime.ReadSymbol(preview.Input, probeSymbol, "UDINT");
-            }
-            if (after == before) throw new InvalidOperationException("The actual PLC probe did not change; execution is unverified.");
-            using (var ads = runtime.Connect(851))
-            {
-                var app = ads.ReadValue("TwinCAT_SystemInfoVarList._AppInfo.AppName", typeof(string))?.ToString();
-                if (app != preview.Input.Manifest.PlcProjectName) throw new InvalidOperationException("Running PLC application name differs from the owned project.");
-            }
-            var result = Envelope("start-simulation", new { Phase = "complete", Success = true, Published = false,
-                runtime.SimulationId, runtime.NetId, runtime.ProcessId, runtime.ConfigurationRoot,
-                preview.Input.InputHash, ProjectIdentity = handle.ProjectIdentity, Compilation = compilation, Verification = verification,
-                Probe = new { Symbol = probeSymbol, Type = "UDINT", Before = before, After = after, NativeExecutionObserved = true },
-                State = runtime.Status(), HardwareTested = false });
-            await File.WriteAllTextAsync(Path.Combine(root, "runtime-evidence.json"), result.ToJsonString(), cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            simulations.Add(runtime.SimulationId, new(runtime, preview.Input, handle.ProjectIdentity));
-            return result;
+            return await CompleteSimulationAsync("start-simulation", runtime, preview.Input, prepared, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             var cleanup = new List<string>();
             if (runtime is not null) try { await runtime.DisposeAsync().ConfigureAwait(false); }
                 catch { cleanup.Add("Owned Runtime cleanup could not be confirmed."); simulations[runtime.SimulationId] = new(runtime, preview.Input, handle.ProjectIdentity); }
-            // Retain detailed native diagnostics privately; do not publish raw stack/host/license material.
             await File.WriteAllTextAsync(Path.Combine(root, "runtime-failure.log"), ex.ToString(), CancellationToken.None).ConfigureAwait(false);
-            return Envelope("start-simulation", new { Phase = phase, Success = false, Published = false, preview.Input.InputHash,
+            return Envelope(prepareOnly ? "prepare-simulation" : "start-simulation", new { Phase = phase, Success = false, Published = false, preview.Input.InputHash,
                 Compilation = compilation, Verification = verification, OwnedEvidenceRoot = root,
                 Failures = new[] { ex.GetType().Name + ": " + ex.Message }, Cleanup = cleanup });
         }
+    }
+    private async Task<JsonObject> ResumeSimulationAsync(JsonElement payload, CancellationToken cancellationToken)
+    {
+        var id = Text(payload, "simulationId");
+        if (!simulations.TryGetValue(id, out var state) || state.Prepared is not { } prepared)
+            throw new InvalidOperationException("Unknown prepared simulation; a running or foreign handle cannot be resumed.");
+        state.Runtime.RequireLive();
+        try
+        {
+            // Human licensing/UI work must not silently alter the frozen program.
+            await state.Runtime.EnterConfigAsync(cancellationToken).ConfigureAwait(false);
+            await NativeSimulationDeployment.SelectOwnedTargetAsync(prepared.Project, session, state.Runtime, cancellationToken).ConfigureAwait(false);
+            var compiled = await compiler.CompileAsync(state.Input, prepared.Project, session, cancellationToken).ConfigureAwait(false);
+            if (!compiled.Passed) throw new InvalidOperationException("Prepared simulation did not compile after user interaction.");
+            var observed = await capture.CaptureAsync(state.Input, prepared.Project, session, cancellationToken).ConfigureAwait(false);
+            var verified = comparer.Compare(state.Input, observed);
+            if (!verified.Passed || observed.InputHash != state.Input.InputHash || observed.ProjectIdentity != prepared.Project.ProjectIdentity ||
+                observed.Failures.Count != 0 || observed.Unsupported.Count != 0)
+                throw new InvalidOperationException("Prepared simulation differs from its frozen source.");
+            prepared = prepared with { Compilation = compiled, Verification = verified };
+            await NativeSimulationDeployment.ActivateAsync(prepared.Project, session, state.Runtime, compiled, verified, cancellationToken).ConfigureAwait(false);
+            return await CompleteSimulationAsync("resume-simulation", state.Runtime, state.Input, prepared, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await File.WriteAllTextAsync(Path.Combine(prepared.Root, "resume-failure.log"), ex.ToString(), CancellationToken.None).ConfigureAwait(false);
+            return Envelope("resume-simulation", new { Phase = "resume-failed", Success = false, SimulationId = id,
+                state.Input.InputHash, ExecutionReady = false,
+                Failures = new[] { ex.GetType().Name + ": " + ex.Message } });
+        }
+    }
+    private async Task<JsonObject> CompleteSimulationAsync(string action, OwnedUsermodeRuntime runtime, FrozenGenerationInput input,
+        PreparedSimulation prepared, CancellationToken cancellationToken)
+    {
+            await runtime.EnterRunAsync(cancellationToken).ConfigureAwait(false);
+            string probeSymbol = prepared.ProbeSymbol;
+            uint before = (uint)runtime.ReadSymbol(input, probeSymbol, "UDINT");
+            uint after = before;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            while (after == before && watch.Elapsed < TimeSpan.FromSeconds(5))
+            {
+                await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+                after = (uint)runtime.ReadSymbol(input, probeSymbol, "UDINT");
+            }
+            if (after == before) throw new InvalidOperationException("The actual PLC probe did not change; execution is unverified.");
+            using (var ads = runtime.Connect(851))
+            {
+                var app = ads.ReadValue("TwinCAT_SystemInfoVarList._AppInfo.AppName", typeof(string))?.ToString();
+                var runningProject = ads.ReadValue("TwinCAT_SystemInfoVarList._AppInfo.ProjectName", typeof(string))?.ToString();
+                var port = (ushort)ads.ReadValue("TwinCAT_SystemInfoVarList._AppInfo.AdsPort", typeof(ushort));
+                SimulationPolicy.RequireApplicationIdentity(app, runningProject, port, input.Manifest.PlcProjectName);
+            }
+            var result = Envelope(action, new { Phase = "complete", Success = true, Published = false, ExecutionReady = true,
+                runtime.SimulationId, runtime.NetId, runtime.ProcessId, runtime.ConfigurationRoot,
+                input.InputHash, ProjectIdentity = prepared.Project.ProjectIdentity, Compilation = prepared.Compilation, Verification = prepared.Verification,
+                Probe = new { Symbol = probeSymbol, Type = "UDINT", Before = before, After = after, NativeExecutionObserved = true },
+                State = runtime.Status(), HardwareTested = false });
+            await File.WriteAllTextAsync(Path.Combine(prepared.Root, "runtime-evidence.json"), result.ToJsonString(), cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            simulations[runtime.SimulationId] = new(runtime, input, prepared.Project.ProjectIdentity);
+            return result;
     }
     private async Task<JsonObject> SimulationActionAsync(string action, JsonElement payload)
     {
         var id = Text(payload, "simulationId");
         if (!simulations.TryGetValue(id, out var simulation)) throw new InvalidOperationException("Unknown owned simulation handle.");
         var runtime = simulation.Runtime; runtime.RequireLive();
+        if (simulation.Prepared is not null && action != "stop-simulation")
+        {
+            if (action != "simulation-status") throw new InvalidOperationException("Prepared simulation is not qualified for PLC operations; resume it first.");
+            using var system = runtime.Connect(10000);
+            return Envelope(action, new { SimulationId = id, simulation.Input.InputHash, ExecutionReady = false,
+                Phase = "awaiting-user-license", SystemState = system.ReadState().AdsState.ToString() });
+        }
         object details;
         switch (action)
         {
@@ -523,9 +584,9 @@ public sealed class WorkerBackend : IAsyncDisposable
         {
             "inspect" => new[] { "projectPath" },
             "preview" => new[] { "operation", "inputDirectory", "outputDirectory", "projectPath", "executionId", "probeSymbol" },
-            "authorize" or "build-generation" or "compile" or "start-simulation" => new[] { "operation", "inputDirectory", "outputDirectory", "projectPath", "executionId", "probeSymbol", "previewId", "inputHash", "grantToken" },
+            "authorize" or "build-generation" or "compile" or "start-simulation" or "prepare-simulation" => new[] { "operation", "inputDirectory", "outputDirectory", "projectPath", "executionId", "probeSymbol", "previewId", "inputHash", "grantToken" },
             "verify" => new[] { "executionId" },
-            "simulation-status" or "stop-simulation" => new[] { "simulationId" },
+            "simulation-status" or "stop-simulation" or "resume-simulation" => new[] { "simulationId" },
             "simulation-state" => new[] { "simulationId", "state" },
             "simulation-read" => new[] { "simulationId", "symbol", "type" },
             "simulation-write" => new[] { "simulationId", "symbol", "type", "value" },

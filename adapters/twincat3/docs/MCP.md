@@ -58,6 +58,8 @@ Node 每次创建随机 `TC3_PIPE` 和 `TC3_IDENTITY`，通过子进程环境传
 | 仿真工具 | 参数 | 行为 |
 | --- | --- | --- |
 | `start_twincat_simulation` | `previewId`, `grantId` | 对自有副本重新编译、核验，在新分配的本地 Usermode 进程激活并验证真实执行 |
+| `prepare_twincat_simulation` | `previewId`, `grantId` | 使用 start-simulation 预览/一次性授权准备同一自有实例并显示其授权节点；返回 executionReady=false，尚未验收运行 |
+| `resume_twincat_simulation` | `simulationId` | 用户在官方页面处理许可后，重新编译、独立核验并验证该实例的实际执行；不能恢复其他会话或已有 Runtime |
 | `read_twincat_simulation` | `simulationId` | 读取实际系统/PLC 状态 |
 | `set_twincat_simulation_state` | `simulationId`, `state` | PLC Run/Stop 并等待实际状态反馈 |
 | `read_twincat_symbol` | `simulationId`, `symbol`, `type` | 读取 frozen source 中 Program/GVL 的标量 |
@@ -65,6 +67,8 @@ Node 每次创建随机 `TC3_PIPE` 和 `TC3_IDENTITY`，通过子进程环境传
 | `stop_twincat_simulation` | `simulationId` | 结束本会话创建的进程并确认退出 |
 
 标量类型限定 BOOL/INT/UINT/DINT/UDINT/REAL/LREAL，数值需有限且不溢出。不提供用户指定 AMS 地址、端口、PID、原始 ADS 内存或任意在线工程选择。
+
+需要官方许可输入时，按“start-simulation 预览 → 授权 → prepare → 用户双击自有 IDE 的系统/授权节点处理官方许可 → resume”操作。准备成功仅代表已完成部署准备；此时只允许读取准备状态、继续运行验收或结束实例，PLC 状态修改和变量读写均拒绝。人机步骤期间的代码编辑会在 resume 的重新编译/独立核验中被检查，不沿用旧的成功结论。MCP 不生成或复制许可证、不填写验证码。
 
 生成输入消费 A 的 `GenerationInputLoader.Load(inputDirectory)`，固定文件名是 `twincat-generation.json`，其结构以 `../contracts/generation.schema.json` 为准。源码必须恰好等于 manifest 引用的 UTF-8 文件集合；Node 不复制该 manifest schema、不自己计算替代 source hash。MCP 的 `inputDirectory` 映射到 B 的 `GenerationRequest.SourceDirectory`，`outputDirectory` 映射到 `OutputDirectory`，所有 canonical path/ownership/environment 检查仍由 B 执行端完成。
 

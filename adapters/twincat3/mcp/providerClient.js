@@ -6,7 +6,8 @@ const { DaemonClient } = require("./daemonClient.js");
 const { BridgeError, failure, isFailure, sanitize } = require("./result.js");
 const { toolSchemas } = require("./toolSchemas.js");
 const allowed = new Set(Object.values(toolSchemas).map(t => t.action));
-const simulationActions = new Set(["start-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation"]);
+const simulationActions = new Set(["start-simulation", "prepare-simulation", "resume-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation"]);
+const simulationAllocations = new Set(["start-simulation", "prepare-simulation"]);
 
 class ProviderClient {
   constructor({ transport = null, identity = null, offlineWrites = false, runtimeWrites = false, child = null, startupMs = 10000 } = {}) {
@@ -61,7 +62,7 @@ class ProviderClient {
       throw new BridgeError("provider-capability-unavailable", "availability");
     let request = payload;
     let preview;
-    if (["authorize", "build-generation", "compile", "start-simulation"].includes(action)) {
+    if (["authorize", "build-generation", "compile", "start-simulation", "prepare-simulation"].includes(action)) {
       preview = this.previews.get(payload.previewId);
       if (!preview) throw new BridgeError("missing-preview", "authorization");
       if (preview.request.operation === "start-simulation" && (!this.runtimeWrites || !this.offlineWrites))
@@ -70,7 +71,8 @@ class ProviderClient {
       request = { ...preview.request, previewId: preview.backendId, inputHash: preview.inputHash };
       if (action !== "authorize") {
         const grant = this.grants.get(payload.grantId); this.grants.delete(payload.grantId);
-        if (!grant || grant.previewId !== payload.previewId || preview.request.operation !== action ||
+        const operation = action === "prepare-simulation" ? "start-simulation" : action;
+        if (!grant || grant.previewId !== payload.previewId || preview.request.operation !== operation ||
             Date.parse(grant.expiresAtUtc) <= Date.now()) throw new BridgeError("invalid-or-consumed-grant", "authorization");
         request.grantToken = grant.token;
       }
@@ -79,8 +81,12 @@ class ProviderClient {
       throw new BridgeError("unknown-owned-execution", "authorization");
     if (action === "preview" && payload.operation === "start-simulation" && !this.executions.has(payload.executionId))
       throw new BridgeError("unknown-owned-execution", "authorization");
-    if (simulationActions.has(action) && action !== "start-simulation" && !this.simulations.has(payload.simulationId))
+    if (simulationActions.has(action) && !simulationAllocations.has(action) && !this.simulations.has(payload.simulationId))
       throw new BridgeError("unknown-owned-simulation", "authorization");
+    if (["simulation-state", "simulation-read", "simulation-write"].includes(action) && this.simulations.get(payload.simulationId)?.prepared)
+      throw new BridgeError("simulation-not-qualified", "authorization");
+    if (action === "resume-simulation" && !this.simulations.get(payload.simulationId)?.prepared)
+      throw new BridgeError("unknown-prepared-simulation", "authorization");
     let msg;
     try { msg = await this.transport.call(action, { ...request, sessionId: session.sessionId, providerId: session.providerId }); }
     catch (err) { this.invalidate(); throw err; }
@@ -126,15 +132,25 @@ class ProviderClient {
     if (action === "verify" && r.inputHash !== this.executions.get(payload.executionId).inputHash) {
       this.invalidate(); throw new BridgeError("provider-verification-binding-invalid");
     }
-    if (action === "start-simulation") {
+    if (simulationAllocations.has(action)) {
       if (r.inputHash !== preview.inputHash || r.compilation?.inputHash !== preview.inputHash ||
+          r.projectIdentity !== r.compilation.projectIdentity ||
           typeof r.simulationId !== "string" || !r.simulationId || this.simulations.size !== 0) {
         this.invalidate(); throw new BridgeError("provider-simulation-binding-invalid");
       }
-      this.simulations.set(r.simulationId, { inputHash: preview.inputHash });
+      this.simulations.set(r.simulationId, { inputHash: preview.inputHash, projectIdentity: r.projectIdentity,
+        prepared: action === "prepare-simulation" });
     } else if (simulationActions.has(action)) {
       if (r.simulationId !== payload.simulationId) {
         this.invalidate(); throw new BridgeError("provider-simulation-binding-invalid");
+      }
+      if (action === "resume-simulation") {
+        const prior = this.simulations.get(payload.simulationId);
+        if (r.inputHash !== prior.inputHash || r.compilation.inputHash !== prior.inputHash ||
+            r.projectIdentity !== prior.projectIdentity || r.compilation.projectIdentity !== prior.projectIdentity) {
+          this.invalidate(); throw new BridgeError("provider-simulation-binding-invalid");
+        }
+        prior.prepared = false;
       }
       if (action === "stop-simulation") this.simulations.delete(payload.simulationId);
     }

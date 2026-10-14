@@ -7,6 +7,16 @@ namespace TwinCat3.WorkerTests;
 // These tests qualify boundaries only; they never simulate ADS or claim PLC execution.
 public sealed class SimulationPolicyTests
 {
+    [Fact] public void TwinCatGeneratedApplicationNameIsDifferentFromProjectName()
+        => SimulationPolicy.RequireApplicationIdentity("Port_851", "MotorPLC", 851, "MotorPLC");
+
+    [Theory]
+    [InlineData("MotorPLC", "MotorPLC", 851)]
+    [InlineData("Port_851", "OtherPLC", 851)]
+    [InlineData("Port_852", "MotorPLC", 852)]
+    [InlineData("Port_851", "Port_851", 851)]
+    public void RefuseWrongApplicationProjectOrPort(string application, string project, int port)
+        => Assert.Throws<InvalidOperationException>(() => SimulationPolicy.RequireApplicationIdentity(application, project, port, "MotorPLC"));
     [Fact] public void SimulationUsesNewScratchOutputWithoutWeakeningPublicationRules()
     {
         var root = Path.Combine(Path.GetTempPath(), "tc-runtime-path-" + Guid.NewGuid().ToString("N"));

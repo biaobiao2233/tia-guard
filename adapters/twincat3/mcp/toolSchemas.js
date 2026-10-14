@@ -60,6 +60,16 @@ const definitions = {
     description: "Compile, verify and activate an owned disposable PLC-only project on a freshly created local Usermode Runtime. Requires explicit host simulation mode, reviewed preview and single-use grant. Actual changing UDINT feedback is mandatory.",
     inputSchema: z.strictObject({ previewId: handle, grantId: handle })
   },
+  prepare_twincat_simulation: {
+    action: "prepare-simulation", readOnly: false,
+    description: "Consume a start-simulation preview/grant to compile, verify and deploy a new owned PLC-only instance, then show its official License node for the user. Preparation is not execution success. No license generation or copying; resume the SAME handle after the user handles official licensing.",
+    inputSchema: z.strictObject({ previewId: handle, grantId: handle })
+  },
+  resume_twincat_simulation: {
+    action: "resume-simulation", readOnly: false,
+    description: "Continue this session's prepared instance after the user handles official licensing. Recompile and independently verify the owned copy, then require actual Run states, application/project/port identity and a changing UDINT probe. Cannot attach to an existing/foreign Runtime.",
+    inputSchema: z.strictObject(simulation)
+  },
   read_twincat_simulation: {
     action: "simulation-status", readOnly: true,
     description: "Read actual ADS system/PLC states of this session's owned simulation.",

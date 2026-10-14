@@ -45,7 +45,7 @@ public sealed class WorkerTests : IDisposable
     [Fact] public async Task OfflineModeDoesNotPermitRuntimeActionsOrCreateProcesses()
     {
         await using var backend = Backend(writes: true, native: true);
-        foreach (var action in new[] { "start-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation" })
+        foreach (var action in new[] { "start-simulation", "prepare-simulation", "resume-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation" })
         {
             var denied = await backend.DispatchAsync(action, Payload(backend, new { }));
             Assert.False(denied["success"]!.GetValue<bool>());

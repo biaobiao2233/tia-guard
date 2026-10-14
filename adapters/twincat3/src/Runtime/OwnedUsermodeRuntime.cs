@@ -137,8 +137,9 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
     private static void ValidateSymbol(InstalledAdsClient ads, string name, string type, bool writing)
     {
         var symbol = ads.ReadSymbol(name); _ = SimulationPolicy.ScalarType(type);
+        var expectedSize = type.ToUpperInvariant() switch { "BOOL" => 1, "INT" or "UINT" => 2, "LREAL" => 8, _ => 4 };
         if (!symbol.IsPrimitiveType || symbol.IsPointer || symbol.IsReference || symbol.IsProperty ||
-            !symbol.TypeName.Equals(type, StringComparison.OrdinalIgnoreCase) || (writing && symbol.IsReadOnly))
+            symbol.ByteSize != expectedSize || !symbol.TypeName.Equals(type, StringComparison.OrdinalIgnoreCase) || (writing && symbol.IsReadOnly))
             throw new InvalidDataException("Actual PLC symbol type/access differs from the requested scalar.");
     }
     public object Status()

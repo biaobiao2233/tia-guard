@@ -16,6 +16,7 @@ public sealed class InstalledAdsClient : IDisposable
     private readonly OwnedUsermodeRuntime owner;
     private readonly dynamic client;
     private readonly Type stateType;
+    private object? symbolLoader;
     internal InstalledAdsClient(OwnedUsermodeRuntime owner, int port)
     {
         this.owner = owner; owner.RequireLive();
@@ -66,16 +67,54 @@ public sealed class InstalledAdsClient : IDisposable
     });
     public InstalledSymbol ReadSymbol(string name) => Invoke(() =>
     {
-        dynamic info = client.ReadSymbolInfo(name);
-        return new InstalledSymbol((string)info.TypeName, (int)info.ByteSize, info.Category.ToString() == "Primitive",
-            (bool)info.IsPointer, (bool)info.IsReference, (bool)info.IsTcComInterfacePointer || (bool)info.HasRpcMethods, (bool)info.IsReadOnly);
+        // ADS 4 ReadSymbolInfo returns the legacy ITcAdsSymbol (Type/Size),
+        // not the modern symbol metadata contract. Use the official loader and
+        // its public interfaces, including access flags. Internal implementation
+        // classes cannot safely be accessed with the C# dynamic binder.
+        var info = FindSymbol(name);
+        var primitive = (bool)Property(info, "TwinCAT.TypeSystem.ISymbol", "IsPrimitiveType");
+        var dataType = Property(info, "TwinCAT.TypeSystem.IInstance", "DataType");
+        return new InstalledSymbol((string)Property(info, "TwinCAT.TypeSystem.IInstance", "TypeName"),
+            (int)Property(info, "TwinCAT.TypeSystem.IBitSize", "ByteSize"), primitive,
+            (bool)Property(info, "TwinCAT.TypeSystem.IInstance", "IsPointer"),
+            (bool)Property(info, "TwinCAT.TypeSystem.IInstance", "IsReference"),
+            (bool)Property(info, "TwinCAT.Ads.TypeSystem.ISymbolFlagProvider", "IsTcComInterfacePointer") ||
+                !(bool)Property(dataType, "TwinCAT.TypeSystem.IDataType", "IsPrimitive"),
+            (bool)Property(info, "TwinCAT.TypeSystem.ISymbol", "IsReadOnly"));
     });
+    private object FindSymbol(string name)
+    {
+        var assembly = stateType.Assembly;
+        if (symbolLoader is null)
+        {
+            var settings = assembly.GetType("TwinCAT.Ads.SymbolLoaderSettings", true)!
+                .GetProperty("Default", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
+            var factory = assembly.GetType("TwinCAT.Ads.TypeSystem.SymbolLoaderFactory", true)!;
+            var create = factory.GetMethod("Create", new[] { assembly.GetType("TwinCAT.IConnection", true)!,
+                assembly.GetType("TwinCAT.ISymbolLoaderSettings", true)! })!;
+            symbolLoader = create.Invoke(null, new object[] { client, settings })
+                ?? throw new InvalidDataException("Official symbol loader returned no metadata.");
+        }
+        var symbols = Property(symbolLoader, "TwinCAT.TypeSystem.ISymbolProvider", "Symbols");
+        var indexer = assembly.GetType("TwinCAT.TypeSystem.ReadOnlySymbolCollection", true)!
+            .GetProperty("Item", new[] { typeof(string) })!;
+        return indexer.GetValue(symbols, new object[] { name })
+            ?? throw new InvalidDataException("Actual PLC symbol is absent.");
+    }
+    private object Property(object value, string contract, string name)
+    {
+        var type = stateType.Assembly.GetType(contract, true)!;
+        if (!type.IsInstanceOfType(value)) throw new InvalidDataException("Actual metadata does not implement " + contract + ".");
+        return type.GetProperty(name)!.GetValue(value)
+            ?? throw new InvalidDataException("Actual symbol metadata is incomplete: " + name + ".");
+    }
     public object ReadValue(string name, Type type) => Invoke(() =>
     {
         int handle = client.CreateVariableHandle(name);
         try
         {
-            if (type == typeof(string)) { dynamic info = client.ReadSymbolInfo(name); return (object)client.ReadAny(handle, type, new[] { (int)info.ByteSize }); }
+            if (type == typeof(string)) { var info = FindSymbol(name); return (object)client.ReadAny(handle, type,
+                new[] { (int)Property(info, "TwinCAT.TypeSystem.IBitSize", "ByteSize") }); }
             return (object)client.ReadAny(handle, type);
         }
         finally { client.DeleteVariableHandle(handle); }

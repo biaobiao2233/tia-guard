@@ -33,10 +33,13 @@ function isFailure(r, action) {
   if (["build-generation", "compile"].includes(action) && !compilationPassed(r.compilation)) return true;
   if (["build-generation", "verify"].includes(action) && !verificationPassed(r.verification)) return true;
   if (action === "build-generation" && r.published !== true) return true;
-  if (action === "start-simulation" && (!compilationPassed(r.compilation) || !verificationPassed(r.verification) ||
+  if (action === "prepare-simulation" && (!compilationPassed(r.compilation) || !verificationPassed(r.verification) ||
+      !r.simulationId || r.executionReady !== false || r.phase !== "awaiting-user-license")) return true;
+  if (["start-simulation", "resume-simulation"].includes(action) && (!compilationPassed(r.compilation) || !verificationPassed(r.verification) ||
       !r.simulationId || r.probe?.nativeExecutionObserved !== true ||
       !Number.isInteger(r.probe.before) || !Number.isInteger(r.probe.after) ||
       r.probe.before === r.probe.after || r.state?.systemState !== "Run" || r.state?.plcState !== "Run")) return true;
+  if (action === "resume-simulation" && r.executionReady !== true) return true;
   if (action === "stop-simulation" && r.ownedProcessExited !== true) return true;
   if (r.published === true && (action !== "build-generation" || !compilationPassed(r.compilation) || !verificationPassed(r.verification))) return true;
   return false;

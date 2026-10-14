@@ -9,6 +9,13 @@ namespace TwinCat3.Runtime;
 
 public static class SimulationPolicy
 {
+    public static void RequireApplicationIdentity(string? application, string? project, int port, string expectedProject)
+    {
+        // Official _AppInfo.AppName contains the ADS port; ProjectName is the
+        // actual PLC project name. They are distinct identities, not aliases.
+        if (application != "Port_851" || port != 851 || project != expectedProject)
+            throw new InvalidOperationException("Running PLC application/project/port differs from the owned project.");
+    }
     public static string CheckOutput(string path, string scratch, string source)
     {
         var output = EngineeringPaths.RequireNewOutput(path, scratch);
