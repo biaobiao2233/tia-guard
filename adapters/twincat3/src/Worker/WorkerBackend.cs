@@ -163,7 +163,9 @@ public sealed class WorkerBackend : IAsyncDisposable
         else if (payload.TryGetProperty("executionId", out _) || payload.TryGetProperty("probeSymbol", out _))
             throw new InvalidDataException("Simulation-only fields are not valid for an offline preview.");
         string source = allocation.CheckInput(Text(payload, "inputDirectory"));
-        string output = allocation.CheckOutput(Text(payload, "outputDirectory"), source);
+        string output = operation == "start-simulation"
+            ? SimulationPolicy.CheckOutput(Text(payload, "outputDirectory"), allocation.ScratchRoot, source)
+            : allocation.CheckOutput(Text(payload, "outputDirectory"), source);
         FrozenGenerationInput frozen = GenerationInputLoader.Load(source);
         if (configuration.Build is not null && frozen.Manifest.Environment.RequestedBuild != configuration.Build)
             throw new InvalidDataException("Manifest build differs from the trusted worker build.");
@@ -191,7 +193,8 @@ public sealed class WorkerBackend : IAsyncDisposable
                 request["executionId"] = ownedExecutionId; request["probeSymbol"] = probe;
             }
             project = ProjectSnapshot.Capture(Text(payload, "projectPath"), allocation);
-            EngineeringPaths.RequireDistinctTrees(project.Root, output, allocation.ScratchRoot);
+            if (operation == "start-simulation") EngineeringPaths.RequireDistinctTrees(project.Root, output);
+            else EngineeringPaths.RequireDistinctTrees(project.Root, output, allocation.ScratchRoot);
             if (project.ByteCount + previews.Values.Sum(p => p.Project?.ByteCount ?? 0) > 192 * 1024 * 1024)
                 throw new InvalidOperationException("Frozen project memory limit exceeded.");
             request["projectPath"] = EngineeringPaths.RequireUnder(Text(payload, "projectPath"), allocation.WorkspaceRoot, true);
@@ -218,7 +221,9 @@ public sealed class WorkerBackend : IAsyncDisposable
             throw new InvalidOperationException("The reviewed generation request does not contain an existing project.");
         var current = GenerationInputLoader.Load(allocation.CheckInput(preview.Input.RootDirectory));
         if (current.InputHash != preview.Input.InputHash) throw new InvalidOperationException("Source input drifted.");
-        allocation.CheckOutput(preview.Request["outputDirectory"]!.GetValue<string>(), preview.Input.RootDirectory);
+        if (preview.Request["operation"]!.GetValue<string>() == "start-simulation")
+            SimulationPolicy.CheckOutput(preview.Request["outputDirectory"]!.GetValue<string>(), allocation.ScratchRoot, preview.Input.RootDirectory);
+        else allocation.CheckOutput(preview.Request["outputDirectory"]!.GetValue<string>(), preview.Input.RootDirectory);
         if (preview.Project is not null)
         {
             var currentProject = ProjectSnapshot.Capture(preview.Request["projectPath"]!.GetValue<string>(), allocation);

@@ -3,11 +3,17 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using TwinCat3.Contracts;
+using TwinCat3.Engineering;
 
 namespace TwinCat3.Runtime;
 
 public static class SimulationPolicy
 {
+    public static string CheckOutput(string path, string scratch, string source)
+    {
+        var output = EngineeringPaths.RequireNewOutput(path, scratch);
+        EngineeringPaths.RequireDistinctTrees(output, source); return output;
+    }
     public static void RequireLoopbackAllocation(string netId)
     {
         var parts = netId.Split('.');

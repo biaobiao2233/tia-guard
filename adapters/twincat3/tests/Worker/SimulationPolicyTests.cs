@@ -7,6 +7,22 @@ namespace TwinCat3.WorkerTests;
 // These tests qualify boundaries only; they never simulate ADS or claim PLC execution.
 public sealed class SimulationPolicyTests
 {
+    [Fact] public void SimulationUsesNewScratchOutputWithoutWeakeningPublicationRules()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "tc-runtime-path-" + Guid.NewGuid().ToString("N"));
+        var source = Path.Combine(root, "input"); var scratch = Path.Combine(root, "scratch");
+        Directory.CreateDirectory(source); Directory.CreateDirectory(scratch);
+        try
+        {
+            var output = Path.Combine(scratch, "simulation");
+            Assert.Equal(output, SimulationPolicy.CheckOutput(output, scratch, source));
+            Assert.Throws<ArgumentException>(() => new TwinCat3.Engineering.EngineeringAllocation(root, scratch).CheckOutput(output, source));
+            Assert.Throws<ArgumentException>(() => SimulationPolicy.CheckOutput(Path.Combine(root, "outside"), scratch, source));
+            Directory.CreateDirectory(output);
+            Assert.Throws<IOException>(() => SimulationPolicy.CheckOutput(output, scratch, source));
+        }
+        finally { Directory.Delete(root, true); }
+    }
     [Theory]
     [InlineData("1.2.3.4.5.6")]
     [InlineData("127.0.0.1.10.22")]
