@@ -235,6 +235,7 @@ public sealed class WorkerBackend : IAsyncDisposable
     private async Task<JsonObject> BuildAsync(JsonElement payload, CancellationToken cancellationToken)
     {
         var preview = ConsumeHostGrant(payload, "build-generation");
+        await session.ResetNativeAsync().ConfigureAwait(false);
         var generation = await pipeline.BuildAsync(new() { SourceDirectory = preview.Input.RootDirectory,
             OutputDirectory = preview.Request["outputDirectory"]!.GetValue<string>() }, Text(payload, "previewId"),
             Text(payload, "grantToken"), session, cancellationToken).ConfigureAwait(false);
@@ -252,6 +253,7 @@ public sealed class WorkerBackend : IAsyncDisposable
     {
         var preview = ConsumeHostGrant(payload, "compile");
         grants.Consume(Text(payload, "grantToken"), session.SessionId, preview.RequestHash);
+        await session.ResetNativeAsync().ConfigureAwait(false);
         string stage = Path.Combine(allocation.ScratchRoot, "compile-" + Guid.NewGuid().ToString("N"));
         preview.Project!.CopyTo(stage, allocation);
         string solution = Path.Combine(stage, preview.Project.SolutionRelativePath.Replace('/', Path.DirectorySeparatorChar));
@@ -270,6 +272,7 @@ public sealed class WorkerBackend : IAsyncDisposable
     {
         string id = Text(payload, "executionId");
         if (!executions.TryGetValue(id, out var execution)) throw new InvalidOperationException("Unknown owned execution.");
+        await session.ResetNativeAsync().ConfigureAwait(false);
         string root = execution.Root, solution = execution.SolutionPath;
         if (execution.Published)
         {

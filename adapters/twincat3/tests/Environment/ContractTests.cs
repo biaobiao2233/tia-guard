@@ -85,6 +85,17 @@ public sealed class ContractTests
     }
 
     [Theory]
+    [InlineData("TwinCAT RT (x64)")][InlineData("TwinCAT OS (x64)")]
+    public void ExplicitX64PlatformProfilesAreAccepted(string platform)
+        => GenerationInputLoader.ValidateManifest(Valid() with { Environment = new() { TargetPlatform = platform } });
+
+    [Theory]
+    [InlineData("TwinCAT RT (x86)")][InlineData("TwinCAT OS (ARMV8-A)")][InlineData("x64")]
+    public void UnknownOrUnqualifiedPlatformProfilesAreRejected(string platform)
+        => Assert.Throws<InvalidDataException>(() => GenerationInputLoader.ValidateManifest(
+            Valid() with { Environment = new() { TargetPlatform = platform } }));
+
+    [Theory]
     [InlineData("duplicates")][InlineData("taskCalls")][InlineData("latestLibrary")][InlineData("standalone")]
     public void UnsupportedProfileDoesNotSilentlyExpand(string failure)
     {

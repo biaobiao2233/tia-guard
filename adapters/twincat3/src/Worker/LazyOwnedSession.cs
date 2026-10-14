@@ -47,6 +47,16 @@ public sealed class LazyOwnedSession : IOwnedEngineeringSession
     internal static string Fingerprint(EnvironmentReport report)
         => JsonSerializer.Serialize(report with { ObservedAtUtc = DateTimeOffset.UnixEpoch }, ContractJson.Options);
 
+    public async Task ResetNativeAsync()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (actual is null) return;
+        // Retain logical preview/grant identity, but never inherit a prior IDE's
+        // stale Error List or bound native project into another operation.
+        await actual.DisposeAsync().ConfigureAwait(false);
+        actual = null;
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (disposed) return;

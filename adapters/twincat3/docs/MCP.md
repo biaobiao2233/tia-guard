@@ -1,6 +1,6 @@
 # TwinCAT MCP 接入与 Agent 流程
 
-状态：#57 的 **CANDIDATE**。此包实现 Node stdio MCP、工具 schema、任务唯一 pipe 客户端和结果门禁；还没有可宣称接通的真实 TwinCAT worker。当前 SDK/fake-worker 测试不是 XAE 编译、B 执行端授权或独立回读验收。依赖与实时交付状态以 [#53](https://github.com/biaobiao2233/tia-guard/issues/53)、[#54](https://github.com/biaobiao2233/tia-guard/issues/54)、[#55](https://github.com/biaobiao2233/tia-guard/issues/55)、[#56](https://github.com/biaobiao2233/tia-guard/issues/56)、[#57](https://github.com/biaobiao2233/tia-guard/issues/57) 为准。
+状态：#53 的集成候选已绑定真实 Windows Worker，并完成一次本机 MCP 错误修复、真实 XAE 编译和独立回读观察。纯 SDK/fake-worker 测试仍不能替代原生验收；当前实现没有 Runtime 下装/运行能力。主机配置见 [WORKER.md](WORKER.md)，交付和验收状态以 [#53](https://github.com/biaobiao2233/tia-guard/issues/53) 为准。
 
 ## 安装与默认只读
 

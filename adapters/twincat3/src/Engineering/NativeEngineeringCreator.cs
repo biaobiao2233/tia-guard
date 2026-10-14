@@ -177,6 +177,21 @@ public sealed class NativeEngineeringCreator : IEngineeringCreator
         if (!File.Exists(solutionPath) || !File.Exists(projectPath)
             || !Directory.EnumerateFiles(stage, "*.plcproj", SearchOption.AllDirectories).Any())
             throw new IOException("XAE did not save the complete native solution/configuration/PLC project.");
+        // Reload the saved native project so the newly added PLC's build configurations
+        // and library references are initialized from disk before a compiler is invoked.
+        var typedDte = (DTE2)context.Dte;
+        typedDte.Solution.Close(true);
+        if (typedDte.Solution.IsOpen) throw new InvalidOperationException("The new owned solution did not close before compiler initialization.");
+        context.TwinCatProject = null;
+        context.SystemManager = null;
+        typedDte.Solution.Open(solutionPath);
+        if (!typedDte.Solution.IsOpen || typedDte.Solution.Projects.Count != 1)
+            throw new InvalidOperationException("The new owned solution did not reload completely.");
+        var reloaded = typedDte.Solution.Projects.Item(1);
+        if (!Path.GetFullPath(reloaded.FullName).Equals(projectPath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("A different configuration reloaded before compilation.");
+        context.TwinCatProject = reloaded;
+        context.SystemManager = (ITcSysManager)reloaded.Object;
         EngineeringPaths.CheckTree(stage);
         return new NativeProjectHandle
         {

@@ -3,6 +3,9 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using EnvDTE;
 using EnvDTE80;
+#if TWINCAT_COM
+using TCatSysManagerLib;
+#endif
 
 namespace TiaGuard.TwinCat.Validation;
 
@@ -71,8 +74,15 @@ internal static class NativeDteBuild
             PlcContextEvidence ReadPlcContext()
             {
                 var contexts = new List<PlcSolutionContext>();
-                foreach (SolutionContext context in build.ActiveConfiguration.SolutionContexts)
+                var collection = build.ActiveConfiguration.SolutionContexts;
+                var count = collection.Count;
+                for (var index = 1; index <= count; index++)
+                {
+                    collectorPhase = "plc-context-item-" + index;
+                    var context = collection.Item(index) ?? throw new InvalidOperationException("Missing native solution context at index " + index);
                     contexts.Add(new(context.ProjectName, context.ConfigurationName, context.PlatformName, context.ShouldBuild));
+                }
+                if (collection.Count != count) throw new InvalidOperationException("Solution contexts changed during capture.");
                 nativeTrace.Add(new { kind = "solution-contexts", contexts });
                 return PlcBuildIdentity.CheckContexts(solutionPath, plcProjectPath, buildConfiguration, targetPlatform, contexts);
             }
@@ -99,7 +109,16 @@ internal static class NativeDteBuild
             dte.MainWindow.Visible = false;
             collectorPhase = "build-output-baseline";
             buildPane = FindBuildPane(dte, phase => collectorPhase = phase, entry => nativeTrace.Add(entry));
-            if (buildPane != null) { buildPane.Clear(); outputFresh = string.IsNullOrWhiteSpace(ReadOutput(buildPane)); }
+            if (buildPane != null)
+            {
+                collectorPhase = "output-pane-clear";
+                buildPane.Clear();
+                // Clear's documented contract removes all text. An empty native pane can
+                // reject TextDocument with E_FAIL until the compiler has written output.
+                // Only a successful Clear establishes freshness; capture after Build stays strict.
+                outputFresh = true;
+                nativeTrace.Add(new { kind = "build-output-baseline", method = "owned-pane-clear", succeeded = true });
+            }
             else outputFresh = true; // No preexisting pane; a pane created by this build has no old output.
             if (!outputFresh) throw new InvalidOperationException("Could not clear the owned Build Output pane.");
             collectorPhase = "build-event-subscription";
@@ -127,7 +146,7 @@ internal static class NativeDteBuild
             if (completed && build.BuildState != vsBuildState.vsBuildStateDone) problems.Add("BuildDone event contradicts SolutionBuild.BuildState.");
             failedProjectCount = completed ? build.LastBuildInfo : null;
             buildPane ??= FindBuildPane(dte, phase => collectorPhase = phase, entry => nativeTrace.Add(entry));
-            if (buildPane != null) output = ReadOutput(buildPane);
+            if (buildPane != null) output = ReadOutput(buildPane, phase => collectorPhase = phase);
             diagnostics = OneBasedErrorCollector.Read(() => list.ErrorItems.Count, index =>
             {
                 var item = list.ErrorItems.Item(index);
@@ -143,7 +162,9 @@ internal static class NativeDteBuild
                 var file = OptionalText(() => item.FileName);
                 var recognizedProject = project == configurationName || project == plcName ||
                     string.Equals(project, configurationName + ".tsproj", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(project, plcName + ".plcproj", StringComparison.OrdinalIgnoreCase);
+                    string.Equals(project, plcName + ".plcproj", StringComparison.OrdinalIgnoreCase) ||
+                    (project != null && (PlcBuildIdentity.MatchesProject(solutionPath, plcProjectPath, project) ||
+                        PlcBuildIdentity.MatchesProject(solutionPath, twinCatProjectPath, project)));
                 var ownedFile = file != null && IsWithin(stageRoot, file);
                 var outputCorrelation = !string.IsNullOrEmpty(message) && output.Contains(message, StringComparison.Ordinal);
                 var correlation = !baselineEmpty || !completed ? DiagnosticCorrelation.Unknown :
@@ -166,6 +187,7 @@ internal static class NativeDteBuild
         }
         catch (Exception ex)
         {
+            nativeTrace.Add(new { kind = "collector-exception", collectorPhase, detail = ex.ToString() });
             problems.Add($"Native DTE build/capture failed at {collectorPhase}: {ex.GetType().Name}: {ex.Message}");
             observations = new()
             {
@@ -202,7 +224,13 @@ internal static class NativeDteBuild
             }
             catch (Exception ex) { problems.Add("Build trace could not be retained: " + ex.Message); }
         }
-        return CompilationGate.Evaluate(observations with { CollectorProblems = problems });
+        var evidence = CompilationGate.Evaluate(observations with { CollectorProblems = problems });
+        // Preserve UNKNOWN if the Error List was partial. Complete Build Output can still
+        // supply real compiler codes/locations needed for an Agent to repair the source.
+        var supplemented = BuildOutputDiagnostics.Supplement(evidence.Diagnostics, output, stageRoot, plcName);
+        return evidence with { Diagnostics = supplemented,
+            ErrorCount = supplemented.Count(d => d.Severity == DiagnosticSeverity.Error),
+            WarningCount = supplemented.Count(d => d.Severity == DiagnosticSeverity.Warning) };
     }
 
     private static OutputWindowPane? FindBuildPane(DTE2 dte, Action<string>? phase = null, Action<object>? trace = null)
@@ -222,7 +250,19 @@ internal static class NativeDteBuild
         }
         return null;
     }
-    private static string ReadOutput(OutputWindowPane pane) => pane.TextDocument.StartPoint.CreateEditPoint().GetText(pane.TextDocument.EndPoint);
+    private static string ReadOutput(OutputWindowPane pane, Action<string>? phase = null)
+    {
+        phase?.Invoke("output-text-document");
+        var document = pane.TextDocument;
+        phase?.Invoke("output-start-point");
+        var start = document.StartPoint;
+        phase?.Invoke("output-end-point");
+        var end = document.EndPoint;
+        phase?.Invoke("output-edit-point");
+        var edit = start.CreateEditPoint();
+        phase?.Invoke("output-get-text");
+        return edit.GetText(end);
+    }
     private static string? OptionalText(Func<string?> read)
     {
         try { var value = read(); return string.IsNullOrWhiteSpace(value) ? null : value; }

@@ -160,7 +160,7 @@ public sealed class PlcProjectBuildTracker(string solutionPath, string projectPa
         }
         var isConfigurationProject = PlcBuildIdentity.MatchesProject(solutionPath, configurationProjectPath, project);
         if ((!isConfigurationProject && !PlcBuildIdentity.MatchesProject(solutionPath, projectPath, project)) || projectConfiguration != configuration ||
-            observedPlatform != platform || solutionConfiguration != configuration)
+            observedPlatform != platform || (solutionConfiguration != configuration && solutionConfiguration != configuration + "|" + platform))
         {
             problems.Add($"Uncorrelated PLC project event: {project} | {projectConfiguration} | {observedPlatform} | {solutionConfiguration}.");
             return false;

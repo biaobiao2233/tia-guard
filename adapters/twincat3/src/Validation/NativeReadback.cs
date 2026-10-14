@@ -110,6 +110,8 @@ internal static class NativeReadback
                 if (!tasks.Any(t => t.LinkedSystemTask == "TIRT^" + systemTask.Name)) unsupported.Add("Unbound additional system task: " + systemTask.Name);
             tasksComplete = !unsupported.Any(x => x.Contains("TaskDef", StringComparison.Ordinal) || x.Contains("task metadata", StringComparison.Ordinal) || x.Contains("task child", StringComparison.Ordinal));
             if (references == null) throw new InvalidDataException("PLC library References node is absent.");
+            var referencesXml = ParseXml(references.ProduceXml());
+            SaveXml("references", referencesXml.ToString());
             var nativeReferences = ((ITcPlcLibraryManager)references).References;
             var referenceCount = nativeReferences.Count;
             if (referenceCount < 0 || referenceCount > 10000) throw new InvalidDataException("Invalid or oversized library reference collection.");
@@ -117,8 +119,12 @@ internal static class NativeReadback
             for (var index = 0; index < referenceCount; index++)
             {
                 var reference = nativeReferences[index];
-                if (reference is ITcPlcPlaceholderRef)
+                if (reference is ITcPlcPlaceholderRef placeholder)
                 {
+                    // Build 4026 injects this virtual system library. Validate its actual
+                    // resolved identity; it is not an explicit user library from the manifest.
+                    if (reference.Name == "#Tc3_GlobalTypes" && placeholder.PlaceholderName == "Tc3_GlobalTypes"
+                        && GeneratedLibraryProjection.IsSystemGlobalTypes(referencesXml.ToString())) continue;
                     unsupported.Add("Placeholder library is outside this supported slice: " + reference.Name);
                     continue;
                 }
@@ -127,7 +133,6 @@ internal static class NativeReadback
                     Vendor = library.Distributor, ResolvedVersion = library.Version, IsPlaceholder = false });
             }
             if (nativeReferences.Count != referenceCount) throw new InvalidOperationException("Library references changed during enumeration.");
-            SaveXml("references", references.ProduceXml());
             librariesComplete = true;
         }
         catch (Exception ex) { failures.Add($"Native independent readback failed: {ex.GetType().Name}: {ex.Message}"); }
@@ -155,6 +160,21 @@ internal static class NativeReadback
                     continue;
                 }
                 if (type == 621) { plcTaskItems.Add(child); continue; }
+                if (type == 653)
+                {
+                    var tmcXml = ParseXml(child.ProduceXml());
+                    SaveXml("generated-tmc-" + child.Name, tmcXml.ToString());
+                    var file = tmcXml.Root?.Element("TmcFileDef")?.Element("FileName")?.Value;
+                    var generated = tmcXml.Root?.Element("TmcFileDef")?.Element("Document")?.Element("TcModuleClass");
+                    var expected = Path.Combine(Path.GetDirectoryName(handle.TwinCatProjectPath)!, handle.PlcProjectName, handle.PlcProjectName + ".tmc");
+                    if (child.Name != handle.PlcProjectName + ".tmc" || Children(child).Count != 0 || file == null
+                        || !Path.GetFullPath(file).Equals(expected, StringComparison.OrdinalIgnoreCase) || !File.Exists(file)
+                        || generated?.Attribute("GeneratedBy")?.Value != "TwinCAT XAE Plc"
+                        || string.IsNullOrEmpty(generated.Attribute("Hash")?.Value)
+                        || generated.Attribute("Hash")?.Value != ReadXml(file).Root?.Attribute("Hash")?.Value)
+                        unsupported.Add("Unproven generated TMC identity: " + child.PathName);
+                    continue;
+                }
                 var kind = type switch { 602 => C.ArtifactKind.Program, 603 => C.ArtifactKind.Function,
                     604 => C.ArtifactKind.FunctionBlock, 615 => C.ArtifactKind.GlobalVariableList,
                     606 => C.ArtifactKind.Struct, 605 => C.ArtifactKind.Enum, _ => (C.ArtifactKind?)null };

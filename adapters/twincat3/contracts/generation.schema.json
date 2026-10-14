@@ -43,7 +43,7 @@
           "const": "dte"
         },
         "targetPlatform": {
-          "const": "TwinCAT RT (x64)"
+          "enum": ["TwinCAT RT (x64)", "TwinCAT OS (x64)"]
         },
         "buildConfiguration": {
           "enum": [

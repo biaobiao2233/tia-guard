@@ -7,7 +7,7 @@
     "requestedBuild": "4026.27",
     "dteProgId": "TcXaeShell.DTE.17.0",
     "provider": "dte",
-    "targetPlatform": "TwinCAT RT (x64)",
+    "targetPlatform": "TwinCAT OS (x64)",
     "buildConfiguration": "Release",
     "plcTemplate": "Empty PLC Template"
   },
@@ -18,5 +18,9 @@
     { "id": "main", "name": "MAIN", "kind": "program", "declarationFile": "sources/MAIN.declaration.st", "implementationFile": "sources/MAIN.implementation.st" }
   ],
   "tasks": [{ "name": "MotorTask", "cycleTimeUs": 10000, "priority": 20, "programs": ["MAIN"] }],
-  "libraries": [{ "name": "Tc2_Standard", "version": "3.4.7.0", "vendor": "Beckhoff Automation GmbH" }]
+  "libraries": [
+    { "name": "Tc2_Standard", "version": "3.4.7.0", "vendor": "Beckhoff Automation GmbH" },
+    { "name": "Tc2_System", "version": "3.10.2.0", "vendor": "Beckhoff Automation GmbH" },
+    { "name": "Tc3_Module", "version": "3.4.7.0", "vendor": "Beckhoff Automation GmbH" }
+  ]
 }

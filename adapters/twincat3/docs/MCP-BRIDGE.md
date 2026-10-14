@@ -1,6 +1,6 @@
 # D-owned local transport mapping (candidate)
 
-This documents the Node framing/adapter seam, **not a replacement shared DTO or qualified backend**. Shared generation/native service/report definitions are A's `TwinCat3.Contracts` at `b39178a9c69c4e94060abd5124342968644c81d9`. D does not change them. A/coordinator must freeze/approve the external operation envelope and map the actual B/C services before real integration; this mapping is currently exercised only with `tests/Mcp/fake-worker.js`.
+This documents the Node framing/adapter seam, not a replacement shared DTO. The candidate maps contracts, engineering, compiler and independent capture services in src/Worker. A real local MCP repair/build/reopen sequence was observed on XAE 4026.27; mock tests remain separate. Qualification is source/environment scoped; Runtime operations remain absent. See WORKER.md and canonical #53.
 
 ## Framing and identity
 
@@ -43,4 +43,4 @@ The worker should provide bounded, sanitized errors, not raw exceptions containi
 
 ## Integration gate
 
-As of this candidate, only A's in-process contract is frozen. B's observed `GenerationRequest`, `GenerationPreview`, `GenerationResult`, `EngineeringPipeline` are B-owned definitions; D has not copied or moved them. Real B grant checks, native providers and the final worker executable have not been bound in this package. Compile-owned-copy and independent verify need explicit service mappings. The coordinator owns shared composition/CI and must resolve these seams before this adapter can claim real TwinCAT support.
+The candidate Worker binds real grants, generation, compile-on-owned-copy and independent verify. Cloud checks cover contracts/transport only; actual native compilation/reopen requires the qualified XAE host. Current observations are not source merge, release, hardware or Runtime acceptance.

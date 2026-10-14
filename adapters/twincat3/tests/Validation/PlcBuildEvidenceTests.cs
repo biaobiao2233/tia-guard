@@ -36,6 +36,24 @@ public class PlcBuildEvidenceTests
         });
 
     [Fact]
+    public void NativeCompositeSolutionConfigurationMatchesExactPlatform()
+    {
+        var tracker = Tracker();
+        tracker.Begin(PlcUniqueName, Configuration, Platform, Configuration + "|" + Platform, true);
+        tracker.Done(PlcUniqueName, Configuration, Platform, Configuration + "|" + Platform, true, true);
+        Assert.True(Evaluate(Context(ValidContext()), tracker).Success);
+    }
+
+    [Fact]
+    public void CompositeSolutionConfigurationWithForeignPlatformCannotPass()
+    {
+        var tracker = Tracker();
+        tracker.Begin(PlcUniqueName, Configuration, Platform, Configuration + "|TwinCAT OS (x64)", true);
+        tracker.Done(PlcUniqueName, Configuration, Platform, Configuration + "|TwinCAT OS (x64)", true, true);
+        Assert.False(Evaluate(Context(ValidContext()), tracker).Success);
+    }
+
+    [Fact]
     public void RelativeContextAndAbsoluteProjectEventsResolveToSamePlcProject()
     {
         var tracker = Tracker();

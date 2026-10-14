@@ -72,7 +72,17 @@ test("real executable hello/doctor/static inspect/preview/dispose do not mutate 
     fs.cpSync(path.resolve(__dirname, "../../../../examples/twincat3-generation/motor"), input, { recursive: true });
     const preview = (await worker.call("preview", { ...bind, operation: "build-generation", inputDirectory: input,
       outputDirectory: path.join(worker.root, "output") })).result;
-    assert.equal(preview.success, true, JSON.stringify(preview)); assert.match(preview.inputHash, /^[a-f0-9]{64}$/);
+    const requested = JSON.parse(fs.readFileSync(path.join(input, "twincat-generation.json"), "utf8")).environment;
+    const detected = doctor.environment;
+    const ready = detected?.installedBuilds?.includes(requested.requestedBuild) &&
+      detected?.comRegistrations?.some(r => r.progId === requested.dteProgId && r.registered) && detected.projectTemplatePath;
+    if (ready) {
+      assert.equal(preview.success, true, JSON.stringify(preview)); assert.match(preview.inputHash, /^[a-f0-9]{64}$/);
+    } else {
+      // A clean cloud runner has no XAE. Refusal is the correct result; doctor,
+      // inspection and disposal must still work without creating a COM object.
+      assert.equal(preview.success, false); assert.equal(preview.phase, "preflight");
+    }
     assert.equal(fs.existsSync(path.join(worker.root, "output")), false); assert.deepEqual(fs.readdirSync(worker.scratch), []);
     const rejected = (await worker.call("authorize", { ...bind, ...preview.request, previewId: preview.previewId, inputHash: preview.inputHash })).result;
     assert.equal(rejected.success, false); assert.equal(rejected.grantToken, undefined);

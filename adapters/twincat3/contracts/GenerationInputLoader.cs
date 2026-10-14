@@ -78,7 +78,7 @@ public static class GenerationInputLoader
             throw new InvalidDataException("Generation v1 requires the proven DTE creation path; standalone generation is not qualified.");
         if (!Regex.IsMatch(environment.DteProgId ?? "", "^TcXaeShell\\.DTE\\.[0-9]+\\.0$"))
             throw new InvalidDataException("Generation requires an explicitly installed TcXaeShell DTE ProgID.");
-        if (environment.TargetPlatform != "TwinCAT RT (x64)" || environment.BuildConfiguration is not ("Debug" or "Release"))
+        if (environment.TargetPlatform is not ("TwinCAT RT (x64)" or "TwinCAT OS (x64)") || environment.BuildConfiguration is not ("Debug" or "Release"))
             throw new InvalidDataException("Unsupported platform/build configuration.");
         if (environment.PlcTemplate != "Empty PLC Template")
             throw new InvalidDataException("Generation v1 uses Empty PLC Template with explicit objects.");
