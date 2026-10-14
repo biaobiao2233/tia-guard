@@ -13,5 +13,6 @@
     <ProjectReference Include="../Environment/TwinCat3.Environment.csproj" />
     <ProjectReference Include="../Engineering/TwinCat3.Engineering.csproj" />
     <ProjectReference Include="../Validation/TwinCat.Validation.csproj" />
+    <ProjectReference Include="../Runtime/TwinCat3.Runtime.csproj" />
   </ItemGroup>
 </Project>

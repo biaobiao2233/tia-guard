@@ -6,11 +6,13 @@ const { DaemonClient } = require("./daemonClient.js");
 const { BridgeError, failure, isFailure, sanitize } = require("./result.js");
 const { toolSchemas } = require("./toolSchemas.js");
 const allowed = new Set(Object.values(toolSchemas).map(t => t.action));
+const simulationActions = new Set(["start-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation"]);
 
 class ProviderClient {
-  constructor({ transport = null, identity = null, offlineWrites = false, child = null, startupMs = 10000 } = {}) {
+  constructor({ transport = null, identity = null, offlineWrites = false, runtimeWrites = false, child = null, startupMs = 10000 } = {}) {
     this.transport = transport; this.identity = identity; this.offlineWrites = offlineWrites;
     this.child = child; this.startupMs = startupMs; this.session = null; this.ready = null;
+    this.runtimeWrites = runtimeWrites; this.simulations = new Map();
     this.previews = new Map(); this.grants = new Map(); this.executions = new Map();
     this.secrets = new Set(identity ? [identity] : []); this.closed = false; this.queue = Promise.resolve();
   }
@@ -40,6 +42,7 @@ class ProviderClient {
   }
   invalidate() {
     this.closed = true; this.session = null; this.previews.clear(); this.grants.clear(); this.executions.clear();
+    this.simulations.clear();
     this.transport?.close();
   }
   dispatch(action, payload) {
@@ -48,6 +51,8 @@ class ProviderClient {
   }
   async dispatchOnce(action, payload) {
     if (!allowed.has(action)) throw new BridgeError("operation-not-allowed", "authorization");
+    if ((simulationActions.has(action) || (action === "preview" && payload.operation === "start-simulation")) &&
+        (!this.runtimeWrites || !this.offlineWrites)) throw new BridgeError("simulation-mode-required", "authorization");
     if (["authorize", "build-generation", "compile", "verify"].includes(action) && !this.offlineWrites)
       throw new BridgeError("read-only-mode", "authorization");
     const session = await this.ensureReady();
@@ -56,9 +61,11 @@ class ProviderClient {
       throw new BridgeError("provider-capability-unavailable", "availability");
     let request = payload;
     let preview;
-    if (["authorize", "build-generation", "compile"].includes(action)) {
+    if (["authorize", "build-generation", "compile", "start-simulation"].includes(action)) {
       preview = this.previews.get(payload.previewId);
       if (!preview) throw new BridgeError("missing-preview", "authorization");
+      if (preview.request.operation === "start-simulation" && (!this.runtimeWrites || !this.offlineWrites))
+        throw new BridgeError("simulation-mode-required", "authorization");
       if (Date.parse(preview.expiresAtUtc) <= Date.now()) { this.previews.delete(payload.previewId); throw new BridgeError("preview-expired", "authorization"); }
       request = { ...preview.request, previewId: preview.backendId, inputHash: preview.inputHash };
       if (action !== "authorize") {
@@ -70,6 +77,10 @@ class ProviderClient {
     }
     if (action === "verify" && !this.executions.has(payload.executionId))
       throw new BridgeError("unknown-owned-execution", "authorization");
+    if (action === "preview" && payload.operation === "start-simulation" && !this.executions.has(payload.executionId))
+      throw new BridgeError("unknown-owned-execution", "authorization");
+    if (simulationActions.has(action) && action !== "start-simulation" && !this.simulations.has(payload.simulationId))
+      throw new BridgeError("unknown-owned-simulation", "authorization");
     let msg;
     try { msg = await this.transport.call(action, { ...request, sessionId: session.sessionId, providerId: session.providerId }); }
     catch (err) { this.invalidate(); throw err; }
@@ -115,6 +126,18 @@ class ProviderClient {
     if (action === "verify" && r.inputHash !== this.executions.get(payload.executionId).inputHash) {
       this.invalidate(); throw new BridgeError("provider-verification-binding-invalid");
     }
+    if (action === "start-simulation") {
+      if (r.inputHash !== preview.inputHash || r.compilation?.inputHash !== preview.inputHash ||
+          typeof r.simulationId !== "string" || !r.simulationId || this.simulations.size !== 0) {
+        this.invalidate(); throw new BridgeError("provider-simulation-binding-invalid");
+      }
+      this.simulations.set(r.simulationId, { inputHash: preview.inputHash });
+    } else if (simulationActions.has(action)) {
+      if (r.simulationId !== payload.simulationId) {
+        this.invalidate(); throw new BridgeError("provider-simulation-binding-invalid");
+      }
+      if (action === "stop-simulation") this.simulations.delete(payload.simulationId);
+    }
     return sanitize(r, [...this.secrets]);
   }
   expireHandles() {
@@ -126,13 +149,13 @@ class ProviderClient {
     // Use an already authenticated session only: shutdown must not spawn/reconnect.
     if (!this.closed && this.session && this.transport) {
       try {
-        const msg = await this.transport.call("dispose", { sessionId: this.session.sessionId, providerId: this.session.providerId }, 3000);
+        const msg = await this.transport.call("dispose", { sessionId: this.session.sessionId, providerId: this.session.providerId }, 35000);
         if (msg?.ok !== true || msg.result?.success !== true) report = failure("dispose", "cleanup-failed", "cleanup");
       } catch { report = failure("dispose", "cleanup-indeterminate", "cleanup"); }
     }
     this.invalidate(); this.secrets.clear();
     if (this.child && this.child.exitCode === null) {
-      await new Promise(resolve => { const timer = setTimeout(resolve, 2000); this.child.once("exit", () => { clearTimeout(timer); resolve(); }); });
+      await new Promise(resolve => { const timer = setTimeout(resolve, 5000); this.child.once("exit", () => { clearTimeout(timer); resolve(); }); });
       if (this.child.exitCode === null) { this.child.kill(); report = failure("dispose", "owned-worker-forced-exit", "cleanup"); }
     }
     return report;
@@ -148,11 +171,12 @@ function fromEnvironment(env = process.env) {
   const identity = randomUUID(); const pipeName = `tia-guard-tc3-${randomUUID()}`;
   const endpoint = process.platform === "win32" ? `\\\\.\\pipe\\${pipeName}` : path.join(env.TMPDIR || "/tmp", `${pipeName}.sock`);
   const offlineWrites = env.TC3_OFFLINE_WRITES === "1";
+  const runtimeWrites = env.TC3_RUNTIME_WRITES === "1";
   const child = spawn(command, args, { shell: false, detached: false, windowsHide: true,
     stdio: ["ignore", "ignore", "pipe"], env: { ...env, TC3_PIPE: endpoint, TC3_IDENTITY: identity,
-      TC3_OFFLINE_WRITES: offlineWrites ? "1" : "0" } });
+      TC3_OFFLINE_WRITES: offlineWrites ? "1" : "0", TC3_RUNTIME_WRITES: runtimeWrites ? "1" : "0" } });
   child.on("error", () => {}); child.stderr.on("data", () => {}); // Never publish raw backend stderr/secrets.
   const transport = new DaemonClient({ endpoint, identity });
-  return new ProviderClient({ transport, identity, offlineWrites, child });
+  return new ProviderClient({ transport, identity, offlineWrites, runtimeWrites, child });
 }
 module.exports = { ProviderClient, fromEnvironment };

@@ -1,19 +1,29 @@
 "use strict";
 // Derived from Edge Automation toolSchemas.js at 30d8e2938eeed1c41ee24765b469d13430ab0a32.
 // Copyright (c) 2026 Edge Automation. MIT; see licenses/Edge-LICENSE.
-// One source for discovery and handler validation. No runtime/COM action passthrough.
+// One source for discovery and validation. No arbitrary runtime/COM passthrough.
 const z = require("zod/v4");
 const name = z.string().min(1).max(4096).refine(v => !v.includes("\0"), "NUL is invalid");
 const handle = z.string().min(1).max(128);
 const previewRequest = z.strictObject({
-  operation: z.enum(["build-generation", "compile"]),
+  operation: z.enum(["build-generation", "compile", "start-simulation"]),
   inputDirectory: name,
   outputDirectory: name,
-  projectPath: name.optional()
+  projectPath: name.optional(),
+  executionId: handle.optional(),
+  probeSymbol: name.optional()
 }).superRefine((v, ctx) => {
   if (v.operation === "compile" && !v.projectPath)
     ctx.addIssue({ code: "custom", path: ["projectPath"], message: "compile requires projectPath; the backend must compile an owned disposable copy" });
+  if (v.operation === "start-simulation") {
+    for (const key of ["projectPath", "executionId", "probeSymbol"])
+      if (!v[key]) ctx.addIssue({ code: "custom", path: [key], message: "simulation requires an owned published execution and changing UDINT probe" });
+  } else if (v.executionId || v.probeSymbol) {
+    ctx.addIssue({ code: "custom", message: "executionId/probeSymbol are simulation-only" });
+  }
 });
+const simulation = { simulationId: handle };
+const scalar = { ...simulation, symbol: name, type: z.enum(["BOOL", "INT", "UINT", "DINT", "UDINT", "REAL", "LREAL"]) };
 const definitions = {
   doctor_twincat: {
     action: "doctor", readOnly: true,
@@ -44,6 +54,36 @@ const definitions = {
     action: "compile", readOnly: false,
     description: "Compile only the owned disposable copy bound to the preview/grant. Full diagnostics and build initiation/completion are mandatory. Never compile user input in place.",
     inputSchema: z.strictObject({ previewId: handle, grantId: handle })
+  },
+  start_twincat_simulation: {
+    action: "start-simulation", readOnly: false,
+    description: "Compile, verify and activate an owned disposable PLC-only project on a freshly created local Usermode Runtime. Requires explicit host simulation mode, reviewed preview and single-use grant. Actual changing UDINT feedback is mandatory.",
+    inputSchema: z.strictObject({ previewId: handle, grantId: handle })
+  },
+  read_twincat_simulation: {
+    action: "simulation-status", readOnly: true,
+    description: "Read actual ADS system/PLC states of this session's owned simulation.",
+    inputSchema: z.strictObject(simulation)
+  },
+  set_twincat_simulation_state: {
+    action: "simulation-state", readOnly: false,
+    description: "Request and observe PLC Run/Stop only on this session's owned software simulation.",
+    inputSchema: z.strictObject({ ...simulation, state: z.enum(["Run", "Stop"]) })
+  },
+  read_twincat_symbol: {
+    action: "simulation-read", readOnly: true,
+    description: "Read an actual typed scalar rooted in the frozen PLC source. No arbitrary ADS address or remote target.",
+    inputSchema: z.strictObject(scalar)
+  },
+  write_twincat_symbol: {
+    action: "simulation-write", readOnly: false,
+    description: "Write and read back an explicitly declared scalar GVL variable on the owned simulation. Program outputs, pointers, hardware and special symbols are protected.",
+    inputSchema: z.strictObject({ ...scalar, value: z.union([z.boolean(), z.number().finite()]) })
+  },
+  stop_twincat_simulation: {
+    action: "stop-simulation", readOnly: false,
+    description: "Stop only the Runtime process created by this session and confirm its exit.",
+    inputSchema: z.strictObject(simulation)
   },
   verify_twincat_project: {
     action: "verify", readOnly: false,

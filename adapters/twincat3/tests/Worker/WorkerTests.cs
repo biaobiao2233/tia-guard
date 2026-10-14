@@ -42,6 +42,18 @@ public sealed class WorkerTests : IDisposable
     private JsonElement PreviewPayload(WorkerBackend backend) => Payload(backend,
         new { operation = "build-generation", inputDirectory = input, outputDirectory = Path.Combine(root, "output") });
 
+    [Fact] public async Task OfflineModeDoesNotPermitRuntimeActionsOrCreateProcesses()
+    {
+        await using var backend = Backend(writes: true, native: true);
+        foreach (var action in new[] { "start-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation" })
+        {
+            var denied = await backend.DispatchAsync(action, Payload(backend, new { }));
+            Assert.False(denied["success"]!.GetValue<bool>());
+            Assert.False(backend.Hello()["capabilities"]![action]!["available"]!.GetValue<bool>());
+        }
+        Assert.Equal(0, environment.Created); Assert.Empty(Directory.EnumerateFileSystemEntries(scratch));
+    }
+
     [Fact] public async Task DoctorAndPreviewNeverCreateAnOwnedNativeSession()
     {
         await using var backend = Backend();

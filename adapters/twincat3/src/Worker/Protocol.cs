@@ -11,7 +11,8 @@ public static class WorkerProtocol
     public const int MaxBytes = 8 * 1024 * 1024;
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private static readonly HashSet<string> Actions = new(StringComparer.Ordinal)
-        { "hello", "doctor", "inspect", "preview", "authorize", "build-generation", "compile", "verify", "dispose" };
+        { "hello", "doctor", "inspect", "preview", "authorize", "build-generation", "compile", "verify", "dispose",
+            "start-simulation", "simulation-status", "simulation-state", "simulation-read", "simulation-write", "stop-simulation" };
 
     public static WorkerRequest Parse(byte[] frame, string identity)
     {
