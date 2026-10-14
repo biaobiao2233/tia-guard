@@ -21,7 +21,7 @@ public static class NativeSimulationDeployment
     }
     public static Task SelectOwnedTargetAsync(NativeProjectHandle project, IOwnedEngineeringSession session,
         OwnedUsermodeRuntime runtime, CancellationToken cancellationToken)
-        => session.InvokeAsync(context =>
+        => session.InvokeAsync<bool>(context =>
         {
 #if TWINCAT_RUNTIME_NATIVE
             runtime.RequireLive(); RequireBinding(context, project);
@@ -45,7 +45,7 @@ public static class NativeSimulationDeployment
     public static Task ActivateAsync(NativeProjectHandle project, IOwnedEngineeringSession session,
         OwnedUsermodeRuntime runtime, CompilationReport compiled, VerificationReport verified,
         CancellationToken cancellationToken)
-        => session.InvokeAsync(context =>
+        => session.InvokeAsync<bool>(context =>
         {
 #if TWINCAT_RUNTIME_NATIVE
             runtime.RequireLive(); RequireBinding(context, project);

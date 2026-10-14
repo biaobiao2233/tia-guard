@@ -1,6 +1,7 @@
 "use strict";
 // Opt-in qualification against the real local XAE/compiler. Retain all evidence;
-// never attach to an existing IDE or activate a Runtime.
+// never attach to an existing IDE. Runtime qualification is separately opt-in
+// and can activate only a freshly allocated, owned Usermode simulation.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
@@ -23,7 +24,8 @@ test("native MCP: compiler error -> repair -> fresh authorization -> build -> in
   const c = await connectMcp({
     TC3_WORKER_COMMAND: path.resolve(__dirname, "../../src/Worker/bin/Release/net8.0-windows/TwinCat3.Worker.exe"),
     TC3_WORKER_ARGS: "[]", TC3_WORKSPACE: root, TC3_SCRATCH: scratch,
-    TC3_INTEROP: process.env.TC3_INTEROP, TC3_OFFLINE_WRITES: "1", TC3_BUILD: manifest.environment.requestedBuild
+    TC3_INTEROP: process.env.TC3_INTEROP, TC3_OFFLINE_WRITES: "1", TC3_BUILD: manifest.environment.requestedBuild,
+    TC3_RUNTIME_WRITES: process.env.TC3_RUNTIME_TEST === "1" ? "1" : "0"
   });
   const receipts = [];
   async function call(name, args = {}) {
@@ -45,7 +47,10 @@ test("native MCP: compiler error -> repair -> fresh authorization -> build -> in
   }
   try {
     assert.equal((await call("doctor_twincat")).isError, false);
-    const bad = await generate("rejected-output");
+    const runtimeOnly = process.env.TC3_RUNTIME_TEST === "1";
+    let bad;
+    if (!runtimeOnly) {
+    bad = await generate("rejected-output");
     assert.equal(bad.built.isError, true);
     const failed = bad.built.structuredContent;
     assert.equal(failed.published, false);
@@ -57,14 +62,69 @@ test("native MCP: compiler error -> repair -> fresh authorization -> build -> in
     assert.ok(failed.compilation.diagnostics.some(d => d.severity === "error" && d.code === "C0046" &&
       d.origin === "DTE.BuildOutput" && d.line > 0 && d.file && d.message.includes("UndefinedRegressionIdentifier")));
     assert.equal((await call("build_twincat_generation", bad.handles)).isError, true);
+    }
     await fs.writeFile(main, correct);
     const good = await generate("published");
-    assert.notEqual(good.preview.inputHash, bad.preview.inputHash);
+    if (bad) assert.notEqual(good.preview.inputHash, bad.preview.inputHash);
     assert.equal(good.built.isError, false, JSON.stringify(good.built.structuredContent));
     assert.equal(good.built.structuredContent.published, true);
     const verification = await call("verify_twincat_project", { executionId: good.built.structuredContent.executionId });
     assert.equal(verification.isError, false, JSON.stringify(verification.structuredContent));
     assert.equal(verification.structuredContent.verification.verdict, "pass");
+    if (runtimeOnly) {
+      const published = good.built.structuredContent;
+      const preview = await call("preview_twincat_generation", { operation: "start-simulation", inputDirectory,
+        projectPath: published.solutionPath, executionId: published.executionId,
+        outputDirectory: path.join(scratch, "simulation"), probeSymbol: "MAIN.Motor.Status.CycleCount" });
+      assert.equal(preview.isError, false, JSON.stringify(preview.structuredContent));
+      const authorization = await call("authorize_twincat_preview", { previewId: preview.structuredContent.previewId });
+      assert.equal(authorization.isError, false, JSON.stringify(authorization.structuredContent));
+      const started = await call("start_twincat_simulation", { previewId: preview.structuredContent.previewId, grantId: authorization.structuredContent.grantId });
+      assert.equal(started.isError, false, JSON.stringify(started.structuredContent));
+      const simulationId = started.structuredContent.simulationId;
+      const scalar = (symbol, type, value) => ({ simulationId, symbol, type, ...(value === undefined ? {} : { value }) });
+      const successful = async (tool, args) => {
+        const response = await call(tool, args); assert.equal(response.isError, false, JSON.stringify(response.structuredContent));
+        return response.structuredContent;
+      };
+      const waitValue = async (symbol, type, value) => {
+        const deadline = Date.now() + 10000;
+        while (Date.now() < deadline) {
+          const actual = await successful("read_twincat_symbol", scalar(symbol, type));
+          if (actual.value === value) return;
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        assert.fail(`Actual PLC value was not observed: ${symbol}=${value}`);
+      };
+      await successful("read_twincat_simulation", { simulationId });
+      for (const [command, feedback, wanted] of [["Start", "Running", true], ["Fault", "Faulted", true]]) {
+        await successful("write_twincat_symbol", scalar(`GVL_Signals.${command}`, "BOOL", true));
+        await waitValue(`MAIN.Motor.Status.${feedback}`, "BOOL", wanted);
+        await successful("write_twincat_symbol", scalar(`GVL_Signals.${command}`, "BOOL", false));
+      }
+      await waitValue("MAIN.Motor.Status.Running", "BOOL", false);
+      await successful("write_twincat_symbol", scalar("GVL_Signals.Reset", "BOOL", true));
+      await waitValue("MAIN.Motor.Status.Faulted", "BOOL", false);
+      await successful("write_twincat_symbol", scalar("GVL_Signals.Reset", "BOOL", false));
+      await successful("write_twincat_symbol", scalar("GVL_Signals.Start", "BOOL", true));
+      await waitValue("MAIN.Motor.Status.Running", "BOOL", true);
+      await successful("write_twincat_symbol", scalar("GVL_Signals.Start", "BOOL", false));
+      await successful("write_twincat_symbol", scalar("GVL_Signals.Stop", "BOOL", true));
+      await waitValue("MAIN.Motor.Status.Running", "BOOL", false);
+      await successful("write_twincat_symbol", scalar("GVL_Signals.Stop", "BOOL", false));
+      assert.equal((await call("write_twincat_symbol", scalar("MAIN.Motor.Status.CycleCount", "UDINT", 0))).isError, true);
+      const stopped = await successful("set_twincat_simulation_state", { simulationId, state: "Stop" });
+      assert.equal(stopped.state.plcState, "Stop");
+      const first = await successful("read_twincat_symbol", scalar("MAIN.Motor.Status.CycleCount", "UDINT"));
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const second = await successful("read_twincat_symbol", scalar("MAIN.Motor.Status.CycleCount", "UDINT"));
+      assert.equal(first.value, second.value);
+      const resumed = await successful("set_twincat_simulation_state", { simulationId, state: "Run" });
+      assert.equal(resumed.state.plcState, "Run");
+      const stoppedProcess = await successful("stop_twincat_simulation", { simulationId });
+      assert.equal(stoppedProcess.ownedProcessExited, true);
+      assert.equal((await call("read_twincat_simulation", { simulationId })).isError, true);
+    }
   } finally {
     await c.close();
     await fs.writeFile(path.join(root, "client-stderr.log"), c.stderr());

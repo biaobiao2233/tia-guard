@@ -181,14 +181,14 @@ public sealed class WorkerBackend : IAsyncDisposable
             if (operation == "start-simulation")
             {
                 if (simulations.Count != 0) throw new InvalidOperationException("Stop the owned simulation before starting another.");
-                var id = Text(payload, "executionId");
-                if (!executions.TryGetValue(id, out var owned) || !owned.Published || owned.Input.InputHash != frozen.InputHash ||
+                var ownedExecutionId = Text(payload, "executionId");
+                if (!executions.TryGetValue(ownedExecutionId, out var owned) || !owned.Published || owned.Input.InputHash != frozen.InputHash ||
                     !Path.GetFullPath(owned.SolutionPath).Equals(Path.GetFullPath(Text(payload, "projectPath")), StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Only a successfully published execution from this Worker can be simulated.");
                 if (frozen.Manifest.Environment.TargetPlatform != "TwinCAT OS (x64)") throw new NotSupportedException("Only qualified OS x64 simulation is supported.");
                 EngineeringPaths.RequireNewOutput(output, allocation.ScratchRoot);
                 var probe = Text(payload, "probeSymbol"); SimulationPolicy.RequireSymbol(frozen, probe, false);
-                request["executionId"] = id; request["probeSymbol"] = probe;
+                request["executionId"] = ownedExecutionId; request["probeSymbol"] = probe;
             }
             project = ProjectSnapshot.Capture(Text(payload, "projectPath"), allocation);
             EngineeringPaths.RequireDistinctTrees(project.Root, output, allocation.ScratchRoot);

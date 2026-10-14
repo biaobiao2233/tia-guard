@@ -1,6 +1,6 @@
 # TwinCAT MCP 接入与 Agent 流程
 
-状态：#53 的集成候选已绑定真实 Windows Worker，并完成一次本机 MCP 错误修复、真实 XAE 编译和独立回读观察。纯 SDK/fake-worker 测试仍不能替代原生验收；当前实现没有 Runtime 下装/运行能力。主机配置见 [WORKER.md](WORKER.md)，交付和验收状态以 [#53](https://github.com/biaobiao2233/tia-guard/issues/53) 为准。
+状态：#53 的集成候选已绑定真实 Windows Worker，并完成一次本机 MCP 错误修复、真实 XAE 编译和独立回读观察。新增独立 Usermode 仿真接口；运行验收必须另有原生证据，纯 SDK/fake-worker 测试不能替代。主机配置见 [WORKER.md](WORKER.md)，交付和验收状态以 [#53](https://github.com/biaobiao2233/tia-guard/issues/53) 为准。
 
 ## 安装与默认只读
 
@@ -36,9 +36,10 @@ MCP host 的 stdio 配置示例（路径替换为自己的独立 checkout，不�
 | `TC3_WORKER_COMMAND` | 可信本地 worker 的绝对可执行路径；不经 shell |
 | `TC3_WORKER_ARGS` | JSON 字符串数组，例如 dotnet 的本地 worker DLL 参数；不含 token |
 | `TC3_OFFLINE_WRITES` | 默认 `0`；只有 host 明确设置 `1` 才允许 owned 离线授权/执行/回读 |
+| `TC3_RUNTIME_WRITES` | 默认 `0`；同时启用离线写才允许新建自有软件仿真、状态控制和标量读写 |
 | worker 自己的 allocation 配置 | 后端拥有的 workspace/scratch；MCP 请求不能赋予路径所有权 |
 
-Node 每次创建随机 `TC3_PIPE` 和 `TC3_IDENTITY`，通过子进程环境传给自有 worker；不接受用户指定共享/default pipe，不 detached，不附着既有 daemon，不复用 `te1000-mcp`。worker 需要使用 [本地桥映射](MCP-BRIDGE.md)。目前没有真实 worker 可直接填入这个配置；不要把测试 fake-worker 用于实际工程。worker 启动必须默认 hidden，并懒加载 fresh owned COM，不能因为只读工具发现就附着用户 IDE。
+Node 每次创建随机 `TC3_PIPE` 和 `TC3_IDENTITY`，通过子进程环境传给自有 worker；不接受用户指定共享/default pipe，不 detached，不附着既有 daemon，不复用 `te1000-mcp`。真实 Worker 需使用本机原生绑定构建；不要把测试 fake-worker 用于实际工程。worker 启动默认 hidden，并懒加载 fresh owned COM，不能因为只读工具发现就附着用户 IDE。
 
 ## 工具与操作顺序
 
@@ -49,10 +50,21 @@ Node 每次创建随机 `TC3_PIPE` 和 `TC3_IDENTITY`，通过子进程环境传
 | `preview_twincat_generation` | `operation`, `inputDirectory`, `outputDirectory`；compile 还需 `projectPath` | 冻结请求/源码/环境、预览新输出；不写工程 |
 | `authorize_twincat_preview` | `previewId` | host 已开启离线写时，从 B 执行服务申请单次 grant |
 | `build_twincat_generation` | `previewId`, `grantId` | 创建 owned stage；编译并独立回读通过后才发布新输出 |
-| `compile_twincat_project` | `previewId`, `grantId` | 只能构建授权绑定的 owned disposable copy；现有 B 尚无该独立入口，真实能力必须 unavailable |
+| `compile_twincat_project` | `previewId`, `grantId` | 只能构建授权绑定的 owned disposable copy，提供完整诊断 |
 | `verify_twincat_project` | `executionId` | 仅回读本会话已有 owned execution；缺真实独立回读服务则 unavailable |
 
-`operation` 只接受 `build-generation` 或 `compile`。工具参数严格拒绝未知字段，不能注入 `action`、任意 COM 命令、worker token 或扩大路径权限。
+`operation` 接受 `build-generation`、`compile` 或 `start-simulation`。仿真预览额外要求本会话成功发布的 `executionId`、对应 `projectPath`、实际变化的 UDINT `probeSymbol`，以及 scratch 中尚不存在的 `outputDirectory`。工具参数严格拒绝未知字段，不能注入任意 COM 命令、worker token 或扩大路径权限。
+
+| 仿真工具 | 参数 | 行为 |
+| --- | --- | --- |
+| `start_twincat_simulation` | `previewId`, `grantId` | 对自有副本重新编译、核验，在新分配的本地 Usermode 进程激活并验证真实执行 |
+| `read_twincat_simulation` | `simulationId` | 读取实际系统/PLC 状态 |
+| `set_twincat_simulation_state` | `simulationId`, `state` | PLC Run/Stop 并等待实际状态反馈 |
+| `read_twincat_symbol` | `simulationId`, `symbol`, `type` | 读取 frozen source 中 Program/GVL 的标量 |
+| `write_twincat_symbol` | 同上及 `value` | 写入显式声明的顶层 GVL 标量并回读；拒绝 Program 输出和指针 |
+| `stop_twincat_simulation` | `simulationId` | 结束本会话创建的进程并确认退出 |
+
+标量类型限定 BOOL/INT/UINT/DINT/UDINT/REAL/LREAL，数值需有限且不溢出。不提供用户指定 AMS 地址、端口、PID、原始 ADS 内存或任意在线工程选择。
 
 生成输入消费 A 的 `GenerationInputLoader.Load(inputDirectory)`，固定文件名是 `twincat-generation.json`，其结构以 `../contracts/generation.schema.json` 为准。源码必须恰好等于 manifest 引用的 UTF-8 文件集合；Node 不复制该 manifest schema、不自己计算替代 source hash。MCP 的 `inputDirectory` 映射到 B 的 `GenerationRequest.SourceDirectory`，`outputDirectory` 映射到 `OutputDirectory`，所有 canonical path/ownership/environment 检查仍由 B 执行端完成。
 
@@ -65,7 +77,7 @@ Agent 流程：
 5. 编译失败读取 `structuredContent.compilation.diagnostics` 的完整错误、file/line/column；位置缺失保持 null。根据错误修改自有 ST 输入。旧 preview/grant 无法用于改后的源码，重新执行 preview→authorize→build。
 6. 只有真实 compilation 和 independent verification 全部通过、cleanup 无失败，才交付 `published:true` 的新工程；需要再核实时用成功 execution 的 `executionId` 独立 verify。
 
-这套顺序不涉及 Activate、ADS 路由、下载、RUN/STOP/reset、许可或对现有 PLC 的操作。
+离线流程到此结束。另开仿真预览→授权→启动才能进入运行流程；它仅针对新建的自有 Usermode 软件进程。全局 ADS 路由、许可、真实硬件及既有 PLC 操作均未开放。
 
 ## 结果、诊断与退出
 
