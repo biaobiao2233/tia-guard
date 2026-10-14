@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Xml;
 using TwinCAT.Ads;
-using TwinCAT.TypeSystem;
 using TwinCat3.Contracts;
 using TwinCat3.Engineering;
 
@@ -24,11 +23,13 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
     public string ConfigurationRoot { get; }
     public string InstanceRoot { get; }
     public string ExecutablePath { get; }
+    public string InstallationRoot { get; }
     public int ProcessId => process.Id;
     private OwnedUsermodeRuntime(Process process, string netId, string root, string executable)
     {
         this.process = process; NetId = netId; InstanceRoot = root; ExecutablePath = executable;
         ConfigurationRoot = Path.Combine(root, "3.1"); started = process.StartTime;
+        InstallationRoot = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(executable)!, "..", ".."));
         stdout = DrainAsync(process.StandardOutput, Path.Combine(root, "stdout.log"), line =>
         {
             if (line.StartsWith("AmsNetId: ", StringComparison.Ordinal)) announcedNetId.TrySetResult(line[10..].Trim());
@@ -37,7 +38,7 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
     }
     public static bool Installed(string? installation) => installation is not null &&
         File.Exists(Path.Combine(installation, "Runtimes", "bin", "TcSystemServiceUm.exe")) &&
-        File.Exists(Path.Combine(installation, "Runtimes", "UmRT_Template", "3.1", "TcRegistry.xml"));
+        File.Exists(Path.Combine(installation, "Runtimes", "UmRT_Template", "3.1", "TcRegistry.xml")) && InstalledAdsClient.Installed(installation);
 
     public static async Task<OwnedUsermodeRuntime> StartAsync(string installation, string root, string scratch,
         CancellationToken cancellationToken)
@@ -87,7 +88,7 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
             {
                 cancellationToken.ThrowIfCancellationRequested(); owned.RequireLive();
                 try { using var ads = owned.Connect(10000); _ = ads.ReadState(); return owned; }
-                catch (AdsErrorException ex) { lastAdsError = ex.ErrorCode + ": " + ex.Message; await Task.Delay(100, cancellationToken); }
+                catch (InstalledAdsException ex) { lastAdsError = ex.Message; await Task.Delay(100, cancellationToken); }
             }
             throw new TimeoutException("Owned Runtime ADS service did not become available. Last ADS error: " + lastAdsError);
         }
@@ -110,10 +111,10 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
         if (actual != string.Concat(NetId.Split('.').Select(p => byte.Parse(p).ToString("X2"))))
             throw new InvalidOperationException("Owned Runtime configuration identity changed.");
     }
-    public AdsClient Connect(int port)
+    public InstalledAdsClient Connect(int port)
     {
         RequireLive(); if (port is not (851 or 10000)) throw new InvalidDataException("Unsupported simulation port.");
-        var client = new AdsClient { Timeout = 1000 }; client.Connect(NetId, port); return client;
+        return new InstalledAdsClient(this, port);
     }
     public object ReadSymbol(FrozenGenerationInput input, string symbol, string type)
     {
@@ -128,10 +129,10 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
         var requested = SimulationPolicy.ScalarValue(type, value); ads.WriteValue(symbol, requested);
         return ads.ReadValue(symbol, SimulationPolicy.ScalarType(type)) ?? throw new InvalidDataException("No scalar readback.");
     }
-    private static void ValidateSymbol(AdsClient ads, string name, string type, bool writing)
+    private static void ValidateSymbol(InstalledAdsClient ads, string name, string type, bool writing)
     {
         var symbol = ads.ReadSymbol(name); _ = SimulationPolicy.ScalarType(type);
-        if (!symbol.IsAtomicType() || symbol.IsPointer || symbol.IsReference || symbol.IsProperty ||
+        if (!symbol.IsPrimitiveType || symbol.IsPointer || symbol.IsReference || symbol.IsProperty ||
             !symbol.TypeName.Equals(type, StringComparison.OrdinalIgnoreCase) || (writing && symbol.IsReadOnly))
             throw new InvalidDataException("Actual PLC symbol type/access differs from the requested scalar.");
     }
@@ -164,7 +165,7 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
         {
             cancellationToken.ThrowIfCancellationRequested(); RequireLive();
             try { using var ads = Connect(port); if (ads.ReadState().AdsState == wanted) return; }
-            catch (AdsErrorException) { }
+            catch (InstalledAdsException) { }
             await Task.Delay(100, cancellationToken);
         }
         throw new TimeoutException("Owned Runtime did not reach " + wanted + " on port " + port + "; inspect local Runtime/licensing diagnostics.");
