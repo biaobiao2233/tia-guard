@@ -161,14 +161,15 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
     private async Task WaitStateAsync(int port, AdsState wanted, CancellationToken cancellationToken)
     {
         var timer = Stopwatch.StartNew();
-        while (timer.Elapsed < TimeSpan.FromSeconds(20))
+        string last = "No reply";
+        while (timer.Elapsed < TimeSpan.FromSeconds(60))
         {
             cancellationToken.ThrowIfCancellationRequested(); RequireLive();
-            try { using var ads = Connect(port); if (ads.ReadState().AdsState == wanted) return; }
-            catch (InstalledAdsException) { }
+            try { using var ads = Connect(port); var actual = ads.ReadState().AdsState; last = actual.ToString(); if (actual == wanted) return; }
+            catch (InstalledAdsException ex) { last = ex.Message; }
             await Task.Delay(100, cancellationToken);
         }
-        throw new TimeoutException("Owned Runtime did not reach " + wanted + " on port " + port + "; inspect local Runtime/licensing diagnostics.");
+        throw new TimeoutException("Owned Runtime did not reach " + wanted + " on port " + port + ". Last observation: " + last);
     }
     public async ValueTask DisposeAsync()
     {

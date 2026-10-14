@@ -22,7 +22,7 @@ public sealed class InstalledAdsClient : IDisposable
         var assembly = Load(owner.InstallationRoot);
         stateType = assembly.GetType("TwinCAT.Ads.StateInfo", true)!;
         client = Activator.CreateInstance(assembly.GetType("TwinCAT.Ads.TcAdsClient", true)!)!;
-        try { client.Timeout = 1000; client.Connect(owner.NetId, port); }
+        try { client.Synchronize = false; client.Timeout = 1000; client.Connect(owner.NetId, port); }
         catch { client.Dispose(); throw; }
     }
     internal static bool Installed(string root) => Find(root) is not null &&
