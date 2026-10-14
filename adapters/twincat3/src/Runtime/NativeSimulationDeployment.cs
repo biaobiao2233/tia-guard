@@ -10,6 +10,10 @@ public static class NativeSimulationDeployment
 {
     public static Task ShowOwnedLicensePageAsync(NativeProjectHandle project, IOwnedEngineeringSession session,
         OwnedUsermodeRuntime runtime, CancellationToken cancellationToken)
+        => RecordOwnedIdeAsync(project, session, runtime, cancellationToken, showLicensePage: true);
+
+    public static Task RecordOwnedIdeAsync(NativeProjectHandle project, IOwnedEngineeringSession session,
+        OwnedUsermodeRuntime runtime, CancellationToken cancellationToken, bool showLicensePage = false)
         => session.InvokeAsync<bool>(context =>
         {
 #if TWINCAT_RUNTIME_NATIVE
@@ -22,8 +26,11 @@ public static class NativeSimulationDeployment
             using var process = System.Diagnostics.Process.GetProcessById((int)processId);
             File.WriteAllText(Path.Combine(runtime.InstanceRoot, "ide-ownership.json"), System.Text.Json.JsonSerializer.Serialize(new
                 { OwnedProcessId = processId, session.SessionId, Started = process.StartTime, runtime.SimulationId }));
-            dte.SuppressUI = false; dte.MainWindow.Visible = true;
-            manager.SelectTreeItem("TIRC^License");
+            if (showLicensePage)
+            {
+                dte.SuppressUI = false; dte.MainWindow.Visible = true;
+                manager.SelectTreeItem("TIRC^License");
+            }
             return true; // Selection only. No license request/generation/copy.
 #else
             throw new NotSupportedException("Native licensing page requires the local XAE interop.");

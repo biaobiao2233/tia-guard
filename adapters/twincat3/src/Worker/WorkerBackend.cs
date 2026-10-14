@@ -406,7 +406,17 @@ public sealed class WorkerBackend : IAsyncDisposable
         {
             // Human licensing/UI work must not silently alter the frozen program.
             await state.Runtime.EnterConfigAsync(cancellationToken).ConfigureAwait(false);
+            // Licensing/runtime messages outlive solution reloads and this XAE
+            // build cannot reliably clear them through DTE. Use our existing
+            // fresh-owned-IDE boundary, keeping the SAME held Runtime/license.
+            await session.ResetNativeAsync().ConfigureAwait(false);
+            var reopened = await BindAsync(state.Input, prepared.Project.SolutionPath,
+                prepared.Project.StageRoot, cancellationToken).ConfigureAwait(false);
+            if (reopened.ProjectIdentity != prepared.Project.ProjectIdentity)
+                throw new InvalidOperationException("Prepared project identity changed during fresh IDE reopen.");
+            prepared = prepared with { Project = reopened };
             await NativeSimulationDeployment.SelectOwnedTargetAsync(prepared.Project, session, state.Runtime, cancellationToken).ConfigureAwait(false);
+            await NativeSimulationDeployment.RecordOwnedIdeAsync(prepared.Project, session, state.Runtime, cancellationToken).ConfigureAwait(false);
             compiled = await compiler.CompileAsync(state.Input, prepared.Project, session, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(prepared.Root, "resume-compilation.json"), JsonSerializer.Serialize(compiled, Json), cancellationToken).ConfigureAwait(false);
             if (!compiled.Passed) throw new InvalidOperationException("Prepared simulation did not compile after user interaction.");

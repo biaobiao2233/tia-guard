@@ -99,21 +99,8 @@ internal static class NativeDteBuild
             if (list.ErrorItems.Count != 0)
             {
                 // Only this task's fresh owned IDE is reachable here; do not clear the user's IDE.
-                // Licensing leaves a different document active. Restore the command's
-                // Error List context before invoking the official clear command.
-                collectorPhase = "error-list-activate";
-                dte.ExecuteCommand("View.ErrorList", "");
-                dte.Windows.Item(EnvDTE80.WindowKinds.vsWindowKindErrorList).Activate();
-                PumpMessages();
                 collectorPhase = "error-list-clear-command";
                 dte.ExecuteCommand("OtherContextMenus.ErrorList.Clear", "");
-                var baselineWait = Stopwatch.StartNew();
-                while (list.ErrorItems.Count != 0 && baselineWait.Elapsed < TimeSpan.FromSeconds(5))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    PumpMessages();
-                    System.Threading.Thread.Sleep(30);
-                }
             }
             baselineEmpty = list.ErrorItems.Count == 0;
             if (!baselineEmpty) throw new InvalidOperationException("Could not establish an empty fresh Error List baseline.");
