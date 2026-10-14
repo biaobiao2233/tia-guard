@@ -44,4 +44,8 @@ node --test adapters/twincat3/tests/Worker/native-mcp.test.js
 
 启动必须观察实际 `MAIN.Motor.Status.CycleCount` 变化并核对运行应用名称。后续测试通过 ADS 验证 Start/Stop/Fault/Reset、PLC STOP 时计数冻结、RUN 恢复以及自有进程退出。任何超时、许可问题、部分编译诊断或回读不完整都保留失败证据，不改写为 PASS。
 
-运行库复用官方 NuGet `Beckhoff.TwinCAT.Ads` 7.0.389；Usermode 可执行文件来自本机官方安装。本工具不安装驱动、配置系统路由或生成试用许可证。若本机缺许可证，由原生验证日志明确定位该阻塞。
+运行库使用官方 NuGet `Beckhoff.TwinCAT.Ads` 7.0.389 的状态契约；在已验证主机上，通信复用本机 XAE 安装的官方 ADS 4 客户端和 `Common64/TcAdsDll.dll`。现代 SDK 的默认路由通道未能解析该主机的新建 Usermode 地址，因此不能仅凭 NuGet 恢复成功认为通信可用。旧版客户端隔离加载，禁用 GUI 同步；供应商 DLL 不随项目分发。Worker 需要 .NET 8 Windows Desktop Runtime，Usermode 可执行文件与 ADS 客户端需来自官方安装。
+
+2026-10-14 的实际 MCP 复测完成从零生成、真实编译和独立核验；仿真副本也达到 0 错误/0 警告。启动没有通过：独立实例退回 Config，PLC 的 851 端口不可用。随后在另一个自有诊断实例中，官方 IDE 明确报告 `license not found`。精确源版本、证据哈希及未验证项见 [运行观察记录](../evidence/runtime-20261014.json)。这不是运行验收 PASS。
+
+本工具不安装驱动、配置系统路由或生成/复制许可证。新建实例必须具备相应的运行许可；已有 Servo 演示的许可状态不能推定适用于新实例。许可阻塞需要用户在该实例对应的官方许可页面处理，试用验证码由用户本人输入。处理后还需完整重跑 MCP 原生测试，观察实际 PLC 计数变化、应用身份、命令反馈、Run/Stop 和进程退出；只消除许可错误不能替代这些验收。
