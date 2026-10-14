@@ -44,4 +44,4 @@ node --test adapters/twincat3/tests/Worker/native-mcp.test.js
 
 启动必须观察实际 `MAIN.Motor.Status.CycleCount` 变化并核对运行应用名称。后续测试通过 ADS 验证 Start/Stop/Fault/Reset、PLC STOP 时计数冻结、RUN 恢复以及自有进程退出。任何超时、许可问题、部分编译诊断或回读不完整都保留失败证据，不改写为 PASS。
 
-运行库复用官方 NuGet `Beckhoff.TwinCAT.Ads` 6.2.521；Usermode 可执行文件来自本机官方安装。本工具不安装驱动、配置系统路由或生成试用许可证。若本机缺许可证，由原生验证日志明确定位该阻塞。
+运行库复用官方 NuGet `Beckhoff.TwinCAT.Ads` 7.0.389；Usermode 可执行文件来自本机官方安装。本工具不安装驱动、配置系统路由或生成试用许可证。若本机缺许可证，由原生验证日志明确定位该阻塞。
