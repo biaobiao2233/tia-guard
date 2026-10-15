@@ -63,6 +63,14 @@ Control Win service was stopped and remains outside scope. Commercial
 separate runtime license; its documentation describes a two-hour unlicensed demo.
 This is not PDE, and IDE-simulation evidence does not qualify Control Win SL.
 
+Native identity observation: `get_device_identification()` returns
+`4096 / 0000 0001 / 3.5.22.40` with simulation disabled, and
+`4097 / 0000 000a / 3.5.22.40` with simulation enabled, including after reopen.
+The first strict identity-check candidate incorrectly expected the offline ID
+in simulation and was rejected before compilation. Its native run was not PASS;
+the owned process exited. The corrected guard checks the offline identity before
+switching and requires the observed simulation identity thereafter.
+
 ## Open-source comparison (live GitHub API inspected)
 
 | Candidate | Pin / license / maintenance | Reuse decision |

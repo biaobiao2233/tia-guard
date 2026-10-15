@@ -31,7 +31,8 @@ def simulation_only():
     if not device.get_simulation_mode():
         raise ValueError('simulation-required')
     identity=device.get_device_identification()
-    if (identity.type,str(identity.id),str(identity.version)) != (4096,'0000 0001','3.5.22.40'):
+    # The official IDE switches to a distinct simulation device identification.
+    if (identity.type,str(identity.id),str(identity.version)) != (4097,'0000 000a','3.5.22.40'):
         raise ValueError('device-identity-changed')
 
 def bind():
@@ -128,6 +129,9 @@ def do(request):
         project=projects.create(project_path)
         project.add('OwnedPLC',4096,'0000 0001','3.5.22.40')
         bind()
+        identity=device.get_device_identification()
+        if (identity.type,str(identity.id),str(identity.version)) != (4096,'0000 0001','3.5.22.40'):
+            raise ValueError('source-device-identity-mismatch')
         device.set_simulation_mode(True)
         for obj in request['objects']: put_object(obj,True)
         task=app.create_task_configuration().create_task('MainTask')

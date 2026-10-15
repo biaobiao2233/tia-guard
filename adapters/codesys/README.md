@@ -9,7 +9,8 @@ tool is required or exposed.
 ## Scope
 
 - New adapter-owned `.project`, CODESYS Control Win device description
-  `4096 / 0000 0001 / 3.5.22.40`, switched immediately to **IDE Simulation**.
+  `4096 / 0000 0001 / 3.5.22.40`, switched immediately to **IDE Simulation**
+  (`4097 / 0000 000a / 3.5.22.40` observed and checked through the native API).
 - ST programs, function blocks, GVLs and one 20 ms cyclic program call.
 - Create and edit supplied declarations/implementations; native rebuild and code
   generation; complete categorized diagnostic messages, codes, objects and positions.
