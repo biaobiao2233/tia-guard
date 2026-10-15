@@ -71,6 +71,8 @@ Node 每次创建随机 `TC3_PIPE` 和 `TC3_IDENTITY`，通过子进程环境传
 
 需要官方许可输入时，按“start-simulation 预览 → 授权 → prepare → 用户双击自有 IDE 的系统/授权节点处理官方许可 → resume”操作。准备成功仅代表已完成部署准备；此时只允许读取准备状态、继续运行验收或结束实例，PLC 状态修改和变量读写均拒绝。人机步骤期间的代码编辑会在 resume 的重新编译/独立核验中被检查，不沿用旧的成功结论。MCP 不生成或复制许可证、不填写验证码。
 
+resume 结束本任务的许可 IDE，在新的自有 IDE 中重开精确工程；同一个 Runtime 进程和许可目录保持不变。跨 Worker 会话复用已有实例尚未开放；许可有效期检查及持久化复用属于后续能力，不能据此提供任意 Runtime 附着接口。
+
 退出时先调用 `dispose_twincat_session` 并检查真实清理结果，再关闭 MCP stdio。Windows 上 SDK 关闭子进程不能代替后台自有资源清理；空 stderr 也不能证明进程退出。正常关闭失败时，仅对创建阶段已持有并核对启动时间的自有 IDE 做退出处理，清理失败证据仍保留。
 
 生成输入消费 A 的 `GenerationInputLoader.Load(inputDirectory)`，固定文件名是 `twincat-generation.json`，其结构以 `../contracts/generation.schema.json` 为准。源码必须恰好等于 manifest 引用的 UTF-8 文件集合；Node 不复制该 manifest schema、不自己计算替代 source hash。MCP 的 `inputDirectory` 映射到 B 的 `GenerationRequest.SourceDirectory`，`outputDirectory` 映射到 `OutputDirectory`，所有 canonical path/ownership/environment 检查仍由 B 执行端完成。
