@@ -14,6 +14,13 @@ this repository.
 
 Runtime vendor interop assemblies are generated/resolved from the local licensed
 installation by the Environment component. They are not committed to this repo.
+The NC simulation increment uses the documented CreateChild/ConsumeXml/LinkVariables
+APIs, with repository-authored manifest, XML projection, comparison and motion example.
+No third-party NC orchestrator or binary project is embedded. API references:
+[official Automation Interface manual](https://download.beckhoff.com/download/document/automation/twincat3/TC3_Automation_Interface_EN.pdf),
+[simulation axis](https://infosys.beckhoff.com/content/1033/tf50x0_tc3_nc_ptp/10541544203.html),
+[AXIS_REF](https://infosys.beckhoff.com/content/1033/tcplclib_tc2_mc2/70132363.html),
+[MC_Stop](https://infosys.beckhoff.com/content/1033/tcplclib_tc2_mc2/70108555.html).
 The following complete upstream notices apply to the adapted API sequences.
 
 ## Beckhoff — BSD Zero Clause License

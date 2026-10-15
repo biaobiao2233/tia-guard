@@ -56,6 +56,8 @@ Node 每次创建随机 `TC3_PIPE` 和 `TC3_IDENTITY`，通过子进程环境传
 
 `operation` 接受 `build-generation`、`compile` 或 `start-simulation`。仿真预览额外要求本会话成功发布的 `executionId`、对应 `projectPath`、实际变化的 UDINT `probeSymbol`，以及 scratch 中尚不存在的 `outputDirectory`。工具参数严格拒绝未知字段，不能注入任意 COM 命令、worker token 或扩大路径权限。
 
+NC/PTP 轴采用同一流程：在输入 manifest 中显式添加可选 `motion`（不添加新的任意 COM/绑定请求接口）。当前支持一根连续软件轴、一对 SAF/SVB 任务，PLC/NC 共用 1–20 ms 周期，顶层 GVL 的 AXIS_REF，固定 Tc2_MC2；限位、速度和动态参数均被源哈希绑定。编译后才根据实际生成过程映像解析本地化名称、核对双方类型并链接；独立重开检查两条完整映射、轴类型及参数。运行阶段再次检查同一配置，并仍只激活本适配器自己的 Usermode 实例。原生示例见 [nc-axis](../../../examples/twincat3-generation/nc-axis.md)，不包含 EtherCAT 或真实电机控制。
+
 | 仿真工具 | 参数 | 行为 |
 | --- | --- | --- |
 | `start_twincat_simulation` | `previewId`, `grantId` | 对自有副本重新编译、核验，在新分配的本地 Usermode 进程激活并验证真实执行 |
