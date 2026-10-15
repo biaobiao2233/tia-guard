@@ -1,0 +1,24 @@
+{
+  "operation": "create",
+  "entry": "PLC_PRG",
+  "objects": [
+    {
+      "name": "PLC_PRG",
+      "kind": "program",
+      "declaration": "PROGRAM PLC_PRG\nVAR\n    Counter : DINT;\n    Result : DINT;\n    fb : FB_Add;\nEND_VAR",
+      "implementation": "Counter := Counter + 1;\nfb(Value := Counter);\nResult := fb.Result;"
+    },
+    {
+      "name": "FB_Add",
+      "kind": "functionBlock",
+      "declaration": "FUNCTION_BLOCK FB_Add\nVAR_INPUT\n    Value : DINT;\nEND_VAR\nVAR_OUTPUT\n    Result : DINT;\nEND_VAR",
+      "implementation": "IF GVL_Test.Enable THEN\n    Result := Value + GVL_Test.Step;\nELSE\n    Result := Value;\nEND_IF;"
+    },
+    {
+      "name": "GVL_Test",
+      "kind": "gvl",
+      "declaration": "VAR_GLOBAL\n    Enable : BOOL := FALSE;\n    Step : DINT := 1;\nEND_VAR",
+      "implementation": ""
+    }
+  ]
+}
