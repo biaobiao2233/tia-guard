@@ -1,0 +1,17 @@
+<TcSmProject><Project><Motion><NC>
+<SafTask Priority="4" AmsPort="501" CycleTime="20000"><Name>DemoNC SAF</Name></SafTask>
+<SvbTask Priority="8" AmsPort="511" CycleTime="100000"><Name>DemoNC SVB</Name></SvbTask>
+<Axis Id="1" AxisType="1"><Name>Axis1</Name>
+<AxisPara><Dynamic Acceleration="240" Deceleration="240" Jerk="1200"/><Velo Maximum="100"/></AxisPara>
+<Encoder EncType="1"><EncPara><SoftEndMinControl Enable="true" Range="0"/><SoftEndMaxControl Enable="true" Range="100"/></EncPara></Encoder>
+<Drive DrvType="5"/>
+<Vars VarGrpType="1"><Name>输入</Name><Var><Name>FromPlc</Name><Type>PLCTONC_AXIS_REF</Type></Var></Vars>
+<Vars VarGrpType="2"><Name>输出</Name><Var><Name>ToPlc</Name><Type>NCTOPLC_AXIS_REF</Type></Var></Vars>
+</Axis></NC></Motion><Plc><Project Name="PLC"><Instance><Name>PLC Instance</Name>
+<Vars VarGrpType="1"><Name>MotionTask Inputs</Name><Var><Name>GVL_Axis.Axis.NcToPlc</Name><Type>NCTOPLC_AXIS_REF</Type></Var></Vars>
+<Vars VarGrpType="2"><Name>MotionTask Outputs</Name><Var><Name>GVL_Axis.Axis.PlcToNc</Name><Type>PLCTONC_AXIS_REF</Type></Var></Vars>
+</Instance></Project></Plc></Project>
+<Mappings><OwnerA Name="TIPC^PLC^PLC Instance"><OwnerB Name="TINC^DemoNC SAF^Axes^Axis1">
+<Link VarA="MotionTask Inputs^GVL_Axis.Axis.NcToPlc" VarB="输出^ToPlc"/>
+<Link VarA="MotionTask Outputs^GVL_Axis.Axis.PlcToNc" VarB="输入^FromPlc"/>
+</OwnerB></OwnerA></Mappings></TcSmProject>

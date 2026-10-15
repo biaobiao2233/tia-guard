@@ -7,6 +7,26 @@ namespace TwinCat3.WorkerTests;
 // These tests qualify boundaries only; they never simulate ADS or claim PLC execution.
 public sealed class SimulationPolicyTests
 {
+    [Theory][InlineData("empty")][InlineData("attribute")][InlineData("device")][InlineData("foreign-axis")][InlineData("missing-motion")]
+    public void NcTargetEmptyIoMarkerDoesNotPermitDevicesOrMismatchedProfiles(string mutation)
+    {
+        var document = System.Xml.Linq.XDocument.Load(Path.Combine(AppContext.BaseDirectory, "fixtures", "nc-4026.27.xml"));
+        var motion = TwinCat3.Contracts.MotionConfiguration.Capture(document, "PLC")!;
+        var io = new System.Xml.Linq.XElement("Io");
+        document.Root!.Element("Project")!.Add(io);
+        if (mutation == "attribute") io.SetAttributeValue("DeviceId", 1);
+        if (mutation == "device") io.Add(new System.Xml.Linq.XElement("Device"));
+        if (mutation == "foreign-axis") motion = motion with { AxisName = "OtherAxis" };
+        if (mutation == "missing-motion") motion = null;
+        var file = Path.Combine(Path.GetTempPath(), "tc-nc-policy-" + Guid.NewGuid().ToString("N") + ".tsproj");
+        try
+        {
+            document.Save(file);
+            if (mutation == "empty") SimulationPolicy.RequireNoHardware(file, motion, "PLC");
+            else Assert.ThrowsAny<Exception>(() => SimulationPolicy.RequireNoHardware(file, motion, "PLC"));
+        }
+        finally { File.Delete(file); }
+    }
     [Fact] public void TwinCatGeneratedApplicationNameIsDifferentFromProjectName()
         => SimulationPolicy.RequireApplicationIdentity("Port_851", "MotorPLC", 851, "MotorPLC");
 

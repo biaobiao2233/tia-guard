@@ -13,4 +13,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
     <ProjectReference Include="../../src/Worker/TwinCat3.Worker.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="../Validation/fixtures/nc-4026.27.xml" Link="fixtures/nc-4026.27.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

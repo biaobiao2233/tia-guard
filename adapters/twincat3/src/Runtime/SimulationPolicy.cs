@@ -36,7 +36,10 @@ public static class SimulationPolicy
         var project = root?.Element("Project") ?? throw new InvalidDataException("Missing native configuration.");
         foreach (var section in project.Elements())
             if (section.Name.LocalName is not ("System" or "Plc" or "TypeSystem" or "LicenseInfo")
-                && !(section.Name == "Motion" && motion is not null))
+                && !(section.Name == "Motion" && motion is not null)
+                // XAE materializes <Io/> after selecting the software target for an NC project.
+                // Accept only the empty marker, with an explicit, fully verified motion profile.
+                && !(section.Name == "Io" && motion is not null && !section.HasAttributes && !section.HasElements && string.IsNullOrWhiteSpace(section.Value)))
                 throw new NotSupportedException("Only PLC-only software simulation is qualified; configuration section: " + section.Name);
         if (project.Descendants().Any(e => e.Name.LocalName is "Device" or "EtherCAT" or "EtherCat" or "Box"))
             throw new NotSupportedException("Hardware configuration is not allowed in this simulation slice.");

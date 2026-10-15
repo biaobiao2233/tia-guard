@@ -12,25 +12,7 @@ public sealed class MotionTests
         MinimumPosition = 0, MaximumPosition = 100, MaximumVelocity = 100, Acceleration = 240, Deceleration = 240, Jerk = 1200
     };
     // Minimal independent saved configuration, including localized process-image group names.
-    public static XDocument Configuration() => XDocument.Parse("""
-        <TcSmProject><Project><Motion><NC>
-        <SafTask Priority="4" AmsPort="501" CycleTime="20000"><Name>DemoNC SAF</Name></SafTask>
-        <SvbTask Priority="8" AmsPort="511" CycleTime="100000"><Name>DemoNC SVB</Name></SvbTask>
-        <Axis Id="1" AxisType="1"><Name>Axis1</Name>
-        <AxisPara><Dynamic Acceleration="240" Deceleration="240" Jerk="1200"/><Velo Maximum="100"/></AxisPara>
-        <Encoder EncType="1"><EncPara><SoftEndMinControl Enable="true" Range="0"/><SoftEndMaxControl Enable="true" Range="100"/></EncPara></Encoder>
-        <Drive DrvType="5"/>
-        <Vars VarGrpType="1"><Name>输入</Name><Var><Name>FromPlc</Name><Type>PLCTONC_AXIS_REF</Type></Var></Vars>
-        <Vars VarGrpType="2"><Name>输出</Name><Var><Name>ToPlc</Name><Type>NCTOPLC_AXIS_REF</Type></Var></Vars>
-        </Axis></NC></Motion><Plc><Project Name="PLC"><Instance><Name>PLC Instance</Name>
-        <Vars VarGrpType="1"><Name>MotionTask Inputs</Name><Var><Name>GVL_Axis.Axis.NcToPlc</Name><Type>NCTOPLC_AXIS_REF</Type></Var></Vars>
-        <Vars VarGrpType="2"><Name>MotionTask Outputs</Name><Var><Name>GVL_Axis.Axis.PlcToNc</Name><Type>PLCTONC_AXIS_REF</Type></Var></Vars>
-        </Instance></Project></Plc></Project>
-        <Mappings><OwnerA Name="TIPC^PLC^PLC Instance"><OwnerB Name="TINC^DemoNC SAF^Axes^Axis1">
-        <Link VarA="MotionTask Inputs^GVL_Axis.Axis.NcToPlc" VarB="输出^ToPlc"/>
-        <Link VarA="MotionTask Outputs^GVL_Axis.Axis.PlcToNc" VarB="输入^FromPlc"/>
-        </OwnerB></OwnerA></Mappings></TcSmProject>
-        """);
+    public static XDocument Configuration() => XDocument.Load(Path.Combine(AppContext.BaseDirectory, "fixtures", "nc-4026.27.xml"));
 
     private static C.GenerationManifest Manifest(C.MotionSpec spec) => new()
     {
@@ -73,7 +55,7 @@ public sealed class MotionTests
     [Theory]
     [InlineData("missing-link")][InlineData("offset-link")][InlineData("foreign-owner")][InlineData("extra-axis")]
     [InlineData("real-encoder")][InlineData("real-drive")][InlineData("disabled-limit")][InlineData("io-binding")]
-    [InlineData("wrong-type")][InlineData("nc-i")]
+    [InlineData("wrong-type")][InlineData("nc-i")][InlineData("duplicate-motion")][InlineData("fractional-cycle")]
     public void IncompleteOrForeignMotionCannotBeQualified(string mutation)
     {
         var doc = Configuration();
@@ -89,6 +71,8 @@ public sealed class MotionTests
             case "io-binding": doc.Descendants("Axis").Single().Add(new XElement("IoItem", "TIID^Drive")); break;
             case "wrong-type": doc.Descendants("Type").First().Value = "BOOL"; break;
             case "nc-i": doc.Descendants("NC").Single().Add(new XElement("Channel")); break;
+            case "duplicate-motion": doc.Root!.Element("Project")!.Add(new XElement(doc.Descendants("Motion").Single())); break;
+            case "fractional-cycle": doc.Descendants("SafTask").Single().SetAttributeValue("CycleTime", 20001); break;
         }
         Assert.ThrowsAny<Exception>(() => C.MotionConfiguration.Capture(doc, "PLC"));
     }

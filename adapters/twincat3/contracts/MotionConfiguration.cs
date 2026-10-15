@@ -64,7 +64,7 @@ public static class MotionConfiguration
         var project = document.Root?.Element("Project") ?? throw new InvalidDataException("Missing Project.");
         var motion = project.Element("Motion");
         if (motion is null) return null;
-        if (motion.Elements().Count() != 1 || motion.Elements().Single().Name != "NC")
+        if (project.Elements("Motion").Count() != 1 || motion.Elements().Count() != 1 || motion.Elements().Single().Name != "NC")
             throw new NotSupportedException("Only one NC/PTP configuration is supported.");
         var nc = motion.Element("NC")!;
         if (nc.Elements().Any(e => e.Name.LocalName is not ("SafTask" or "SvbTask" or "Axis"))
@@ -75,6 +75,7 @@ public static class MotionConfiguration
         if (!task.EndsWith(" SAF", StringComparison.Ordinal) || Text(svb, "Name") != task[..^4] + " SVB"
             || (int?)saf.Attribute("Priority") != 4 || (int?)svb.Attribute("Priority") != 8
             || (int?)saf.Attribute("AmsPort") != 501 || (int?)svb.Attribute("AmsPort") != 511
+            || (long?)svb.Attribute("CycleTime") != 100000 || (long?)saf.Attribute("CycleTime") % 10 != 0
             || (int?)axis.Attribute("Id") != 1 || (int?)axis.Attribute("AxisType") != 1
             || (int?)axis.Element("Encoder")?.Attribute("EncType") != 1
             || (int?)axis.Element("Drive")?.Attribute("DrvType") != 5
