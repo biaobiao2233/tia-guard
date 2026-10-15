@@ -1,0 +1,66 @@
+name: TwinCAT adapter checks
+on:
+  push:
+    paths:
+      - 'adapters/twincat3/**'
+      - 'examples/twincat3-generation/**'
+      - 'examples/twincat3-verification/**'
+      - '.github/workflows/twincat3.yml'
+  pull_request:
+    paths:
+      - 'adapters/twincat3/**'
+      - 'examples/twincat3-generation/**'
+      - 'examples/twincat3-verification/**'
+      - '.github/workflows/twincat3.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: twincat3-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  portable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      TC3_NATIVE_TEST: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Environment and input contracts
+        run: dotnet test adapters/twincat3/tests/Environment/TwinCat3.Environment.Tests.csproj -c Release --logger "trx;LogFileName=environment.trx" --results-directory TestResults
+      - name: Authoring pipeline contracts
+        run: dotnet test adapters/twincat3/tests/Engineering/Engineering.Tests.csproj -c Release --logger "trx;LogFileName=engineering.trx" --results-directory TestResults
+      - name: Compilation and independent comparison gates
+        run: dotnet test adapters/twincat3/tests/Validation/TwinCat.Validation.Tests.csproj -c Release --logger "trx;LogFileName=validation.trx" --results-directory TestResults
+      - name: Worker contracts without local vendor binaries
+        if: runner.os == 'Windows'
+        run: dotnet test adapters/twincat3/tests/Worker/Worker.Tests.csproj -c Release --logger "trx;LogFileName=worker.trx" --results-directory TestResults
+      - name: Actual read-only named pipe without XAE
+        if: runner.os == 'Windows'
+        run: node --test adapters/twincat3/tests/Worker/pipe.test.js
+      - name: Restore locked MCP dependencies
+        working-directory: adapters/twincat3/mcp
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: MCP SDK and transport contracts (mock compiler)
+        working-directory: adapters/twincat3/mcp
+        run: npm test
+      - name: Preserve scoped test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: twincat3-contracts-${{ matrix.os }}
+          path: TestResults/*.trx
+          retention-days: 7
+          if-no-files-found: ignore
+

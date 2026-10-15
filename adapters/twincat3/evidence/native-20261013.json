@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceKind": "native-observation-not-release-acceptance",
+  "observedDate": "2026-10-13",
+  "timezone": "Asia/Singapore",
+  "adapterSource": "Uncommitted candidate based on 7f3f363 at execution; observations do not qualify subsequent source changes.",
+  "environment": {
+    "xaeBuild": "3.1.4026.27",
+    "platform": "TwinCAT OS (x64)"
+  },
+  "native": {
+    "reopened": true,
+    "success": true,
+    "verification": {
+      "verdict": "pass",
+      "complete": true,
+      "differences": [],
+      "unknowns": []
+    },
+    "closed": true,
+    "published": true,
+    "rawReportSha256": "1df933635ba8f1ddb19ba4f0ab1de3575c4f111d85f4f73274f0db795f526cb7",
+    "errors": 0,
+    "compilationState": "success",
+    "inputHash": "4de6a0166c503fa34533e0915e194c3f37884c1151c273da3756e9fc807f615c",
+    "warnings": 0
+  },
+  "mcp": {
+    "rawReportSha256": "dcd8fd04929176bdf22ae1fc5b7ea63cb00852255386ccfe75657518bf4fd312",
+    "steps": [
+      {
+        "tool": "doctor_twincat",
+        "isError": false,
+        "phase": "doctor",
+        "inputHash": null,
+        "compilation": null,
+        "verification": null
+      },
+      {
+        "tool": "preview_twincat_generation",
+        "isError": false,
+        "phase": "preview",
+        "inputHash": "fd227f2061b27847c3ea37300158d9473efa84f5df17c744f769223bf1752581",
+        "compilation": null,
+        "verification": null
+      },
+      {
+        "tool": "authorize_twincat_preview",
+        "isError": false,
+        "phase": "authorize",
+        "inputHash": "fd227f2061b27847c3ea37300158d9473efa84f5df17c744f769223bf1752581",
+        "compilation": null,
+        "verification": null
+      },
+      {
+        "tool": "build_twincat_generation",
+        "isError": true,
+        "phase": "compile",
+        "inputHash": "fd227f2061b27847c3ea37300158d9473efa84f5df17c744f769223bf1752581",
+        "compilation": "unknown",
+        "verification": null
+      },
+      {
+        "tool": "build_twincat_generation",
+        "isError": true,
+        "phase": "authorization",
+        "inputHash": null,
+        "compilation": null,
+        "verification": null
+      },
+      {
+        "tool": "preview_twincat_generation",
+        "isError": false,
+        "phase": "preview",
+        "inputHash": "65762de9087443fec8c59329c40521363df0203dd06e6ca7520830e7789cb283",
+        "compilation": null,
+        "verification": null
+      },
+      {
+        "tool": "authorize_twincat_preview",
+        "isError": false,
+        "phase": "authorize",
+        "inputHash": "65762de9087443fec8c59329c40521363df0203dd06e6ca7520830e7789cb283",
+        "compilation": null,
+        "verification": null
+      },
+      {
+        "tool": "build_twincat_generation",
+        "isError": false,
+        "phase": "complete",
+        "inputHash": "65762de9087443fec8c59329c40521363df0203dd06e6ca7520830e7789cb283",
+        "compilation": "success",
+        "verification": "pass"
+      },
+      {
+        "tool": "verify_twincat_project",
+        "isError": false,
+        "phase": "verify",
+        "inputHash": "65762de9087443fec8c59329c40521363df0203dd06e6ca7520830e7789cb283",
+        "compilation": null,
+        "verification": "pass"
+      }
+    ]
+  },
+  "limitations": [
+    "Intentional ST failure remained UNKNOWN because Error List was incomplete; it was refused and real C0046 diagnostics were read from compiler output.",
+    "No runtime deployment or execution was performed.",
+    "No EtherCAT or servo hardware was tested.",
+    "Raw reports, local paths and vendor binaries remain private."
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "solutionName": "MotorControl",
+  "configurationName": "MotorConfiguration",
+  "plcProjectName": "MotorPLC",
+  "environment": {
+    "requestedBuild": "4026.27",
+    "dteProgId": "TcXaeShell.DTE.17.0",
+    "provider": "dte",
+    "targetPlatform": "TwinCAT OS (x64)",
+    "buildConfiguration": "Release",
+    "plcTemplate": "Empty PLC Template"
+  },
+  "artifacts": [
+    { "id": "motor-status", "name": "ST_MotorStatus", "kind": "struct", "declarationFile": "sources/ST_MotorStatus.declaration.st" },
+    { "id": "signals", "name": "GVL_Signals", "kind": "globalVariableList", "declarationFile": "sources/GVL_Signals.declaration.st" },
+    { "id": "motor", "name": "FB_Motor", "kind": "functionBlock", "declarationFile": "sources/FB_Motor.declaration.st", "implementationFile": "sources/FB_Motor.implementation.st" },
+    { "id": "main", "name": "MAIN", "kind": "program", "declarationFile": "sources/MAIN.declaration.st", "implementationFile": "sources/MAIN.implementation.st" }
+  ],
+  "tasks": [{ "name": "MotorTask", "cycleTimeUs": 10000, "priority": 20, "programs": ["MAIN"] }],
+  "libraries": [
+    { "name": "Tc2_Standard", "version": "3.4.7.0", "vendor": "Beckhoff Automation GmbH" },
+    { "name": "Tc2_System", "version": "3.10.2.0", "vendor": "Beckhoff Automation GmbH" },
+    { "name": "Tc3_Module", "version": "3.4.7.0", "vendor": "Beckhoff Automation GmbH" }
+  ]
+}

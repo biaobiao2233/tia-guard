@@ -1,0 +1,147 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceKind": "native-mcp-nc-motion-qualification",
+  "observedDate": "2026-10-15",
+  "timezone": "Asia/Singapore",
+  "adapterSourceCommit": "9ece75f33215aa1338828eb0d649d497fbdb7e47",
+  "inputHash": "7d5fce96e298f02272d3e34b2b93a38d080c395c06165393039e344cb7202160",
+  "verdict": "PASS",
+  "environment": {
+    "xaeBuild": "3.1.4026.27",
+    "platform": "TwinCAT OS (x64)",
+    "ncUsermodeModuleVersion": "3.1.5049.0",
+    "usermodeHostVersion": "3.1.0.2731",
+    "nativeBridgeBuildErrors": 0,
+    "nativeBridgeBuildWarnings": 0
+  },
+  "cloudChecks": {
+    "sourceCommit": "9ece75f33215aa1338828eb0d649d497fbdb7e47",
+    "result": "success",
+    "runUrl": "https://github.com/biaobiao2233/tia-guard/actions/runs/38713559652",
+    "nativeNcExecutedInCloud": false
+  },
+  "engineering": {
+    "createdFromEmptyStage": true,
+    "actualPlcCompilation": "success",
+    "generationReopenVerification": "pass",
+    "separateOwnedCopyVerification": "pass",
+    "preparedSimulationCompile": "success",
+    "postLicenseCompilation": "success",
+    "postLicenseReopenVerification": "pass",
+    "capturedMotion": {
+      "taskName": "DemoNC",
+      "axisName": "Axis1",
+      "axisSymbol": "GVL_Axis.Axis",
+      "cycleTimeUs": 2000,
+      "minimumPosition": 0,
+      "maximumPosition": 100,
+      "maximumVelocity": 100,
+      "acceleration": 240,
+      "deceleration": 240,
+      "jerk": 1200
+    },
+    "completeBidirectionalMappings": 2
+  },
+  "licensing": {
+    "priorBlockedReceipt": "nc-axis-20261015.json",
+    "officialTrialEnteredAndConfirmedByUser": true,
+    "sameManagedInstanceIdentity": true,
+    "licenseSetChangedByOfficialTrial": true,
+    "licenseCopied": false,
+    "agentEnteredSecurityCode": false,
+    "postTrialLicenseBytesUnchanged": true
+  },
+  "runtime": {
+    "systemState": "Run",
+    "plcState": "Run",
+    "executionProbe": {
+      "symbol": "MAIN.CycleCount",
+      "type": "UDINT",
+      "before": 170,
+      "after": 303,
+      "nativeExecutionObserved": true
+    },
+    "enabledAndDirectHomeFeedbackPassed": true,
+    "completedMoveCountBefore": 0,
+    "completedMoveCountAfter": 3,
+    "outOfRangeRequestedPositionMm": 101,
+    "rejectedCommandCountBefore": 0,
+    "rejectedCommandCountAfter": 1,
+    "stopAndReleaseFeedbackPassed": true,
+    "resetFeedbackPassed": true,
+    "outputAndAxisInternalWritesRejected": true,
+    "samples": [
+      {
+        "label": "move-30",
+        "position": 26.60442240000002,
+        "velocity": 2.1607998595496105,
+        "step": 20,
+        "error": false
+      },
+      {
+        "label": "done-30",
+        "position": 30,
+        "velocity": 0,
+        "step": 20,
+        "error": false
+      },
+      {
+        "label": "move-80",
+        "position": 58.74000000000003,
+        "velocity": 57.49589353528032,
+        "step": 50,
+        "error": false
+      },
+      {
+        "label": "done-80",
+        "position": 80,
+        "velocity": 0,
+        "step": 20,
+        "error": false
+      },
+      {
+        "label": "move-0",
+        "position": 51.37999999999997,
+        "velocity": -60.00000000000051,
+        "step": 50,
+        "error": false
+      },
+      {
+        "label": "done-0",
+        "position": 0,
+        "velocity": 0,
+        "step": 20,
+        "error": false
+      },
+      {
+        "label": "stopped",
+        "position": 54.59999840000004,
+        "velocity": 0,
+        "step": 60,
+        "error": false
+      }
+    ],
+    "sampleReadSemantics": "Sequential ADS scalar reads across PLC cycles; not an atomic sample or Scope recording."
+  },
+  "cleanup": {
+    "stopReportedOwnedProcessExited": true,
+    "mcpDisposeSuccess": true,
+    "independentOriginalIdeAndRuntimeExitConfirmed": true,
+    "managedCheckpoint": "stopped",
+    "fullConfigurationAndExecutableHashesChecked": true
+  },
+  "privateEvidenceSha256": {
+    "mcp-evidence.json": "dc3df31cd6891f84f7204f35cee6882972750207d7ea4ad5ae6361f2ccc1b2c8",
+    "nc-results.json": "79e53537eef1da5f2aeb9aebdd21c13dd6c19d88ed9cf953b0221b22d3ae31c6",
+    "session-cleanup.json": "db657ca421cd742210364592b1b26d90376c8662b3b21c8c8355394562720d1d",
+    "cleanup-readback.json": "776356d7c50402652f3be41538d9bcf057ca952d5ac76c28505270840e5c5571",
+    "official-license-baseline.json": "56d9a9de195cb55438e90ce0e390b84d2604342dfbd2776f553131b339050b4f"
+  },
+  "limitations": [
+    "One software NC/PTP continuous axis; no EtherCAT, physical drive/motor, deterministic realtime or safety verification.",
+    "MC_Home/MC_Direct sets coordinates and does not validate mechanical homing.",
+    "This native motion run used the user-completed official NC trial; a second independent NC Worker reuse without another code has not been run.",
+    "No HMI or synchronized Scope curve qualification.",
+    "Draft PR only; not merged or released."
+  ]
+}

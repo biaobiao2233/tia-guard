@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors><PlatformTarget>x64</PlatformTarget><UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Beckhoff.TwinCAT.Ads" Version="7.0.389" />
+    <ProjectReference Include="../../contracts/TwinCat3.Contracts.csproj" />
+    <ProjectReference Include="../Engineering/TwinCat3.Engineering.csproj" />
+  </ItemGroup>
+  <PropertyGroup Condition="Exists('$(TwinCatInteropAssemblyPath)') and Exists('$(TwinCatVsPublicAssemblies)/envdte80.dll')">
+    <DefineConstants>$(DefineConstants);TWINCAT_RUNTIME_NATIVE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="Exists('$(TwinCatInteropAssemblyPath)') and Exists('$(TwinCatVsPublicAssemblies)/envdte80.dll')">
+    <Reference Include="TCatSysManagerLib"><HintPath>$(TwinCatInteropAssemblyPath)</HintPath><Private>false</Private></Reference>
+    <Reference Include="EnvDTE80"><HintPath>$(TwinCatVsPublicAssemblies)/envdte80.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Microsoft.VisualStudio.Interop"><HintPath>$(TwinCatVsPublicAssemblies)/Microsoft.VisualStudio.Interop.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

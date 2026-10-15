@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceKind": "native-mcp-owned-software-plc-qualification",
+  "observedDate": "2026-10-15",
+  "timezone": "Asia/Singapore",
+  "adapterSourceCommit": "ba5e635368b6bf4d0cd37ff8a26db1c037fa9c4a",
+  "inputHash": "65762de9087443fec8c59329c40521363df0203dd06e6ca7520830e7789cb283",
+  "environment": {
+    "transport": "Installed official ADS 4 client / native TcAdsDll",
+    "xaeBuild": "3.1.4026.27",
+    "bridgeBuild": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "platform": "TwinCAT OS (x64)"
+  },
+  "cloudChecks": {
+    "sourceCommit": "ba5e635368b6bf4d0cd37ff8a26db1c037fa9c4a",
+    "nativeRuntimeExecutedInCloud": false,
+    "result": "success",
+    "runUrl": "https://github.com/biaobiao2233/tia-guard/actions/runs/38580849202"
+  },
+  "actualMcp": {
+    "explicitSessionDisposal": "success",
+    "independentOwnedProcessExitReadback": {
+      "alive": 0,
+      "processesChecked": 3
+    },
+    "humanOfficialLicensing": {
+      "freshResponseFileObserved": true,
+      "captchaAutomated": false,
+      "licenseCopied": false
+    },
+    "plcStop": {
+      "counterReads": [
+        484,
+        484
+      ],
+      "state": "Stop",
+      "counterFrozen": true,
+      "readIntervalMs": 500
+    },
+    "feedback": [
+      {
+        "symbol": "MAIN.Motor.Status.Running",
+        "value": true,
+        "success": true
+      },
+      {
+        "symbol": "MAIN.Motor.Status.Faulted",
+        "value": true,
+        "success": true
+      },
+      {
+        "symbol": "MAIN.Motor.Status.Running",
+        "value": false,
+        "success": true
+      },
+      {
+        "symbol": "MAIN.Motor.Status.Faulted",
+        "value": false,
+        "success": true
+      },
+      {
+        "symbol": "MAIN.Motor.Status.Running",
+        "value": true,
+        "success": true
+      },
+      {
+        "symbol": "MAIN.Motor.Status.Running",
+        "value": false,
+        "success": true
+      }
+    ],
+    "ownedRuntimeExitConfirmed": true,
+    "preparedWriteRejected": true,
+    "outputWriteRejected": true,
+    "resume": {
+      "probe": {
+        "symbol": "MAIN.Motor.Status.CycleCount",
+        "type": "UDINT",
+        "before": 31,
+        "after": 55,
+        "nativeExecutionObserved": true
+      },
+      "verification": "pass",
+      "errors": 0,
+      "systemState": "Run",
+      "plcState": "Run",
+      "compilationState": "success",
+      "warnings": 0,
+      "freshOwnedIde": true,
+      "executionReady": true,
+      "applicationIdentityGuardCompleted": true,
+      "sameOwnedRuntime": true
+    },
+    "independentReopen": "pass",
+    "releasedHandleRejected": true,
+    "plcRunRestored": true,
+    "generation": {
+      "errors": 0,
+      "verification": "pass",
+      "published": true,
+      "warnings": 0,
+      "compilationState": "success"
+    }
+  },
+  "privateEvidenceSha256": {
+    "mcp-evidence.json": "11812d87d19ab0fa6de4cdaed4f890c4e1a13bac2f1c83cc24f9725307ddc1fa",
+    "preparation-snapshot.json": "7c367a1f04d735ed6e702f121ea5db6fb7adb4ace532872dfd36f5435540c16e",
+    "ide-reopen-evidence.json": "9a359deed8f3631eb4237fbdaf254ce6f3002b7eb607685da7502b26244d9896",
+    "session-cleanup.json": "8e9d3c1178590b5e42e721bee9dd89389a5f31f61a1473128d1e5074c08f2eea",
+    "process-exit-readback.json": "d4e0c4ee7a20c72c99ddbc35bb21de82bcb615147bf0da1aa22a20fa341bbd9a",
+    "scratch/simulation/resume-compilation.json": "33919430de091339dfaf00d2d80968aaa78dc395384d9a8b7e7c4650c6ede4e9",
+    "scratch/simulation/runtime-evidence.json": "fa9016888206b59ce30826afe870d535e087e82c9ad7a53ecd27ba836b7aa2d4"
+  },
+  "runtimeAcceptance": "PASS_FOR_THIS_SOURCE_AND_OWNED_SOFTWARE_PLC_CASE",
+  "limitations": [
+    "Runtime-only opt-in did not rerun the invalid-ST repair branch; historical compiler-repair evidence remains separately source-bound.",
+    "PLC Run restoration was observed as a state; a second changing-counter measurement after Stop/Run was not asserted in this test.",
+    "Persistent reuse across worker sessions and trial-expiry checks are not implemented; this test still allocates a fresh owned instance.",
+    "No hardware, NC/PTP, EtherCAT, physical motor, real-time determinism or safety validation.",
+    "Raw reports, local paths, AMS/system identifiers, license contents and vendor binaries stay private.",
+    "This receipt does not represent main-branch integration or release acceptance."
+  ]
+}

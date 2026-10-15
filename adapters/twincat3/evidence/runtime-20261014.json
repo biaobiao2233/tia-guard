@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceKind": "native-observation-not-runtime-acceptance",
+  "observedDate": "2026-10-14",
+  "timezone": "Asia/Singapore",
+  "environment": {
+    "xaeBuild": "3.1.4026.27",
+    "platform": "TwinCAT OS (x64)",
+    "transport": "Installed official ADS 4 client with native TcAdsDll; vendor binaries remain private"
+  },
+  "mcpAttempt": {
+    "adapterSourceCommit": "04b336bdd585cbdbc35d87151bd9ee65be2508f5",
+    "rawReportSha256": "3f3ca72abace257ae7bcd821b79e4ee79df31db85309222057b080b7e3d8c5e3",
+    "inputHash": "65762de9087443fec8c59329c40521363df0203dd06e6ca7520830e7789cb283",
+    "generation": {
+      "published": true,
+      "compilationState": "success",
+      "errors": 0,
+      "warnings": 0,
+      "verificationVerdict": "pass"
+    },
+    "independentProjectVerification": "pass",
+    "simulationCopy": {
+      "compilationState": "success",
+      "errors": 0,
+      "warnings": 0,
+      "verificationVerdict": "pass"
+    },
+    "simulationStart": {
+      "success": false,
+      "phase": "simulation-run",
+      "failure": "Actual system ADS state did not reach Run; execution probe not qualified"
+    }
+  },
+  "followUpDiagnostic": {
+    "adapterSourceCommit": "96f6d8a612c6f90e4965d357af19136a8a903158",
+    "scope": "Private diagnostic helper using another new owned Usermode instance and owned IDE, with the generated MCP simulation boot project",
+    "systemReturnedTo": "Config",
+    "plc851AvailableAfterStartup": false,
+    "officialIdeMessage": "Error: >> license not found << checking TwinCAT Licenses!",
+    "privateUiCaptureSha256": "781d80f620297526bc962324ad1c0d5d29458cfee2542871d6e55f1d3cae2d6c",
+    "trialGeneratedByAdapter": false,
+    "fullMcpAttemptOnThisSource": false
+  },
+  "cloudChecks": {
+    "sourceCommit": "96f6d8a612c6f90e4965d357af19136a8a903158",
+    "result": "success",
+    "runUrl": "https://github.com/biaobiao2233/tia-guard/actions/runs/38553689678",
+    "nativeRuntimeExecutedInCloud": false
+  },
+  "runtimeAcceptance": "NOT_PASSED",
+  "remainingChecks": [
+    "User handles the official runtime license requirement for the new owned instance",
+    "Actual system and PLC reach Run, application name matches, UDINT execution probe changes",
+    "MCP scalar command feedback, fault/reset, PLC Stop freezes the probe and Run resumes it",
+    "Owned process exit and rejection of foreign simulation handles"
+  ],
+  "limitations": [
+    "The private diagnostic confirms a license failure on its own instance; it is not a full MCP runtime test.",
+    "Cloud unit and transport checks do not qualify native PLC execution.",
+    "No existing Runtime, Servo demo license, hardware, NC axis, or EtherCAT device was controlled.",
+    "No raw reports, local paths, system IDs, license contents, or vendor DLLs are included."
+  ]
+}

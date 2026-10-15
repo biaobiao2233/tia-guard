@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DefineConstants Condition="Exists('$(TwinCatInteropAssemblyPath)') and Exists('$(TwinCatVsPublicAssemblies)/envdte80.dll')">$(DefineConstants);TWINCAT_WORKER_NATIVE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Environment/TwinCat3.Environment.csproj" />
+    <ProjectReference Include="../Engineering/TwinCat3.Engineering.csproj" />
+    <ProjectReference Include="../Validation/TwinCat.Validation.csproj" />
+    <ProjectReference Include="../Runtime/TwinCat3.Runtime.csproj" />
+  </ItemGroup>
+</Project>

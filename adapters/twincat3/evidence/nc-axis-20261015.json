@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceKind": "native-mcp-nc-axis-engineering-and-license-gate",
+  "observedDate": "2026-10-15",
+  "timezone": "Asia/Singapore",
+  "adapterSourceCommit": "9ece75f33215aa1338828eb0d649d497fbdb7e47",
+  "inputHash": "7d5fce96e298f02272d3e34b2b93a38d080c395c06165393039e344cb7202160",
+  "environment": {
+    "xaeBuild": "3.1.4026.27",
+    "platform": "TwinCAT OS (x64)",
+    "ncUsermodeModuleVersion": "3.1.5049.0",
+    "usermodeHostVersion": "3.1.0.2731",
+    "nativeBridgeBuildErrors": 0,
+    "nativeBridgeBuildWarnings": 0
+  },
+  "cloudChecks": {
+    "sourceCommit": "9ece75f33215aa1338828eb0d649d497fbdb7e47",
+    "result": "success",
+    "runUrl": "https://github.com/biaobiao2233/tia-guard/actions/runs/38713559652",
+    "nativeNcExecutedInCloud": false
+  },
+  "engineering": {
+    "verdict": "PASS",
+    "createdFromEmptyStage": true,
+    "actualPlcCompiler": "success",
+    "generationIndependentReopen": "pass",
+    "separateOwnedCopyVerification": "pass",
+    "simulationCopyCompile": "success",
+    "simulationCopyIndependentReopen": "pass",
+    "motionComplete": true,
+    "capturedMotion": {
+      "taskName": "DemoNC",
+      "axisName": "Axis1",
+      "axisSymbol": "GVL_Axis.Axis",
+      "cycleTimeUs": 2000,
+      "minimumPosition": 0,
+      "maximumPosition": 100,
+      "maximumVelocity": 100,
+      "acceleration": 240,
+      "deceleration": 240,
+      "jerk": 1200
+    },
+    "fullBidirectionalMappings": 2
+  },
+  "runtime": {
+    "verdict": "BLOCKED",
+    "nativeTestRunnerVerdict": "FAIL",
+    "phase": "simulation-run",
+    "systemReachedQualifiedRun": false,
+    "actualPlcExecutionProbePassed": false,
+    "motionTestStarted": false,
+    "threePositions": "NOT_RUN",
+    "stopAndRelease": "NOT_RUN",
+    "outOfRangeRefusal": "NOT_RUN",
+    "officialDialogReason": "license not found checking TwinCAT Licenses",
+    "trialCodeHandledByAgent": false,
+    "licenseCopied": false
+  },
+  "cleanupAfterBlockedRun": {
+    "mcpDisposeReturnedError": true,
+    "independentOriginalIdeAndRuntimeExitConfirmed": true,
+    "managedCheckpoint": "stopped",
+    "fullConfigurationAndExecutableHashesChecked": true,
+    "originalLicenseBytesUnchanged": true,
+    "sameManagedInstanceIdentity": true
+  },
+  "historicalAttempts": [
+    {
+      "case": "nc-engineering-01",
+      "verdict": "FAIL",
+      "reason": "Native save omits a zero Range attribute; independent projection refused missing value. Fixed with regression test."
+    },
+    {
+      "case": "nc-engineering-02",
+      "sourceCommit": "5ed8306a474c0a3b7740b330c1bc7b89799eed3d",
+      "verdict": "PASS",
+      "scope": "from-zero native engineering and separate reopen verification only; Runtime NOT_RUN"
+    },
+    {
+      "case": "nc-runtime-01",
+      "sourceCommit": "5ed8306a474c0a3b7740b330c1bc7b89799eed3d",
+      "verdict": "FAIL",
+      "reason": "Activation rejected XAE-generated empty Io marker. Fixed to allow only empty marker for an exact declared NC profile; negative tests cover devices, attributes, foreign axis and missing declaration."
+    }
+  ],
+  "privateEvidenceSha256": {
+    "nc-engineering-01/mcp-evidence.json": "13365ffbba86eb574b3cb7bf43788414c0d5cdfe200b75743c1121618a376e98",
+    "nc-engineering-02/mcp-evidence.json": "d716323f997bd546608317527459173c4abd75fc226a7c49981a4ca95dc98955",
+    "nc-engineering-02/nc-results.json": "27f75e8ca1f7cfeb91d7c2832f00da570a587e9aea3d4bde9790d6c5a71b9471",
+    "nc-engineering-02/session-cleanup.json": "dc075c2bf722c0fee040a22be06b317b01f52234e8ed576d25653a3aa811ba83",
+    "nc-runtime-01/mcp-evidence.json": "f987a743fb00bcbb8448138fd814bc8e855d5425a4e26cba8c8ba756ab690560",
+    "nc-runtime-01/cleanup-readback.json": "3ebae52700526d41e6af5ff1e916b83363d652ce4802648aa7a8ac7b2562428e",
+    "nc-runtime-02/mcp-evidence.json": "76044fb106d92e4a6ced884ba6e0635612898f436591d3283a227f8b60ec228b",
+    "nc-runtime-02/nc-results.json": "cb8787cb972e1110997d5db533cc2ff4062161e15f31368a0b3642add200daca",
+    "nc-runtime-02/fatal-dialog.txt": "d74399ebc953a7786447a00e7512effbac95739c1c2a095951a354cc45e5b7c8",
+    "nc-runtime-02/cleanup-readback.json": "3ef36f49487cafd2debfce0449b9540d6c41f631e01b30e04b46a4fd28f6208d"
+  },
+  "limitations": [
+    "No actual NC motion has passed on this candidate before licensing.",
+    "Cloud checks do not install XAE or execute NC.",
+    "One software continuous axis with a SAF/SVB pair and a synchronized PLC task only.",
+    "No EtherCAT, physical motor, safety, deterministic realtime, HMI or Scope qualification.",
+    "License files, raw identities, system paths and vendor binaries remain private.",
+    "Draft PR only; not merged or released."
+  ]
+}

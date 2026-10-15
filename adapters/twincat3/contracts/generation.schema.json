@@ -1,0 +1,302 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tia-guard.local/contracts/twincat3-generation-v1.schema.json",
+  "title": "TwinCAT owned offline generation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "solutionName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+    },
+    "configurationName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+    },
+    "plcProjectName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requestedBuild": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:3\\.1\\.)?[0-9]{4}\\.[0-9]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dteProgId": {
+          "type": "string",
+          "pattern": "^TcXaeShell\\.DTE\\.[0-9]+\\.0$"
+        },
+        "provider": {
+          "const": "dte"
+        },
+        "targetPlatform": {
+          "enum": [
+            "TwinCAT RT (x64)",
+            "TwinCAT OS (x64)"
+          ]
+        },
+        "buildConfiguration": {
+          "enum": [
+            "Debug",
+            "Release"
+          ]
+        },
+        "plcTemplate": {
+          "const": "Empty PLC Template"
+        }
+      },
+      "required": []
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$"
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+          },
+          "kind": {
+            "enum": [
+              "program",
+              "function",
+              "functionBlock",
+              "globalVariableList",
+              "struct",
+              "enum"
+            ]
+          },
+          "declarationFile": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[^\\\\:\\x00-\\x1f]+$"
+          },
+          "implementationFile": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240,
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[^\\\\:\\x00-\\x1f]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "declarationFile"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "program",
+                    "function",
+                    "functionBlock"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "implementationFile"
+              ],
+              "properties": {
+                "implementationFile": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240,
+                  "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[^\\\\:\\x00-\\x1f]+$"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "implementationFile": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+          },
+          "cycleTimeUs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 429496729
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 99
+          },
+          "programs": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "cycleTimeUs",
+          "priority",
+          "programs"
+        ]
+      }
+    },
+    "libraries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+(?:\\.[0-9]+){1,3}$"
+          },
+          "vendor": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "vendor"
+        ]
+      }
+    },
+    "motion": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "taskName": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+            },
+            "axisName": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+            },
+            "axisSymbol": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "cycleTimeUs": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 20000,
+              "multipleOf": 1000
+            },
+            "minimumPosition": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "maximumPosition": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "maximumVelocity": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000000
+            },
+            "acceleration": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000000
+            },
+            "deceleration": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000000
+            },
+            "jerk": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "taskName",
+            "axisName",
+            "axisSymbol",
+            "cycleTimeUs",
+            "minimumPosition",
+            "maximumPosition",
+            "maximumVelocity",
+            "acceleration",
+            "deceleration",
+            "jerk"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "solutionName",
+    "configurationName",
+    "plcProjectName",
+    "environment",
+    "artifacts",
+    "tasks",
+    "libraries"
+  ]
+}

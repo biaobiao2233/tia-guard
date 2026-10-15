@@ -123,18 +123,28 @@ PLC 工程文本化、版本管理和 AI 工程接口已有有价值的工具。
 
 详见[相关项目、设计来源与后续改进](docs/RELATED-PROJECTS.md)：包含固定版本来源、各自范围、已有实现和待验证计划。先完成 [#41：最新 GUI/Gateway 真实 TIA 离线复验](https://github.com/biaobiao2233/tia-guard/issues/41)，再改善 Git 变更摘要、逐项扩展 LAD，并在环境齐备后评估一个只读跨平台适配；这些后续能力尚未完成。
 
+## 实验性 TwinCAT 3 适配器
+
+[TwinCAT 适配器](adapters/twincat3/README.md)提供独立的 stdio MCP → Windows Worker → Automation Interface / ADS 接入。已验证从零生成受支持的 ST 工程、真实编译诊断、保存关闭重开核验，以及自有 PLC / 单轴 NC/PTP 软件仿真；现有用户工程仅只读或复制到自有目录核验，不附着用户 IDE。它尚未接入现有 TIA GUI / CLI / HTTP 安装包，也不是跨厂商工程转换器。
+
+原生环境为 Windows x64、.NET 8、Node ≥22、XAE 3.1.4026.27 / `TwinCAT OS (x64)`；NC 用户态模块 3.1.5049.0，示例固定 Tc2_MC2 3.3.75.0。需要本机官方 XAE / Usermode Runtime、NC/PTP 组件及对应合法许可，官方试用安全码由用户本人处理。[接入与环境配置](adapters/twincat3/docs/WORKER.md)、[MCP 操作](adapters/twincat3/docs/MCP.md)及[单轴示例](examples/twincat3-generation/nc-axis.md)记录了具体前提。
+
+源版本 `9ece75f` 已通过实际 MCP 创建、编译、独立核验并运行一根连续 NC 仿真轴：30→80→0 mm 定位、运动停止/释放、101 mm 越界拒绝及复位均通过；精确源、环境和原始报告哈希见[NC 运动证据](adapters/twincat3/evidence/nc-motion-20261015.json)。软件 PLC 跨会话配置/有效许可复用另有[源绑定证据](adapters/twincat3/evidence/persistent-runtime-20261015.json)。云端纯测试不代替这些原生结果。
+
+当前 NC 范围是一根软件连续轴和同步 PLC 任务；不涵盖真实电机/EtherCAT、机械回零、安全急停、实时性、HMI/Scope 或任意现有工程的完整编辑。`MC_Home/MC_Direct` 仅坐标置零，ADS 逐标量样本不是同步曲线；第二个独立 NC Worker 免再次验证码的复用尚未单独原生复测。
+
 ## 未来展望与社区适配
 
 长期希望把“工程可读化、Git 版本管理、审查与受验证的重建”逐步扩展到更多 PLC 工程，让不同平台的工程能够纳入统一的项目索引、版本历史与协作流程。适配方向会跟随实际接触的平台、可获得的开发环境和验证条件推进，也欢迎社区基于本项目贡献适配。
 
 ### 候选平台与工程环境
 
-以下是未来可评估的方向，均为待适配、待验证的候选；具体型号、软件版本和功能范围在开展适配时确定。清单保持开放，后续接触到的新平台也欢迎加入。
+除上文已单独验证的实验性 TwinCAT 子集外，以下方向仍为待适配、待验证的候选；具体型号、软件版本和功能范围在开展适配时确定。清单保持开放，后续接触到的新平台也欢迎加入。
 
 | 平台 / 厂商 | 工程软件 / 目标范围 | 软件桥接的候选入口 |
 | --- | --- | --- |
 | Siemens | TIA Portal（博图），S7-1500 扩展 | 现有 [Openness](https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api?contentId=~~8wSiwSWV3Triktc6ADDw) 桥接；新 CPU/对象逐项验证。 |
-| Beckhoff / 倍福 | TwinCAT 3 XAE / TcXaeShell / Visual Studio 集成 | 评估 [Automation Interface / COM](https://infosys.beckhoff.com/content/1033/tc3_automationinterface/242718859.html)。 |
+| Beckhoff / 倍福 | TwinCAT 3 XAE / TcXaeShell / Visual Studio 集成 | 已有[实验性 MCP 适配器](adapters/twincat3/README.md)，已验证能力及限制见上文；其余对象/平台版本仍待验证。 |
 | Mitsubishi / 三菱 | [GX Works3 / GX Works2](https://www.mitsubishielectric.com/fa/products/software/plc/index.html)，MELSEC 工程 | 工程自动化 API 待调研；评估官方导入导出与源码文件。 |
 | Omron / 欧姆龙 | [Sysmac Studio](https://www.ia.omron.com/products/category/automation-systems/machine-automation-controllers/software/)（NJ/NX）；[CX-One / CX-Programmer](https://industrial.omron.eu/en/products/cx-one) | 两类工程分别评估；公开工程 API、脚本与文件入口待调研。 |
 | Rockwell / Allen-Bradley / 罗克韦尔 | [Studio 5000 Logix Designer](https://www.rockwellautomation.com/en-us/products/software/factorytalk/designsuite/studio-5000/studio-5000-logix-designer.html)（ControlLogix / CompactLogix） | 评估 [Logix Designer SDK](https://literature.rockwellautomation.com/idc/groups/literature/documents/gr/ldsdk-gr001_-en-p.pdf) 与工程导入导出。 |
@@ -159,7 +169,7 @@ PLC 工程文本化、版本管理和 AI 工程接口已有有价值的工具。
 
 ### 各家工程软件的 API 桥接
 
-长期适配对象既包括 PLC 工程，也包括创建、编辑和验证这些工程的软件。当前本项目实现的工程软件桥接是 **TIA Portal V21 / Openness**；上表其他软件及接口均为候选方向，尚未在 TIA-Guard 中接入和验证。厂商已有某个 API，不等于本项目已适配。
+长期适配对象既包括 PLC 工程，也包括创建、编辑和验证这些工程的软件。现有产品入口使用 **TIA Portal V21 / Openness**，另有上文独立的实验性 TwinCAT 3 适配器；上表其余软件及接口均为候选方向，尚未接入和验证。厂商已有某个 API，不等于本项目已适配。
 
 计划按“工程软件 + 版本 + 设备系列 + 支持能力”建立适配边界，将工程读取、变量/程序查询、修改预览、受控离线修改、编译、导出、重建与验证逐步接到共用的 GUI / CLI / HTTP API / MCP 流程。共用接口与适配器契约需要随实际实现逐步设计，不能假定现有 TIA 接口已经通用于其他软件。
 
@@ -173,7 +183,7 @@ PLC 工程文本化、版本管理和 AI 工程接口已有有价值的工具。
 2. **工程重建与验证**：在平台工具链允许且证据充分时，再增加导入、创建新工程、编译和往返语义校验，逐项声明支持能力。
 3. **统一协作与 AI 工程视图**：逐步探索跨平台的工程检索、来源引用和 AI 辅助审查；平台特有的工程对象与验证规则仍由各自适配器处理。
 
-推进原则是：**实际接触什么，就评估适配什么；社区先贡献经过验证的适配，也欢迎纳入。** 清单不是固定排期，以上能力尚未实现或验证，也没有承诺固定交付日期。各平台保留自己的工程格式、编译工具和验证规则；同属 IEC 61131-3 或 CODESYS 生态也需要分别验证。统一管理不代表不同厂商的程序可以直接互相转换，也不能从一个平台的测试结果推断另一个平台已支持。
+推进原则是：**实际接触什么，就评估适配什么；社区先贡献经过验证的适配，也欢迎纳入。** 清单不是固定排期；除明确链接的源绑定验证范围外，其余能力尚未实现或验证，也没有承诺固定交付日期。各平台保留自己的工程格式、编译工具和验证规则；同属 IEC 61131-3 或 CODESYS 生态也需要分别验证。统一管理不代表不同厂商的程序可以直接互相转换，也不能从一个平台的测试结果推断另一个平台已支持。
 
 ### 欢迎适配 PR
 

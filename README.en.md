@@ -123,18 +123,28 @@ Valuable tools already address PLC text export, versioning and AI engineering ac
 
 [Related projects, design sources and next improvements](docs/RELATED-PROJECTS.en.md) records pinned sources, scope differences, existing implementation and unverified plans. First complete [#41: current GUI/Gateway real offline TIA requalification](https://github.com/biaobiao2233/tia-guard/issues/41), then improve Git summaries, extend LAD individually and assess one read-only platform adapter when an environment exists. These future capabilities are not complete.
 
+## Experimental TwinCAT 3 adapter
+
+The [TwinCAT adapter](adapters/twincat3/README.md) exposes standalone stdio MCP → Windows Worker → Automation Interface / ADS integration. Qualified capabilities include generating supported ST projects from scratch, actual compiler diagnostics, independent save/close/reopen verification, and owned PLC / single-axis NC/PTP software simulation. Existing user projects are read-only or copied into owned directories for verification; the adapter never attaches to a user's IDE. It is not integrated into the existing TIA GUI / CLI / HTTP package and does not convert projects between vendors.
+
+The native environment is Windows x64, .NET 8, Node ≥22, XAE 3.1.4026.27 / `TwinCAT OS (x64)`, with NC Usermode module 3.1.5049.0 and pinned Tc2_MC2 3.3.75.0 in the example. Official local XAE / Usermode Runtime, NC/PTP components and corresponding valid licenses are required; the user must personally handle official trial security codes. See [environment configuration](adapters/twincat3/docs/WORKER.md), [MCP operations](adapters/twincat3/docs/MCP.md) and the [single-axis example](examples/twincat3-generation/nc-axis.md).
+
+Source `9ece75f` passed actual MCP creation, compilation, independent verification and execution of one continuous NC simulation axis: 30→80→0 mm moves, motion stop/release, rejection of 101 mm and reset. The [NC motion receipt](adapters/twincat3/evidence/nc-motion-20261015.json) binds the exact source, environment and private report hashes. Software PLC configuration / valid-license reuse across sessions has separate [source-bound evidence](adapters/twincat3/evidence/persistent-runtime-20261015.json). Cloud pure tests do not replace native qualification.
+
+NC scope is one software continuous axis with a synchronized PLC task. Physical motors/EtherCAT, mechanical homing, safety stops, deterministic realtime, HMI/Scope and complete editing of arbitrary existing projects are not qualified. `MC_Home/MC_Direct` only sets coordinates; sequential ADS scalars are not synchronized curves. Reuse by a second independent NC Worker without another security code has not been separately native-tested.
+
 ## Future direction and community adapters
 
 The long-term goal is to extend readable engineering source, Git versioning, review and verified rebuilds to more PLC projects, bringing different platforms into shared project indexing, version history and collaboration workflows. Adapter work will follow the platforms we actually use, available engineering environments and opportunities for verification. Community adapters built on this project are welcome.
 
 ### Candidate platforms and engineering environments
 
-The following are potential directions, all awaiting implementation and verification. Specific models, software versions and capability boundaries will be determined when adapter work begins. The list stays open to additional platforms encountered in practice.
+Except for the separately qualified experimental TwinCAT subset above, the following directions await implementation and verification. Specific models, software versions and capability boundaries will be determined when adapter work begins. The list stays open to additional platforms encountered in practice.
 
 | Platform / vendor | Engineering software / target scope | Candidate software-bridge entry points |
 | --- | --- | --- |
 | Siemens | TIA Portal, S7-1500 expansion | Existing [Openness](https://docs.tia.siemens.cloud/r/en-us/v21/tia-portal-openness-api-for-automation-of-engineering-workflows/tia-portal-openness-api?contentId=~~8wSiwSWV3Triktc6ADDw) bridge; qualify additional CPUs and objects individually. |
-| Beckhoff | TwinCAT 3 XAE / TcXaeShell / Visual Studio integration | Evaluate [Automation Interface / COM](https://infosys.beckhoff.com/content/1033/tc3_automationinterface/242718859.html). |
+| Beckhoff | TwinCAT 3 XAE / TcXaeShell / Visual Studio integration | An [experimental MCP adapter](adapters/twincat3/README.md) exists; qualified capabilities and limitations are described above. Other objects/platform versions remain unqualified. |
 | Mitsubishi | [GX Works3 / GX Works2](https://www.mitsubishielectric.com/fa/products/software/plc/index.html), MELSEC projects | Engineering automation APIs need research; evaluate official import/export and source files. |
 | Omron | [Sysmac Studio](https://www.ia.omron.com/products/category/automation-systems/machine-automation-controllers/software/) (NJ/NX); [CX-One / CX-Programmer](https://industrial.omron.eu/en/products/cx-one) | Evaluate the two project families separately; public engineering APIs, scripts and file access need research. |
 | Rockwell / Allen-Bradley | [Studio 5000 Logix Designer](https://www.rockwellautomation.com/en-us/products/software/factorytalk/designsuite/studio-5000/studio-5000-logix-designer.html) (ControlLogix / CompactLogix) | Evaluate the [Logix Designer SDK](https://literature.rockwellautomation.com/idc/groups/literature/documents/gr/ldsdk-gr001_-en-p.pdf) and project import/export. |
@@ -159,7 +169,7 @@ The following are potential directions, all awaiting implementation and verifica
 
 ### API bridges for engineering software
 
-Long-term adapters cover both PLC projects and the software used to create, edit and verify them. The engineering software bridge currently implemented in this project is **TIA Portal V21 / Openness**. Other software and interfaces in the table are candidates, not integrated or qualified in TIA-Guard. A vendor providing an API does not mean this project already supports it.
+Long-term adapters cover both PLC projects and the software used to create, edit and verify them. Existing product entry points use **TIA Portal V21 / Openness**, with the separate experimental TwinCAT 3 adapter described above. The remaining software and interfaces in the table are candidates, not integrated or qualified. A vendor providing an API does not mean this project already supports it.
 
 Plan adapter boundaries around engineering software, version, controller family and supported capability. Progressively connect project reads, tag/program queries, edit previews, guarded offline edits, compilation, export, rebuild and verification to shared GUI / CLI / HTTP API / MCP workflows. Shared interfaces and adapter contracts must evolve through implementation; the existing TIA interface is not automatically a common interface for other software.
 
@@ -173,7 +183,7 @@ Keep engineering-software automation separate from PLC runtime communication. Fo
 2. **Rebuild and verification**: where the platform toolchain permits and sufficient evidence is available, add import, fresh project creation, compilation and round-trip semantic verification, declaring each capability individually.
 3. **Shared collaboration and AI engineering views**: explore cross-platform project queries, source references and AI-assisted review while keeping platform-specific engineering objects and verification rules within their adapters.
 
-The guiding principle is: **evaluate adapters for the platforms we actually encounter, and welcome verified community contributions.** This list is not a fixed schedule. These capabilities are not implemented or verified and carry no fixed delivery dates. Each platform retains its own project format, compiler and verification rules. Sharing IEC 61131-3 or a CODESYS foundation still requires separate qualification. Shared management does not imply direct program conversion between vendors, and passing tests on one platform does not qualify another.
+The guiding principle is: **evaluate adapters for the platforms we actually encounter, and welcome verified community contributions.** This list is not a fixed schedule. Beyond the explicitly linked source-bound qualification, remaining capabilities are not implemented or verified and carry no fixed delivery dates. Each platform retains its own project format, compiler and verification rules. Sharing IEC 61131-3 or a CODESYS foundation still requires separate qualification. Shared management does not imply direct program conversion between vendors, and passing tests on one platform does not qualify another.
 
 ### Adapter PRs are welcome
 
