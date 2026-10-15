@@ -102,8 +102,10 @@ public static class MotionConfiguration
         {
             TaskName = task[..^4], AxisName = Text(axis, "Name"), AxisSymbol = symbol,
             CycleTimeUs = checked((long?)saf.Attribute("CycleTime") ?? throw new InvalidDataException("Missing NC cycle.")) / 10,
-            MinimumPosition = Number(enc?.Element("SoftEndMinControl"), "Range"),
-            MaximumPosition = Number(enc?.Element("SoftEndMaxControl"), "Range"),
+            // XAE omits a zero limit Range when saving, even with Enable=true.
+            // The enabled limit node must exist (checked above); an absent node is never a default.
+            MinimumPosition = Limit(enc?.Element("SoftEndMinControl")),
+            MaximumPosition = Limit(enc?.Element("SoftEndMaxControl")),
             MaximumVelocity = Number(para?.Element("Velo"), "Maximum"),
             Acceleration = Number(para?.Element("Dynamic"), "Acceleration"),
             Deceleration = Number(para?.Element("Dynamic"), "Deceleration"), Jerk = Number(para?.Element("Dynamic"), "Jerk")
@@ -111,6 +113,7 @@ public static class MotionConfiguration
     }
 
     private static string Text(XElement? e, string name) => (string?)e?.Element(name) ?? throw new InvalidDataException("Missing " + name);
+    private static double Limit(XElement? node) => node is not null && node.Attribute("Range") is null ? 0 : Number(node, "Range");
     private static double Number(XElement? e, string name)
     {
         if (!double.TryParse((string?)e?.Attribute(name), NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value))

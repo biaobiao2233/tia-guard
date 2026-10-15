@@ -63,6 +63,13 @@ public sealed class MotionTests
         Assert.Equal(50, C.MotionConfiguration.Capture(doc, "PLC")!.MaximumVelocity);
         Assert.NotEqual(Spec, C.MotionConfiguration.Capture(doc, "PLC"));
     }
+    [Fact] public void NativeOmittedZeroLimitIsZeroRatherThanUnknownOrExpectedValue()
+    {
+        var doc = Configuration(); doc.Descendants("SoftEndMinControl").Single().Attribute("Range")!.Remove();
+        Assert.Equal(0, C.MotionConfiguration.Capture(doc, "PLC")!.MinimumPosition);
+        doc.Descendants("SoftEndMinControl").Single().Remove();
+        Assert.ThrowsAny<Exception>(() => C.MotionConfiguration.Capture(doc, "PLC"));
+    }
     [Theory]
     [InlineData("missing-link")][InlineData("offset-link")][InlineData("foreign-owner")][InlineData("extra-axis")]
     [InlineData("real-encoder")][InlineData("real-drive")][InlineData("disabled-limit")][InlineData("io-binding")]
