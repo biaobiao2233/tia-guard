@@ -8,6 +8,8 @@
 
 运行仍使用适配器自己的独立 Usermode Runtime，需要安装官方 NC/PTP 用户态组件和对应合法许可。此前纯 PLC 的成功验收不代表 NC 已运行，也不意味着已有 PLC 许可覆盖 NC；仅工程生成、编译或云端测试成功不能记运动 PASS。
 
+2026-10-15 原生验收：源版本 `9ece75f` 在用户本人完成官方 NC 试用后，经实际 MCP 完成下述三次定位、停止/释放、101 mm 拒绝和复位；见[精确来源及运动证据](../../adapters/twincat3/evidence/nc-motion-20261015.json)。已有许可缺失的失败记录保留，没有覆盖成成功。第二个独立 NC Worker 免再次验证码的复用尚未单独原生复测。
+
 命令通过 `GVL_Command` 的顶层标量输入，反馈只读 `MAIN`。默认不使能、不运动：
 
 1. Enable=TRUE，等待 MAIN.Enabled；HomeRequest 发 FALSE→TRUE→FALSE，等待 MAIN.Homed、Step=20。这里 MC_Home/MC_Direct 是坐标置零，不找机械原点。
