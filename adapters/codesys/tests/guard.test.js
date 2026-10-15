@@ -1,6 +1,6 @@
 "use strict";
 const test=require('node:test');const assert=require('node:assert/strict');
-const {Guard}=require('../guard');const {Provider}=require('../provider');const {tools}=require('../schemas');
+const {Guard}=require('../guard');const {Provider,compilationPassed}=require('../provider');const {tools}=require('../schemas');
 test('default read-only permits preview but blocks all mutation grants',()=>{
   const g=new Guard();const p=g.preview({operation:'compile'});
   assert.throws(()=>g.authorize(p.previewId),/read-only/);
@@ -47,4 +47,12 @@ test('unsupported object names, case collisions and missing program entry are re
   assert.throws(()=>g.preview({operation:'create',entry:'Other',objects:[object]}),/invalid/);
   assert.throws(()=>g.preview({operation:'create',entry:'MAIN',objects:[object,{...object,name:'main'}]}),/invalid/);
   assert.throws(()=>g.preview({operation:'edit',object:{...object,name:'../escape'}}));
+});
+test('unknown severity, contradictory counts, exceptions and incomplete compilation fail closed',()=>{
+  const good={buildStarted:true,buildCompleted:true,diagnosticsComplete:true,nativeCodeGenerated:true,errorCount:0,warningCount:0,diagnostics:[{severity:'Text'}]};
+  assert.equal(compilationPassed(good),true);
+  for(const bad of [{buildStarted:'true'},{buildCompleted:false},{diagnosticsComplete:false},{warningCount:1},
+    {buildException:'vendor failure'},{diagnostics:[{severity:'Unknown'}]},{diagnostics:[{severity:'Error'}]},{diagnostics:[]}]) {
+    assert.equal(compilationPassed({...good,...bad}),false);
+  }
 });

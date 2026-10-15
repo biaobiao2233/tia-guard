@@ -15,7 +15,7 @@ The MCP needs a **PDE subscription**, distinct from the free base programming ID
 Only one IDE can enable the official server at a time.
 
 The [official tool reference](https://content.helpme-codesys.com/en/CODESYS%20Development%20System%20MCP%20Server/_idemcp_mcp_tools_and_ressources.html)
-lists 19 tools: add_or_remove_library, add_or_remove_program_call_in_task,
+lists 20 tools: add_or_remove_library, add_or_remove_program_call_in_task,
 browse_project_tree, check_for_errors, create_folder,
 create_or_replace_structured_text_object, get_active_app_as_path,
 get_active_path_and_selection, get_available_libraries_list,

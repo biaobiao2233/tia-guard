@@ -3,6 +3,13 @@ const fs=require('node:fs/promises');
 const path=require('node:path');
 const {Guard,digest}=require('./guard');
 const {NativeTransport}=require('./transport');
+function compilationPassed(c) {
+  return c?.buildStarted===true && c.buildCompleted===true && c.diagnosticsComplete===true && c.nativeCodeGenerated===true &&
+    c.errorCount===0 && Number.isInteger(c.warningCount) && c.warningCount>=0 && !c.buildException &&
+    Array.isArray(c.diagnostics) && c.diagnostics.length>0 &&
+    c.diagnostics.every(d=>['Warning','Information','Text'].includes(d.severity)) &&
+    c.warningCount===c.diagnostics.filter(d=>d.severity==='Warning').length;
+}
 function fromEnvironment(env=process.env) {
   return new Provider({writes:env.CODESYS_GUARD_WRITES==='1',exe:env.CODESYS_GUARD_EXE||'',
     profile:env.CODESYS_GUARD_PROFILE||'CODESYS V3.5 SP22 Patch 4',workspace:env.CODESYS_GUARD_WORKSPACE||''});
@@ -35,7 +42,7 @@ class Provider {
           const r=await this.transport.call(frozen.request);
           result={...r,operation:name,nativeOperation:r.operation,inputHash:frozen.inputHash,revision:this.guard.revision};
           // A native result is required; a process exit, empty diagnostics or mock cannot qualify.
-          if(frozen.request.operation==='compile' && r.success && !(r.compilation?.buildStarted && r.compilation?.buildCompleted && r.compilation?.diagnosticsComplete && r.compilation?.nativeCodeGenerated && r.compilation?.errorCount===0 && r.compilation?.diagnostics?.length>0)) result.success=false;
+          if(frozen.request.operation==='compile' && r.success && !compilationPassed(r.compilation)) result.success=false;
           break;
         }
         case 'inspect_codesys':
@@ -57,4 +64,4 @@ class Provider {
   }
   async dispose(){await this.chain;this.guard.close();return this.transport.dispose();}
 }
-module.exports={Provider,fromEnvironment};
+module.exports={Provider,fromEnvironment,compilationPassed};

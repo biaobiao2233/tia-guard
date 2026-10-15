@@ -30,6 +30,9 @@ def simulation_only():
         raise ValueError('project-identity-changed')
     if not device.get_simulation_mode():
         raise ValueError('simulation-required')
+    identity=device.get_device_identification()
+    if (identity.type,str(identity.id),str(identity.version)) != (4096,'0000 0001','3.5.22.40'):
+        raise ValueError('device-identity-changed')
 
 def bind():
     global device, app
@@ -50,14 +53,16 @@ def snapshot():
             for task in config.get_children():
                 tasks.append({'name':task.get_name(), 'kind':str(task.kind_of_task), 'interval':str(task.interval),
                     'calls':[str(task.pous[i][0]) for i in range(len(task.pous))]})
+    identity=device.get_device_identification()
     return {'objects': sorted(objects,key=lambda x:x['name']), 'tasks':tasks,
-        'device':{'type':4096,'id':'0000 0001','version':'3.5.22.40'},'simulation':True}
+        'device':{'type':identity.type,'id':str(identity.id),'version':str(identity.version)},'simulation':True}
 
 def put_object(spec, create):
     global compiled, verified
     if connection is not None: raise ValueError('logout-required-before-edit')
     name=spec['name']; kind=spec['kind']
     if not re.match(r'^[A-Za-z][A-Za-z0-9_]{0,63}$',name): raise ValueError('invalid-name')
+    if kind=='gvl' and spec['implementation']: raise ValueError('gvl-has-no-implementation')
     matches=app.find(name)
     if create:
         if matches: raise ValueError('object-collision')
@@ -71,10 +76,10 @@ def put_object(spec, create):
         # Object identity/kind is fixed at creation; editing cannot change its type.
         original=[o for o in expected['objects'] if o['name']==name][0]
         if original['kind']!=kind: raise ValueError('object-kind-mismatch')
+    # Invalidate BEFORE the first mutation: a vendor exception may leave a partial edit.
+    compiled=False; verified=False
     obj.textual_declaration.replace(spec['declaration'])
     if kind!='gvl': obj.textual_implementation.replace(spec['implementation'])
-    elif spec['implementation']: raise ValueError('gvl-has-no-implementation')
-    compiled=False; verified=False
 
 def diagnostics():
     result=[]
@@ -92,21 +97,27 @@ def compile_project():
     compiled=False; verified=False
     for category in system.get_message_categories(): system.clear_messages(category)
     # Rebuild does type checking. generate_code additionally invokes the native code generator.
-    app.rebuild()
-    first=diagnostics()
-    errors=[m for m in first if m['severity'] in ('Error','FatalError')]
-    if not errors:
-        app.generate_code()
-    messages=diagnostics()
+    messages=[]; build_exception=None; generated=False
+    try:
+        app.rebuild()
+        messages=diagnostics()
+        if not any(m['severity'] in ('Error','FatalError') for m in messages):
+            app.generate_code(); generated=True
+    except:
+        build_exception=traceback.format_exc()
+    # Some vendor phases replace the message store. Preserve diagnostics from both phases.
+    for message in diagnostics():
+        if message not in messages: messages.append(message)
     errors=[m for m in messages if m['severity'] in ('Error','FatalError')]
     warnings=[m for m in messages if m['severity']=='Warning']
     # C0 is a build summary, not a successful process exit. Missing summary fails closed.
-    summaries=[m for m in messages if m['code']=='C0' and (('0'+u'错误') in m['message'] or '0 error' in m['message'])]
-    compiled=not errors and bool(summaries)
+    summaries=[m for m in messages if m['code']=='C0' and re.search(u'(构建完整|Build complete)\\s*--\\s*0\\s*(错误|errors?)',m['message'],re.I)]
+    known=all(m['severity'] in ('Error','FatalError','Warning','Information','Text') for m in messages)
+    compiled=generated and not build_exception and known and not errors and bool(summaries)
     project.save()
     return {'success':compiled,'compilation':{'buildStarted':True,'buildCompleted':True,
-        'diagnosticsComplete':True,'errorCount':len(errors),'warningCount':len(warnings),
-        'nativeCodeGenerated':compiled,'diagnostics':messages}}
+        'diagnosticsComplete':known,'errorCount':len(errors),'warningCount':len(warnings),
+        'nativeCodeGenerated':compiled,'diagnostics':messages,'buildException':build_exception}}
 
 def do(request):
     global project, device, app, connection, compiled, verified, expected, entry

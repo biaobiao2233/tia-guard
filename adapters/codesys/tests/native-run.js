@@ -31,10 +31,15 @@ async function main(){
     assert.equal((await call('doctor_codesys')).isError,false);
     const source=JSON.parse(await fs.readFile(path.join(__dirname,'..','examples','counter.json'),'utf8'));
     const broken=structuredClone(source);broken.objects[0].implementation='Counter := DefinitelyMissing;';
+    broken.objects[1].implementation='Result := Value;';
+    broken.objects[2].declaration=broken.objects[2].declaration.replace('Step : DINT := 1','Step : DINT := 0');
     await execute(broken);
     const bad=await execute({operation:'compile'},false);
     assert.ok(bad.compilation.errorCount>=1);assert.ok(bad.compilation.diagnostics.some(d=>d.message.includes('DefinitelyMissing')));
     for(const object of source.objects) await execute({operation:'edit',object});
+    const snapshot=await call('inspect_codesys');assert.equal(snapshot.isError,false);
+    for(const object of source.objects){const stored=snapshot.structuredContent.snapshot.objects.find(o=>o.name===object.name);assert.equal(stored.declaration,object.declaration);assert.equal(stored.implementation,object.implementation);}
+    report.allThreeObjectKindsChanged=true;
     const compiled=await execute({operation:'compile'});assert.equal(compiled.compilation.nativeCodeGenerated,true);
     assert.equal(compiled.compilation.errorCount,0);
     const reopened=await execute({operation:'reopen'});assert.equal(reopened.verification.verdict,'pass');
