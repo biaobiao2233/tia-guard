@@ -29,6 +29,7 @@ test("runtime schemas reject arbitrary ADS targets, PIDs, raw addresses and inco
   assert.equal(toolSchemas.write_twincat_symbol.inputSchema.safeParse({ simulationId: "owned", symbol: "GVL.Command", type: "LREAL", value: Infinity }).success, false);
   assert.equal(toolSchemas.prepare_twincat_simulation.inputSchema.safeParse({ previewId: "p", grantId: "g", licensePath: "foreign" }).success, false);
   assert.equal(toolSchemas.resume_twincat_simulation.inputSchema.safeParse({ simulationId: "owned", netId: "foreign" }).success, false);
+  assert.equal(toolSchemas.preview_twincat_generation.inputSchema.safeParse({ operation: "build-generation", inputDirectory: "in", outputDirectory: "out", runtimeInstanceRoot: "foreign" }).success, false);
 });
 
 test("startup transport success and a static fake counter cannot qualify native execution", () => {

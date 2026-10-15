@@ -14,7 +14,7 @@ public sealed class WorkerBackend : IAsyncDisposable
 {
     public const string ProviderId = "twincat3-owned-dte";
     private sealed record PreviewState(JsonObject Request, FrozenGenerationInput Input, GenerationPreview? Generation,
-        ProjectSnapshot? Project, string RequestHash, DateTimeOffset Expires);
+        ProjectSnapshot? Project, string RequestHash, DateTimeOffset Expires, RuntimeSlotSnapshot? RuntimeSlot = null);
     private sealed record GrantState(string PreviewId, DateTimeOffset Expires);
     private sealed record ExecutionState(FrozenGenerationInput Input, string SolutionPath, string Root, bool Published);
     private readonly WorkerConfiguration configuration;
@@ -206,14 +206,17 @@ public sealed class WorkerBackend : IAsyncDisposable
                 throw new InvalidOperationException("Frozen project memory limit exceeded.");
             request["projectPath"] = EngineeringPaths.RequireUnder(Text(payload, "projectPath"), allocation.WorkspaceRoot, true);
         }
-        string requestHash = generation?.RequestHash ?? CompileRequestHash(request, frozen, project!);
+        var runtimeSlot = operation == "start-simulation" ? PersistentSlot()?.Inspect() : null;
+        if (runtimeSlot is not null)
+            EngineeringPaths.RequireDistinctTrees(configuration.RuntimeInstanceRoot!, source, output, project!.Root);
+        string requestHash = generation?.RequestHash ?? CompileRequestHash(request, frozen, project!, runtimeSlot?.Fingerprint);
         string id = generation?.PreviewId ?? Guid.NewGuid().ToString("N");
-        var preview = new PreviewState(request, frozen, generation, project, requestHash, time.GetUtcNow() + TimeSpan.FromMinutes(5));
+        var preview = new PreviewState(request, frozen, generation, project, requestHash, time.GetUtcNow() + TimeSpan.FromMinutes(5), runtimeSlot);
         previews.Add(id, preview);
         return Envelope("preview", new { PreviewId = id, frozen.InputHash, ExpiresAtUtc = preview.Expires,
             Request = request, Environment = session.Environment, allocation.WorkspaceRoot, allocation.ScratchRoot,
             RequestHash = requestHash, SourceInputHash = frozen.InputHash, ProjectTreeHash = project?.TreeHash,
-            BackendPreview = generation, Mutates = false });
+            BackendPreview = generation, RuntimeInstance = runtimeSlot, Mutates = false });
     }
 
     private PreviewState RequirePreview(JsonElement payload)
@@ -234,7 +237,8 @@ public sealed class WorkerBackend : IAsyncDisposable
         if (preview.Project is not null)
         {
             var currentProject = ProjectSnapshot.Capture(preview.Request["projectPath"]!.GetValue<string>(), allocation);
-            if (currentProject.TreeHash != preview.Project.TreeHash || CompileRequestHash(preview.Request, current, currentProject) != preview.RequestHash)
+            var slotFingerprint = preview.RuntimeSlot is null ? null : PersistentSlot()!.Inspect().Fingerprint;
+            if (currentProject.TreeHash != preview.Project.TreeHash || CompileRequestHash(preview.Request, current, currentProject, slotFingerprint) != preview.RequestHash)
                 throw new InvalidOperationException("Original project tree drifted.");
         }
         return preview;
@@ -339,6 +343,10 @@ public sealed class WorkerBackend : IAsyncDisposable
             !NativeSimulationDeployment.NativeBuilt || !OwnedUsermodeRuntime.Installed(session.Environment.InstallDirectory))
             throw new InvalidOperationException("Explicit owned-simulation mode and installed native Runtime binding are required.");
     }
+    private PersistentRuntimeSlot? PersistentSlot() => configuration.RuntimeInstanceRoot is { } root
+        ? new(root, allocation.WorkspaceRoot, allocation.ScratchRoot,
+            Path.Combine(session.Environment.InstallDirectory ?? throw new InvalidOperationException("Runtime install directory is absent."),
+                "Runtimes", "bin", "TcSystemServiceUm.exe")) : null;
     private async Task<JsonObject> StartSimulationAsync(JsonElement payload, CancellationToken cancellationToken, bool prepareOnly = false)
     {
         var preview = ConsumeHostGrant(payload, "start-simulation");
@@ -356,10 +364,14 @@ public sealed class WorkerBackend : IAsyncDisposable
         string phase = "simulation-process";
         try
         {
-            runtime = await OwnedUsermodeRuntime.StartAsync(session.Environment.InstallDirectory!, Path.Combine(root, "runtime"),
-                allocation.ScratchRoot, cancellationToken).ConfigureAwait(false);
+            runtime = preview.RuntimeSlot is { } slot
+                ? await OwnedUsermodeRuntime.StartPersistentAsync(session.Environment.InstallDirectory!, configuration.RuntimeInstanceRoot!,
+                    allocation.WorkspaceRoot, allocation.ScratchRoot, slot.Fingerprint, cancellationToken).ConfigureAwait(false)
+                : await OwnedUsermodeRuntime.StartAsync(session.Environment.InstallDirectory!, Path.Combine(root, "runtime"),
+                    allocation.ScratchRoot, cancellationToken).ConfigureAwait(false);
             await runtime.EnterConfigAsync(cancellationToken).ConfigureAwait(false);
             await NativeSimulationDeployment.SelectOwnedTargetAsync(handle, session, runtime, cancellationToken).ConfigureAwait(false);
+            await NativeSimulationDeployment.RecordOwnedIdeAsync(handle, session, runtime, cancellationToken).ConfigureAwait(false);
             phase = "simulation-compile";
             compilation = await compiler.CompileAsync(preview.Input, handle, session, cancellationToken).ConfigureAwait(false);
             if (!compilation.Passed) throw new InvalidOperationException("Owned simulation copy did not compile with complete evidence.");
@@ -535,9 +547,9 @@ public sealed class WorkerBackend : IAsyncDisposable
         }, cancellationToken);
     }
 
-    private string CompileRequestHash(JsonObject request, FrozenGenerationInput input, ProjectSnapshot project)
+    private string CompileRequestHash(JsonObject request, FrozenGenerationInput input, ProjectSnapshot project, string? runtimeFingerprint = null)
         => Hash(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { ProtocolVersion = "1", Request = request,
-            SourceInputHash = input.InputHash, ProjectTreeHash = project.TreeHash, project.Root,
+            SourceInputHash = input.InputHash, RuntimeFingerprint = runtimeFingerprint, ProjectTreeHash = project.TreeHash, project.Root,
             project.SolutionRelativePath, project.ProjectRelativePath, ProviderId, session.SessionId,
             Environment = session.Environment, allocation.WorkspaceRoot, allocation.ScratchRoot }, Json)));
 

@@ -18,6 +18,7 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
     private readonly Task stderr;
     private readonly TaskCompletionSource<string> announcedNetId = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool disposed;
+    private PersistentRuntimeSlot.Lease? persistentLease;
     public string SimulationId { get; } = Guid.NewGuid().ToString("N");
     public string NetId { get; }
     public string ConfigurationRoot { get; }
@@ -42,27 +43,51 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
 
     public static async Task<OwnedUsermodeRuntime> StartAsync(string installation, string root, string scratch,
         CancellationToken cancellationToken)
+        => await StartCoreAsync(installation, root, scratch, null, cancellationToken);
+
+    public static async Task<OwnedUsermodeRuntime> StartPersistentAsync(string installation, string root,
+        string workspace, string scratch, string expectedFingerprint, CancellationToken cancellationToken)
+    {
+        var slot = new PersistentRuntimeSlot(root, workspace, scratch, Path.Combine(installation, "Runtimes", "bin", "TcSystemServiceUm.exe"));
+        var lease = slot.Acquire(expectedFingerprint);
+        try { return await StartCoreAsync(installation, root, workspace, lease, cancellationToken); }
+        catch { lease.Dispose(); throw; }
+    }
+    private static async Task<OwnedUsermodeRuntime> StartCoreAsync(string installation, string root, string scratch,
+        PersistentRuntimeSlot.Lease? lease, CancellationToken cancellationToken)
     {
         if (!OperatingSystem.IsWindows() || !Environment.Is64BitProcess) throw new PlatformNotSupportedException("Windows x64 is required.");
         if (!Installed(installation)) throw new InvalidOperationException("Official Usermode Runtime is not installed.");
-        EngineeringPaths.RequireNewOutput(root, scratch);
+        bool reuse = lease?.Snapshot.State == "stopped";
+        if (reuse) EngineeringPaths.RequireUnder(root, scratch, true);
+        else EngineeringPaths.RequireNewOutput(root, scratch);
         var executable = Path.Combine(installation, "Runtimes", "bin", "TcSystemServiceUm.exe");
         var template = Path.Combine(installation, "Runtimes", "UmRT_Template");
         EngineeringPaths.CheckTree(template);
-        var netId = "127.0.0.1." + RandomNumberGenerator.GetInt32(64, 255) + "." + RandomNumberGenerator.GetInt32(0, 256);
+        var netId = lease?.Snapshot.NetId ?? "127.0.0.1." + RandomNumberGenerator.GetInt32(64, 255) + "." + RandomNumberGenerator.GetInt32(0, 256);
         SimulationPolicy.RequireLoopbackAllocation(netId);
-        Directory.CreateDirectory(root);
-        foreach (var file in Directory.EnumerateFiles(template, "*", SearchOption.AllDirectories))
+        if (!reuse)
         {
-            var destination = EngineeringPaths.RequireUnder(Path.Combine(root, Path.GetRelativePath(template, file)), root);
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!); File.Copy(file, destination, false);
+            Directory.CreateDirectory(root);
+            foreach (var file in Directory.EnumerateFiles(template, "*", SearchOption.AllDirectories))
+            {
+                var destination = EngineeringPaths.RequireUnder(Path.Combine(root, Path.GetRelativePath(template, file)), root);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!); File.Copy(file, destination, false);
+            }
+            var registryPath = Path.Combine(root, "3.1", "TcRegistry.xml");
+            var registry = ReadRegistry(registryPath);
+            var system = registry.SelectSingleNode("//Key[@Name='TwinCAT3']/Key[@Name='System']") ?? throw new InvalidDataException("Template system registry is absent.");
+            Set("HeapMemSizeMB", "DW", "128");
+            Set("AmsNetId", "BIN", string.Concat(netId.Split('.').Select(p => byte.Parse(p).ToString("X2"))));
+            registry.Save(registryPath);
+            void Set(string name, string type, string value)
+            {
+                var item = system.SelectSingleNode("Value[@Name='" + name + "']") ?? registry.CreateElement("Value");
+                if (item.ParentNode is null) system.AppendChild(item);
+                ((XmlElement)item).SetAttribute("Name", name); ((XmlElement)item).SetAttribute("Type", type); item.InnerText = value;
+            }
         }
-        var registryPath = Path.Combine(root, "3.1", "TcRegistry.xml");
-        var registry = ReadRegistry(registryPath);
-        var system = registry.SelectSingleNode("//Key[@Name='TwinCAT3']/Key[@Name='System']") ?? throw new InvalidDataException("Template system registry is absent.");
-        Set("HeapMemSizeMB", "DW", "128");
-        Set("AmsNetId", "BIN", string.Concat(netId.Split('.').Select(p => byte.Parse(p).ToString("X2"))));
-        registry.Save(registryPath);
+        lease?.MarkActive(netId);
         var start = new ProcessStartInfo(executable)
         {
             WorkingDirectory = root, UseShellExecute = false, CreateNoWindow = true,
@@ -71,7 +96,7 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
         // Keep the instance name within the native router's short-name range.
         foreach (var arg in new[] { "-t", "bin", "-n", "TiaGuard" + Guid.NewGuid().ToString("N")[..12], "-i", netId, "-c", Path.Combine(root, "3.1") }) start.ArgumentList.Add(arg);
         var child = Process.Start(start) ?? throw new InvalidOperationException("Owned Runtime did not start.");
-        var owned = new OwnedUsermodeRuntime(child, netId, root, executable);
+        var owned = new OwnedUsermodeRuntime(child, netId, root, executable) { persistentLease = lease };
         try
         {
             // The official Runtime changes its announced AMS identity on collision.
@@ -93,12 +118,6 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
             throw new TimeoutException("Owned Runtime ADS service did not become available. Last ADS error: " + lastAdsError);
         }
         catch { await owned.DisposeAsync(); throw; }
-        void Set(string name, string type, string value)
-        {
-            var item = system.SelectSingleNode("Value[@Name='" + name + "']") ?? registry.CreateElement("Value");
-            if (item.ParentNode is null) system.AppendChild(item);
-            ((XmlElement)item).SetAttribute("Name", name); ((XmlElement)item).SetAttribute("Type", type); item.InnerText = value;
-        }
     }
     public void RequireLive()
     {
@@ -190,8 +209,13 @@ public sealed class OwnedUsermodeRuntime : IAsyncDisposable
                 catch (TimeoutException) { process.Kill(entireProcessTree: false); await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)); }
             }
             await Task.WhenAll(stdout, stderr).WaitAsync(TimeSpan.FromSeconds(3));
+            persistentLease?.CompleteStopped();
         }
-        finally { if (process.HasExited) { disposed = true; process.Dispose(); } }
+        finally
+        {
+            if (process.HasExited) { disposed = true; process.Dispose(); }
+            persistentLease?.Dispose(); persistentLease = null;
+        }
     }
     private static XmlDocument ReadRegistry(string path)
     {

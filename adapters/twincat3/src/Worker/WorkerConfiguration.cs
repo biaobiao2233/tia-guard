@@ -7,6 +7,7 @@ public sealed record WorkerConfiguration(string PipeName, string Identity, strin
     string ScratchRoot, string? InteropPath, string? Build, bool OfflineWrites)
 {
     public bool RuntimeWrites { get; init; }
+    public string? RuntimeInstanceRoot { get; init; }
     public static WorkerConfiguration FromEnvironment()
     {
         string Read(string name) => System.Environment.GetEnvironmentVariable(name)
@@ -23,6 +24,7 @@ public sealed record WorkerConfiguration(string PipeName, string Identity, strin
         return new(endpoint[prefix.Length..], identity, allocation.WorkspaceRoot, allocation.ScratchRoot,
             System.Environment.GetEnvironmentVariable("TC3_INTEROP"), System.Environment.GetEnvironmentVariable("TC3_BUILD"),
             System.Environment.GetEnvironmentVariable("TC3_OFFLINE_WRITES") == "1")
-            { RuntimeWrites = System.Environment.GetEnvironmentVariable("TC3_RUNTIME_WRITES") == "1" };
+            { RuntimeWrites = System.Environment.GetEnvironmentVariable("TC3_RUNTIME_WRITES") == "1",
+                RuntimeInstanceRoot = System.Environment.GetEnvironmentVariable("TC3_RUNTIME_INSTANCE") };
     }
 }
