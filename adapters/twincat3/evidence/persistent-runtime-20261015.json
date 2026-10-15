@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceKind": "native-mcp-cross-worker-persistent-software-plc-qualification",
+  "observedDate": "2026-10-15",
+  "timezone": "Asia/Singapore",
+  "adapterSourceCommit": "96397dfe98046650684e6e3af111ec68c8aa66d5",
+  "environment": {
+    "xaeBuild": "3.1.4026.27",
+    "platform": "TwinCAT OS (x64)",
+    "nativeBridgeBuildWarnings": 0,
+    "nativeBridgeBuildErrors": 0
+  },
+  "cloudChecks": {
+    "sourceCommit": "96397dfe98046650684e6e3af111ec68c8aa66d5",
+    "nativeRuntimeExecutedInCloud": false,
+    "result": "success",
+    "runUrl": "https://github.com/biaobiao2233/tia-guard/actions/runs/38702236245"
+  },
+  "migration": {
+    "licenseCopied": false,
+    "priorHeldProcessExitChecked": true,
+    "kind": "trusted host registration of previously adapter-created stopped software PLC configuration",
+    "priorRawEvidenceHashChecked": true,
+    "priorAcceptedSource": "ba5e635368b6bf4d0cd37ff8a26db1c037fa9c4a"
+  },
+  "crossSession": {
+    "sameAmsIdentity": true,
+    "checkpointRevisionChangedEachUse": true,
+    "allOwnedProcessesExited": true,
+    "differentSessionIdentities": true,
+    "independentMcpWorkerSessions": 2,
+    "newOwnedRuntimeAndIdeProcesses": true,
+    "captchaRequests": 0,
+    "originalLicenseBytesUnchanged": true,
+    "sameManagedInstance": true
+  },
+  "runs": [
+    {
+      "case": "persistent-session-a",
+      "generationCompilation": "success",
+      "independentReopen": "pass",
+      "simulationCompilation": {
+        "state": "success",
+        "errors": 0,
+        "verification": "pass",
+        "warnings": 0
+      },
+      "systemState": "Run",
+      "plcState": "Run",
+      "probe": {
+        "symbol": "MAIN.Motor.Status.CycleCount",
+        "type": "UDINT",
+        "before": 3,
+        "after": 5,
+        "nativeExecutionObserved": true
+      },
+      "licenseAdvisory": {
+        "files": 1,
+        "earliestExpiryUtc": "2026-10-23T00:00:00+08:00",
+        "advisory": "file-expiry-future",
+        "validatedByRuntime": false
+      },
+      "stopCounterReads": [
+        60,
+        60
+      ],
+      "runCounterReads": [
+        63,
+        70
+      ],
+      "commandFeedback": "Start/Stop/Fault/Reset observed through typed ADS reads",
+      "protectedOutputWriteRejected": true,
+      "releasedHandleRejected": true,
+      "ownedRuntimeAndIdeExitReadback": "both exited",
+      "explicitSessionDisposal": true,
+      "finalCheckpointState": "stopped",
+      "inputHash": "65762de9087443fec8c59329c40521363df0203dd06e6ca7520830e7789cb283"
+    },
+    {
+      "case": "persistent-session-b",
+      "generationCompilation": "success",
+      "independentReopen": "pass",
+      "simulationCompilation": {
+        "state": "success",
+        "errors": 0,
+        "verification": "pass",
+        "warnings": 0
+      },
+      "systemState": "Run",
+      "plcState": "Run",
+      "probe": {
+        "symbol": "MAIN.Motor.Status.CycleCount",
+        "type": "UDINT",
+        "before": 5,
+        "after": 8,
+        "nativeExecutionObserved": true
+      },
+      "licenseAdvisory": {
+        "files": 1,
+        "earliestExpiryUtc": "2026-10-23T00:00:00+08:00",
+        "advisory": "file-expiry-future",
+        "validatedByRuntime": false
+      },
+      "stopCounterReads": [
+        147,
+        147
+      ],
+      "runCounterReads": [
+        171,
+        237
+      ],
+      "commandFeedback": "Start/Stop/Fault/Reset observed through typed ADS reads",
+      "protectedOutputWriteRejected": true,
+      "releasedHandleRejected": true,
+      "ownedRuntimeAndIdeExitReadback": "both exited",
+      "explicitSessionDisposal": true,
+      "finalCheckpointState": "stopped",
+      "inputHash": "65762de9087443fec8c59329c40521363df0203dd06e6ca7520830e7789cb283"
+    }
+  ],
+  "cloudContractCoverage": [
+    "exclusive file lease prevents concurrent acquisition",
+    "unfinished shutdown rejected",
+    "modified configuration/executable/license invalidates instance",
+    "checkpoint change invalidates a prior preview fingerprint",
+    "workspace/scratch isolation",
+    "live prior owner rejected during migration",
+    "license expiry remains advisory; DTD external entities prohibited"
+  ],
+  "privateEvidenceSha256": {
+    "persistent-session-a/mcp-evidence.json": "30ae1d328cdd082d642e540937188d3ff45315326489d5ac0acc52f3291c29c5",
+    "persistent-session-a/persistent-readback.json": "ff7c5050bb5e001befdf3e4e76eb50bed1955deca320e081c3937ae1bd91e12d",
+    "persistent-session-a/session-cleanup.json": "4424d55a07c7fb2fc6460fe9868312971e0f695a378c9f9bb8f5c932e257d56f",
+    "persistent-session-a/scratch/simulation/runtime-evidence.json": "61e64c6be248370c23e3b17067295f8466c05b8f9c7d586b26ba3871ab436e60",
+    "persistent-session-b/mcp-evidence.json": "e7d72ab7db2dcf5716ff02cea4299c3d33d74e6f8e4f50d91db2823a87bb0cff",
+    "persistent-session-b/persistent-readback.json": "79b5654055d291d7e98eb7bb28b8e5ffc9b157585798021ebdf86610cc112bf5",
+    "persistent-session-b/session-cleanup.json": "1256c1b5ec3dd516db654c35c65563f1b04f78d9fe69a10b9833fcedce956d43",
+    "persistent-session-b/scratch/simulation/runtime-evidence.json": "5445defba9b050dde54369f25862fbfb0e881087dae33a8df503ad318937fa39",
+    "persistent-adoption-20261015.json": "ee421e4b994fcfea3b8da0d546f16bb09ab51cbd2dd1953aecc172063dd0c150",
+    "persistent-baseline.json": "735139ec95f112d23825d8853bc7316ad02580eb90000ddfa4ce8fcc9f865675",
+    "persistent-comparison.json": "baf7bb300353e162376d68d073fbc7b73a5ea21cbb6adc95c411e2b2fb5f3f45"
+  },
+  "acceptance": "PASS_FOR_THIS_SOURCE_AND_TWO_OWNED_SOFTWARE_PLC_SESSIONS",
+  "limitations": [
+    "Native qualification reused a previously licensed adapter-owned directory after trusted host migration; first-ever new persistent-slot allocation plus human licensing was not rerun natively.",
+    "Runtime-only cases did not rerun the deliberately-invalid ST repair branch.",
+    "License-file expiry metadata is advisory; runtime signatures/features/platform permission are not established by parsing a file. Actual PLC Run and execution feedback were required in both sessions.",
+    "Unfinished/crashed shutdown remains blocked for explicit investigation; no arbitrary existing-process attachment or automatic stale-state adoption.",
+    "No NC/PTP, EtherCAT, physical motor, real-time determinism or safety validation.",
+    "Raw reports, host paths, AMS/system/instance/session identifiers, license contents and vendor binaries remain private.",
+    "This receipt is not main-branch merge or release acceptance."
+  ]
+}

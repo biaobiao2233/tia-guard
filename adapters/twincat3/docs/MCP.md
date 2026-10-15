@@ -37,6 +37,7 @@ MCP host 的 stdio 配置示例（路径替换为自己的独立 checkout，不�
 | `TC3_WORKER_ARGS` | JSON 字符串数组，例如 dotnet 的本地 worker DLL 参数；不含 token |
 | `TC3_OFFLINE_WRITES` | 默认 `0`；只有 host 明确设置 `1` 才允许 owned 离线授权/执行/回读 |
 | `TC3_RUNTIME_WRITES` | 默认 `0`；同时启用离线写才允许新建自有软件仿真、状态控制和标量读写 |
+| `TC3_RUNTIME_INSTANCE` | 可信 host 可选的专用实例目录；位于 workspace 内、与 scratch/输入/输出分离，复用已干净停止的自有配置；MCP 请求不能设置此路径 |
 | worker 自己的 allocation 配置 | 后端拥有的 workspace/scratch；MCP 请求不能赋予路径所有权 |
 
 Node 每次创建随机 `TC3_PIPE` 和 `TC3_IDENTITY`，通过子进程环境传给自有 worker；不接受用户指定共享/default pipe，不 detached，不附着既有 daemon，不复用 `te1000-mcp`。真实 Worker 需使用本机原生绑定构建；不要把测试 fake-worker 用于实际工程。worker 启动默认 hidden，并懒加载 fresh owned COM，不能因为只读工具发现就附着用户 IDE。
@@ -71,7 +72,7 @@ Node 每次创建随机 `TC3_PIPE` 和 `TC3_IDENTITY`，通过子进程环境传
 
 需要官方许可输入时，按“start-simulation 预览 → 授权 → prepare → 用户双击自有 IDE 的系统/授权节点处理官方许可 → resume”操作。准备成功仅代表已完成部署准备；此时只允许读取准备状态、继续运行验收或结束实例，PLC 状态修改和变量读写均拒绝。人机步骤期间的代码编辑会在 resume 的重新编译/独立核验中被检查，不沿用旧的成功结论。MCP 不生成或复制许可证、不填写验证码。
 
-resume 结束本任务的许可 IDE，在新的自有 IDE 中重开精确工程；同一个 Runtime 进程和许可目录保持不变。跨 Worker 会话复用已有实例尚未开放；许可有效期检查及持久化复用属于后续能力，不能据此提供任意 Runtime 附着接口。
+resume 结束本任务的许可 IDE，在新的自有 IDE 中重开精确工程；同一个 Runtime 进程和许可目录保持不变。可信 host 设置 `TC3_RUNTIME_INSTANCE` 后，跨 Worker 可复用经过停止凭据和哈希校验的专用配置，获取独占租约后启动新的自有进程；不附着活跃 Runtime，不继承上一会话的句柄/授权。仿真预览返回 `runtimeInstance` 及许可文件到期提示，实际 Run 与变化计数仍是必要验收。完整机制和迁移边界见 [WORKER.md](WORKER.md)。
 
 退出时先调用 `dispose_twincat_session` 并检查真实清理结果，再关闭 MCP stdio。Windows 上 SDK 关闭子进程不能代替后台自有资源清理；空 stderr 也不能证明进程退出。正常关闭失败时，仅对创建阶段已持有并核对启动时间的自有 IDE 做退出处理，清理失败证据仍保留。
 
