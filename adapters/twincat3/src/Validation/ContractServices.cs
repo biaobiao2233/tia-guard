@@ -24,6 +24,20 @@ public sealed class NativeEngineeringCompiler : C.IEngineeringCompiler
                 var evidence = NativeDteBuild.Build(context.Dte!, project.SolutionPath, project.TwinCatProjectPath, project.StageRoot,
                     manifest.ConfigurationName, manifest.PlcProjectName,
                     manifest.Environment.BuildConfiguration, manifest.Environment.TargetPlatform, timeout, cancellationToken);
+#if TWINCAT_COM
+                if (evidence.Success && manifest.Motion is { } motion)
+                {
+                    var dte = (EnvDTE80.DTE2)context.Dte!;
+                    dte.ExecuteCommand("File.SaveAll", "");
+                    var manager = (TCatSysManagerLib.ITcSysManager)context.SystemManager!;
+                    foreach (var endpoint in C.MotionConfiguration.Endpoints(C.MotionConfiguration.Read(project.TwinCatProjectPath), manifest.PlcProjectName, motion.AxisSymbol))
+                        manager.LinkVariables(endpoint.PlcOwner + "^" + endpoint.PlcVariable, endpoint.NcOwner + "^" + endpoint.NcVariable, 0, 0, 0);
+                    dte.ExecuteCommand("File.SaveAll", "");
+                    // Confirm both saved links before reporting the motion project ready for readback.
+                    if (C.MotionConfiguration.Capture(C.MotionConfiguration.Read(project.TwinCatProjectPath), manifest.PlcProjectName) != motion)
+                        throw new InvalidDataException("Saved NC axis/link parameters differ from the frozen input.");
+                }
+#endif
                 return new C.CompilationReport
                 {
                     State = (C.CompilationState)(int)evidence.Verdict,
@@ -90,6 +104,8 @@ public sealed class SourceBoundProjectComparer : C.IProjectComparer
                 capture.Tasks.Select(x => new TaskFact(x.Name, x.CycleTimeUs, x.Priority, x.LinkedSystemTask, x.Programs)).ToArray(),
                 capture.Libraries.Select(x => new LibraryFact(x.Name, x.Vendor, x.Version, x.ResolvedVersion)).ToArray());
             var problems = capture.Failures.ToList();
+            if (manifest.Motion != capture.Motion) problems.Add("NC motion specification differs from independent native capture.");
+            if (manifest.Motion is not null && !capture.MotionComplete) problems.Add("NC inventory/mappings capture is incomplete.");
             if (string.IsNullOrWhiteSpace(capture.ProjectIdentity)) problems.Add("Captured project identity is missing.");
             if (capture.InputHash != input.InputHash) problems.Add("Capture is not correlated to the frozen input.");
             if (capture.Artifacts.Any(x => x.Opaque)) problems.Add("Capture contains opaque artifacts.");

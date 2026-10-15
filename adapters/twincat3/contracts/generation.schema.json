@@ -43,7 +43,10 @@
           "const": "dte"
         },
         "targetPlatform": {
-          "enum": ["TwinCAT RT (x64)", "TwinCAT OS (x64)"]
+          "enum": [
+            "TwinCAT RT (x64)",
+            "TwinCAT OS (x64)"
+          ]
         },
         "buildConfiguration": {
           "enum": [
@@ -211,6 +214,79 @@
           "vendor"
         ]
       }
+    },
+    "motion": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "taskName": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+            },
+            "axisName": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+            },
+            "axisSymbol": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "cycleTimeUs": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 20000,
+              "multipleOf": 1000
+            },
+            "minimumPosition": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "maximumPosition": {
+              "type": "number",
+              "minimum": -1000000,
+              "maximum": 1000000
+            },
+            "maximumVelocity": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000000
+            },
+            "acceleration": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000000
+            },
+            "deceleration": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000000
+            },
+            "jerk": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1000000
+            }
+          },
+          "required": [
+            "taskName",
+            "axisName",
+            "axisSymbol",
+            "cycleTimeUs",
+            "minimumPosition",
+            "maximumPosition",
+            "maximumVelocity",
+            "acceleration",
+            "deceleration",
+            "jerk"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [

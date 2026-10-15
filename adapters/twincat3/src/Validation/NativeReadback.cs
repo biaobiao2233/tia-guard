@@ -24,6 +24,7 @@ internal static class NativeReadback
         ITcSmTreeItem? references = null;
         var evidence = new List<string>();
         var saved = false; var closed = false; var reopened = false;
+        C.MotionSpec? motion = null; bool motionComplete = false;
         var objectComplete = false; var tasksComplete = false; var librariesComplete = false;
         string? solutionName = null, configurationName = null, plcName = null, toolBuild = null, platform = null, projectIdentity = null;
         var evidenceRoot = Path.Combine(handle.StageRoot, "_readback", Guid.NewGuid().ToString("N"));
@@ -74,6 +75,20 @@ internal static class NativeReadback
             if (platform != actualTargetPlatform) failures.Add("VS build platform differs from actual TwinCAT target platform.");
             toolBuild = ReadXml(handle.TwinCatProjectPath).Root?.Attribute("TcVersion")?.Value;
             if (string.IsNullOrWhiteSpace(toolBuild)) failures.Add("Actual project TcVersion could not be captured.");
+            var actualConfiguration = C.MotionConfiguration.Read(handle.TwinCatProjectPath);
+            motion = C.MotionConfiguration.Capture(actualConfiguration, handle.PlcProjectName);
+            var ncInventory = Children(manager.LookupTreeItem("TINC"));
+            if ((motion is null && ncInventory.Count != 0) || (motion is not null && ncInventory.Count != 1))
+                throw new InvalidDataException("Saved NC configuration and reopened native inventory differ.");
+            if (motion is not null)
+            {
+                var actualAxis = manager.LookupTreeItem("TINC^" + motion.TaskName + " SAF^Axes^" + motion.AxisName);
+                SaveXml("nc-axis", actualAxis.ProduceXml());
+                SaveXml("nc-task", ncInventory.Single().ProduceXml());
+                SaveXml("nc-configuration", actualConfiguration.Root!.Element("Project")!.Element("Motion")!.ToString());
+                SaveXml("nc-mappings", actualConfiguration.Root.Element("Mappings")!.ToString());
+            }
+            motionComplete = true;
             var plcProject = (ITcSmTreeItem)((ITcProjectRoot)plcRoot).NestedProject;
             SaveXml("plc-project", plcProject.ProduceXml());
             var systemTasks = Children(manager.LookupTreeItem("TIRT"));
@@ -142,7 +157,8 @@ internal static class NativeReadback
             SolutionName = solutionName, ConfigurationName = configurationName, PlcProjectName = plcName,
             ToolBuild = toolBuild, Platform = platform, Saved = saved, Closed = closed, Reopened = reopened,
             ObjectsComplete = objectComplete, TasksComplete = tasksComplete, LibrariesComplete = librariesComplete,
-            Artifacts = artifacts, Tasks = tasks, Libraries = libraries, Unsupported = unsupported, Failures = failures, RawEvidencePaths = evidence
+            Artifacts = artifacts, Tasks = tasks, Libraries = libraries, Motion = motion, MotionComplete = motionComplete,
+            Unsupported = unsupported, Failures = failures, RawEvidencePaths = evidence
         };
 
         void Walk(ITcSmTreeItem item, int depth)

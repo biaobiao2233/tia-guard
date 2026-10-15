@@ -48,14 +48,14 @@ public static class NativeSimulationDeployment
         }
     }
     public static Task SelectOwnedTargetAsync(NativeProjectHandle project, IOwnedEngineeringSession session,
-        OwnedUsermodeRuntime runtime, CancellationToken cancellationToken)
+        OwnedUsermodeRuntime runtime, CancellationToken cancellationToken, MotionSpec? motion = null)
         => session.InvokeAsync<bool>(context =>
         {
 #if TWINCAT_RUNTIME_NATIVE
             runtime.RequireLive(); RequireBinding(context, project);
-            SimulationPolicy.RequireNoHardware(project.TwinCatProjectPath);
+            SimulationPolicy.RequireNoHardware(project.TwinCatProjectPath, motion, project.PlcProjectName);
             var manager = (ITcSysManager2)context.SystemManager!;
-            if (manager.LookupTreeItem("TIID").ChildCount != 0 || manager.LookupTreeItem("TINC").ChildCount != 0)
+            if (manager.LookupTreeItem("TIID").ChildCount != 0 || manager.LookupTreeItem("TINC").ChildCount != (motion is null ? 0 : 1))
                 throw new NotSupportedException("Native hardware/motion inventory is not empty.");
             var config = (ITcConfigManager)((ITcSysManager7)manager).ConfigurationManager;
             if (config.ActiveTargetPlatform != "TwinCAT OS (x64)") throw new InvalidOperationException("Simulation requires the qualified OS x64 platform.");
@@ -72,14 +72,14 @@ public static class NativeSimulationDeployment
 
     public static Task ActivateAsync(NativeProjectHandle project, IOwnedEngineeringSession session,
         OwnedUsermodeRuntime runtime, CompilationReport compiled, VerificationReport verified,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, MotionSpec? motion = null)
         => session.InvokeAsync<bool>(context =>
         {
 #if TWINCAT_RUNTIME_NATIVE
             runtime.RequireLive(); RequireBinding(context, project);
             if (!compiled.Passed || !verified.Passed || compiled.InputHash != project.InputHash || compiled.ProjectIdentity != project.ProjectIdentity)
                 throw new InvalidOperationException("Actual compilation and independent verification must precede activation.");
-            SimulationPolicy.RequireNoHardware(project.TwinCatProjectPath);
+            SimulationPolicy.RequireNoHardware(project.TwinCatProjectPath, motion, project.PlcProjectName);
             var manager = (ITcSysManager2)context.SystemManager!;
             if (manager.GetTargetNetId() != runtime.NetId) throw new InvalidOperationException("Refusing a foreign target.");
             var plc = (ITcPlcProject)manager.LookupTreeItem("TIPC^" + project.PlcProjectName);

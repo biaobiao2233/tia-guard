@@ -48,6 +48,22 @@ public sealed record GenerationManifest
     public required IReadOnlyList<ArtifactSpec> Artifacts { get; init; }
     public required IReadOnlyList<TaskSpec> Tasks { get; init; }
     public required IReadOnlyList<LibrarySpec> Libraries { get; init; }
+    public MotionSpec? Motion { get; init; }
+}
+
+// One continuous, software-only NC/PTP axis. No arbitrary XML, paths or I/O endpoints.
+public sealed record MotionSpec
+{
+    public required string TaskName { get; init; }
+    public required string AxisName { get; init; }
+    public required string AxisSymbol { get; init; }
+    public required long CycleTimeUs { get; init; }
+    public required double MinimumPosition { get; init; }
+    public required double MaximumPosition { get; init; }
+    public required double MaximumVelocity { get; init; }
+    public required double Acceleration { get; init; }
+    public required double Deceleration { get; init; }
+    public required double Jerk { get; init; }
 }
 
 public sealed record ArtifactSpec
@@ -264,6 +280,8 @@ public sealed record ProjectCapture
     public IReadOnlyList<CapturedArtifact> Artifacts { get; init; } = Array.Empty<CapturedArtifact>();
     public IReadOnlyList<CapturedTask> Tasks { get; init; } = Array.Empty<CapturedTask>();
     public IReadOnlyList<CapturedLibrary> Libraries { get; init; } = Array.Empty<CapturedLibrary>();
+    public MotionSpec? Motion { get; init; }
+    public bool MotionComplete { get; init; }
     public IReadOnlyList<string> Unsupported { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> Failures { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> RawEvidencePaths { get; init; } = Array.Empty<string>();

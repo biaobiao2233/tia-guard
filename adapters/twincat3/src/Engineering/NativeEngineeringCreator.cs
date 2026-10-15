@@ -149,6 +149,19 @@ public sealed class NativeEngineeringCreator : IEngineeringCreator
                 throw new InvalidOperationException("A fixed installed library version is required.");
             libraries.AddLibrary(library.Name, library.Version, library.Vendor);
         }
+        if (manifest.Motion is { } motion)
+        {
+            var ncRoot = manager.LookupTreeItem("TINC");
+            if (ncRoot.ChildCount != 0 || manager.LookupTreeItem("TIID").ChildCount != 0)
+                throw new InvalidOperationException("Motion creation requires an empty motion/I/O inventory.");
+            var ncTask = ncRoot.CreateChild(motion.TaskName, 1, "", null);
+            if (ncTask.PathName != "TINC^" + motion.TaskName + " SAF")
+                throw new InvalidOperationException("Unexpected NC task identity.");
+            ncTask.ConsumeXml($"<TreeItem><TaskDef><CycleTime>{checked(motion.CycleTimeUs * 10)}</CycleTime><Priority>4</Priority></TaskDef></TreeItem>");
+            var axis = manager.LookupTreeItem(ncTask.PathName + "^Axes").CreateChild(motion.AxisName, 1, "", null);
+            AssertChild(axis, motion.AxisName, ncTask.PathName + "^Axes");
+            axis.ConsumeXml(MotionConfiguration.AxisXml(motion));
+        }
         // Offline build selection; this never selects or activates a live target device.
         var configurationManager = (ITcConfigManager)((ITcSysManager7)manager).ConfigurationManager;
         configurationManager.ActiveTargetPlatform = manifest.Environment.TargetPlatform;

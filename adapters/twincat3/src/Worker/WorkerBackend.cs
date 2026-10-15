@@ -358,7 +358,7 @@ public sealed class WorkerBackend : IAsyncDisposable
         string stage = Path.Combine(root, "project"); preview.Project!.CopyTo(stage, allocation);
         string solution = Path.Combine(stage, preview.Project.SolutionRelativePath.Replace('/', Path.DirectorySeparatorChar));
         var handle = await BindAsync(preview.Input, solution, stage, cancellationToken).ConfigureAwait(false);
-        SimulationPolicy.RequireNoHardware(handle.TwinCatProjectPath);
+        SimulationPolicy.RequireNoHardware(handle.TwinCatProjectPath, preview.Input.Manifest.Motion, handle.PlcProjectName);
         OwnedUsermodeRuntime? runtime = null;
         CompilationReport? compilation = null; VerificationReport? verification = null;
         string phase = "simulation-process";
@@ -370,7 +370,7 @@ public sealed class WorkerBackend : IAsyncDisposable
                 : await OwnedUsermodeRuntime.StartAsync(session.Environment.InstallDirectory!, Path.Combine(root, "runtime"),
                     allocation.ScratchRoot, cancellationToken).ConfigureAwait(false);
             await runtime.EnterConfigAsync(cancellationToken).ConfigureAwait(false);
-            await NativeSimulationDeployment.SelectOwnedTargetAsync(handle, session, runtime, cancellationToken).ConfigureAwait(false);
+            await NativeSimulationDeployment.SelectOwnedTargetAsync(handle, session, runtime, cancellationToken, preview.Input.Manifest.Motion).ConfigureAwait(false);
             await NativeSimulationDeployment.RecordOwnedIdeAsync(handle, session, runtime, cancellationToken).ConfigureAwait(false);
             phase = "simulation-compile";
             compilation = await compiler.CompileAsync(preview.Input, handle, session, cancellationToken).ConfigureAwait(false);
@@ -381,7 +381,7 @@ public sealed class WorkerBackend : IAsyncDisposable
                 observed.Failures.Count != 0 || observed.Unsupported.Count != 0)
                 throw new InvalidOperationException("Independent simulation-copy verification failed.");
             phase = "simulation-activation";
-            await NativeSimulationDeployment.ActivateAsync(handle, session, runtime, compilation, verification, cancellationToken).ConfigureAwait(false);
+            await NativeSimulationDeployment.ActivateAsync(handle, session, runtime, compilation, verification, cancellationToken, preview.Input.Manifest.Motion).ConfigureAwait(false);
             var prepared = new PreparedSimulation(handle, compilation, verification, root, Text(payload, "probeSymbol"));
             if (prepareOnly)
             {
@@ -427,7 +427,7 @@ public sealed class WorkerBackend : IAsyncDisposable
             if (reopened.ProjectIdentity != prepared.Project.ProjectIdentity)
                 throw new InvalidOperationException("Prepared project identity changed during fresh IDE reopen.");
             prepared = prepared with { Project = reopened };
-            await NativeSimulationDeployment.SelectOwnedTargetAsync(prepared.Project, session, state.Runtime, cancellationToken).ConfigureAwait(false);
+            await NativeSimulationDeployment.SelectOwnedTargetAsync(prepared.Project, session, state.Runtime, cancellationToken, state.Input.Manifest.Motion).ConfigureAwait(false);
             await NativeSimulationDeployment.RecordOwnedIdeAsync(prepared.Project, session, state.Runtime, cancellationToken).ConfigureAwait(false);
             compiled = await compiler.CompileAsync(state.Input, prepared.Project, session, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(prepared.Root, "resume-compilation.json"), JsonSerializer.Serialize(compiled, Json), cancellationToken).ConfigureAwait(false);
@@ -438,7 +438,7 @@ public sealed class WorkerBackend : IAsyncDisposable
                 observed.Failures.Count != 0 || observed.Unsupported.Count != 0)
                 throw new InvalidOperationException("Prepared simulation differs from its frozen source.");
             prepared = prepared with { Compilation = compiled, Verification = verified };
-            await NativeSimulationDeployment.ActivateAsync(prepared.Project, session, state.Runtime, compiled, verified, cancellationToken).ConfigureAwait(false);
+            await NativeSimulationDeployment.ActivateAsync(prepared.Project, session, state.Runtime, compiled, verified, cancellationToken, state.Input.Manifest.Motion).ConfigureAwait(false);
             return await CompleteSimulationAsync("resume-simulation", state.Runtime, state.Input, prepared, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)

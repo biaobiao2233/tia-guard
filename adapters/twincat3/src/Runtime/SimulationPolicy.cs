@@ -28,17 +28,20 @@ public static class SimulationPolicy
             !byte.TryParse(parts[4], out var first) || first < 64 || !byte.TryParse(parts[5], out _))
             throw new InvalidDataException("Only freshly allocated simulation AMS identities are allowed.");
     }
-    public static void RequireNoHardware(string configurationPath)
+    public static void RequireNoHardware(string configurationPath, MotionSpec? motion = null, string? plcName = null)
     {
         using var reader = XmlReader.Create(configurationPath, new XmlReaderSettings
             { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 20000000 });
         var root = XDocument.Load(reader).Root;
         var project = root?.Element("Project") ?? throw new InvalidDataException("Missing native configuration.");
         foreach (var section in project.Elements())
-            if (section.Name.LocalName is not ("System" or "Plc" or "TypeSystem" or "LicenseInfo"))
+            if (section.Name.LocalName is not ("System" or "Plc" or "TypeSystem" or "LicenseInfo")
+                && !(section.Name == "Motion" && motion is not null))
                 throw new NotSupportedException("Only PLC-only software simulation is qualified; configuration section: " + section.Name);
         if (project.Descendants().Any(e => e.Name.LocalName is "Device" or "EtherCAT" or "EtherCat" or "Box"))
             throw new NotSupportedException("Hardware configuration is not allowed in this simulation slice.");
+        if (motion is not null && (plcName is null || MotionConfiguration.Capture(new XDocument(root!), plcName) != motion))
+            throw new InvalidDataException("Only the exact frozen, fully mapped NC simulation profile may run.");
     }
     public static void RequireSymbol(FrozenGenerationInput input, string name, bool writing)
     {

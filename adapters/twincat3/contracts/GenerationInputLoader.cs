@@ -131,6 +131,26 @@ public static class GenerationInputLoader
                 || library.Name.Any(char.IsControl) || library.Vendor.Any(char.IsControl))
                 throw new InvalidDataException("Libraries require unique names, explicit numeric versions and vendors.");
         }
+        if (manifest.Motion is { } motion)
+        {
+            Name(motion.TaskName); Name(motion.AxisName);
+            if (manifest.Tasks.Count != 1 || manifest.Tasks[0].CycleTimeUs != motion.CycleTimeUs
+                || motion.CycleTimeUs is < 1000 or > 20000 || motion.CycleTimeUs % 1000 != 0
+                || manifest.Tasks[0].Priority <= 8 || tasks.Contains(motion.TaskName)
+                || !Regex.IsMatch(motion.AxisSymbol ?? "", "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"))
+                throw new InvalidDataException("Motion requires one synchronized PLC task, priority >8, 1..20 ms and a top-level GVL AXIS_REF.");
+            var rootName = motion.AxisSymbol!.Split('.')[0];
+            if (!manifest.Artifacts.Any(a => a.Kind == ArtifactKind.GlobalVariableList && a.Name == rootName)
+                || !manifest.Libraries.Any(l => l.Name == "Tc2_MC2"))
+                throw new InvalidDataException("Motion requires a declared axis GVL and pinned Tc2_MC2 library.");
+            if (!double.IsFinite(motion.MinimumPosition) || !double.IsFinite(motion.MaximumPosition)
+                || motion.MinimumPosition < -1000000 || motion.MaximumPosition > 1000000
+                || motion.MinimumPosition >= motion.MaximumPosition)
+                throw new InvalidDataException("Invalid bounded NC software position limits.");
+            foreach (double value in new[] { motion.MaximumVelocity, motion.Acceleration, motion.Deceleration, motion.Jerk })
+                if (!double.IsFinite(value) || value <= 0 || value > 1000000)
+                    throw new InvalidDataException("NC dynamics must be finite and within (0, 1000000].");
+        }
     }
 
     public static void ValidateRelativePath(string path)
