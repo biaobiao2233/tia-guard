@@ -24,6 +24,11 @@ $packageName = "tia-guard-bridge-v$Version-windows-x64"
 $stage = Join-Path $OutputDirectory $packageName
 $zip = Join-Path $OutputDirectory ($packageName + ".zip")
 $publish = Join-Path $OutputDirectory ".bridge-publish"
+foreach ($candidate in @($stage, $publish)) {
+    if (-not ([IO.Path]::GetFullPath($candidate).StartsWith($OutputDirectory.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase))) {
+        throw 'Package cleanup must stay within the explicit output directory.'
+    }
+}
 
 New-Item -ItemType Directory -Force $OutputDirectory | Out-Null
 Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
@@ -106,6 +111,8 @@ TIA-Guard Bridge v$Version experimental package
 
 中文说明: docs/TIA-AI-BRIDGE.md
 English guide: docs/TIA-AI-BRIDGE.en.md
+AI/MCP setup: docs/ADAPTER-PACKAGES.md
+From-zero generation: docs/PROJECT-GENERATION.md
 Core CLI version remains 0.1.0; the package version identifies this preview.
 See the release notes for exact verification scope.
 
@@ -136,10 +143,11 @@ Current write scope:
 - structured patch apply persists only the disposable offline copy after compile, export, rebuild and round-trip verify all pass
 - a failed patch apply restores that disposable copy; rollback failure is reported as rollback_failed
 - the original project is never saved
+- preview_project_generation -> single-use safety token -> build_project_generation creates and independently verifies a NEW project from supported SCL inputs
 - tag upsert outside a structured patch remains in memory until explicit publish
 - publish preserves the TIA project name, writes only to a NEW parent/destination, reopens, and verifies engineering contentId
 
-Not exposed:
+Excluded physical-device operations:
 - writes to an attached user project
 - attached-project save/overwrite or arbitrary archive (only guarded SaveAs-to-new-directory is exposed)
 - PLC download
@@ -147,6 +155,12 @@ Not exposed:
 - force
 - online variable writes
 - Safety operations
+
+PLCSIM experiment:
+- included but disabled by default; only adapter-owned virtual instances
+- lifecycle/power/SIM-address/compile-preparation checkpoints have native evidence
+- complete download/RUN/scans/actual I/O remains unqualified (runtimeQualified=false)
+- see docs/PLCSIM-AUTOMATION.md; do not infer runtime support from tool discovery
 
 Requirements:
 - Windows x64
@@ -164,8 +178,29 @@ The net48 Openness worker is isolated under .\worker\ so it cannot probe the sel
 
 $docStage = Join-Path $stage "docs"
 New-Item -ItemType Directory -Force $docStage | Out-Null
-foreach ($name in @("GETTING-STARTED.md", "GETTING-STARTED.en.md", "TIA-AI-BRIDGE.md", "TIA-AI-BRIDGE.en.md")) {
+foreach ($name in @("GETTING-STARTED.md", "GETTING-STARTED.en.md", "TIA-AI-BRIDGE.md", "TIA-AI-BRIDGE.en.md", "ADAPTER-PACKAGES.md", "PROJECT-GENERATION.md", "PLCSIM-AUTOMATION.md")) {
     Copy-Item (Join-Path $repoRoot ("docs\" + $name)) $docStage
+}
+Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $repoRoot 'third-party') -Destination $stage -Recurse
+New-Item -ItemType Directory -Path (Join-Path $stage 'examples') -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $repoRoot 'examples\project-generation-v1') -Destination (Join-Path $stage 'examples') -Recurse
+New-Item -ItemType Directory -Path (Join-Path $docStage 'releases') -Force | Out-Null
+$releaseNotes = Join-Path $repoRoot "docs\releases\v$Version.md"
+if (Test-Path -LiteralPath $releaseNotes) { Copy-Item -LiteralPath $releaseNotes -Destination (Join-Path $docStage 'releases') }
+foreach ($assetPath in @('src\TiaGuard.Bridge.Worker\obj\project.assets.json', 'src\TiaGuard.Bridge.Host\obj\project.assets.json')) {
+    $assets = Get-Content -LiteralPath (Join-Path $repoRoot $assetPath) -Raw | ConvertFrom-Json
+    foreach ($library in $assets.libraries.PSObject.Properties) {
+        if ($library.Value.type -ne 'package') { continue }
+        foreach ($folder in $assets.packageFolders.PSObject.Properties.Name) {
+            $packageRoot = Join-Path $folder $library.Value.path
+            if (-not (Test-Path -LiteralPath $packageRoot)) { continue }
+            $noticeStage = Join-Path $stage ('licenses\nuget\' + ($library.Name -replace '/', '-'))
+            New-Item -ItemType Directory -Path $noticeStage -Force | Out-Null
+            Get-ChildItem -LiteralPath $packageRoot -File | Where-Object { $_.Extension -eq '.nuspec' -or $_.Name -match '(?i)license|notice|copying' } | Copy-Item -Destination $noticeStage
+            break
+        }
+    }
 }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem

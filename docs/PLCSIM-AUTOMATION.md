@@ -1,6 +1,6 @@
 # 普通 PLCSIM 自动化（实验功能）
 
-本功能通过仓库源码提供，公开 Release 不包含此功能。完整的下载、RUN、扫描、输入输出断言尚未获得真实运行验收；查看 [OpenAPI](../src/TiaGuard.Bridge.Host/Gateway.openapi.json) 和 `/capabilities` 中的实验状态。构建或模拟后端测试通过不代表 PLC 程序运行通过。
+`v0.2.0-alpha.1` 起的 TIA 发行包包含这部分实验代码，**默认关闭**；旧 `v0.1.0-prealpha.1` 不包含。完整的下载、RUN、扫描、输入输出断言尚未获得真实运行验收，`runtimeQualified=false`；查看 [OpenAPI](../src/TiaGuard.Bridge.Host/Gateway.openapi.json) 和 `/capabilities` 中的实验状态。构建或模拟后端测试通过不代表 PLC 程序运行通过。
 
 目标是把 [从零创建工程](PROJECT-GENERATION.md) 生成的 `.ap21` 接入仿真验证，供 Agent 调用：打开副本、启用仿真编译、读取完整编译诊断、创建并上电仿真器、下载、RUN/STOP、写输入、扫描、读输出、比较预期、关闭。
 

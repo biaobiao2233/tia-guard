@@ -2,7 +2,7 @@
 
 此入口将 `project-generation.json` 和 SCL 源文件转换成一个新的 TIA Portal V21 工程，不需要已有 `.ap21` 或二进制模板。CLI、HTTP 和 MCP 调用同一个工作流：检查并冻结输入 → 创建 CPU → 按依赖导入 → 编译 → 独立回读比较 → 关闭工程后发布。失败返回阶段和诊断，便于 Agent 修改源码并重新调用。
 
-此功能通过仓库源码提供；已发布预览包不自动包含它。真实环境和具体源码身份见[集成验证记录](verification/project-generation-integration-20261012.md)。
+此功能包含在 `v0.2.0-alpha.1` 起的 TIA 完整包和 Bridge 包中；旧 `v0.1.0-prealpha.1` 不包含。安装及 MCP 配置见[适配包指南](ADAPTER-PACKAGES.md)。真实环境和具体源码身份见[集成验证记录](verification/project-generation-integration-20261012.md)。
 
 ## 环境和输入
 

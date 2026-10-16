@@ -4,6 +4,8 @@
 
 ## 安装与默认只读
 
+使用发行包时，生产依赖与原生绑定 Worker 已包含，优先按[适配包指南](../../../docs/ADAPTER-PACKAGES.md#twincat-3)配置。下面的 `npm ci` / test 命令面向源码开发环境。
+
 Node >=22；依赖已在 package-lock.json 中固定。进入 `adapters/twincat3/mcp` 后运行：
 
 ```powershell

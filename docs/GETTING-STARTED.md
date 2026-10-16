@@ -6,7 +6,7 @@
 
 ## 下载与前提
 
-从 [Releases](https://github.com/biaobiao2233/tia-guard/releases) 下载 `tia-guard-v0.1.0-prealpha.1-windows-x64.zip`。这是实验性预览版，适合在自己的离线工程副本上试用；请先阅读同一发行页的验证范围。
+从 [Releases](https://github.com/biaobiao2233/tia-guard/releases) 下载 `tia-guard-tia-v0.2.0-alpha.1-windows-x64.zip`。这是实验性预览版，适合在自己的离线工程副本上试用；请先阅读同一发行页的验证范围。AI/MCP 接入与 TwinCAT 独立包见[适配包指南](ADAPTER-PACKAGES.md)，从零新建工程见[工程生成](PROJECT-GENERATION.md)；下文是可选的 Git GUI 工作流。
 
 需要 Windows x64、.NET Framework 4.8、已安装 TIA Portal V21 与 Openness、Git for Windows，以及当前登录令牌有效的 **Siemens TIA Openness** 组权限。Gateway 已附带 .NET 8 运行时。软件不附带 Siemens DLL、许可证或 TIA 安装程序。
 
@@ -18,7 +18,7 @@
 可用 PowerShell 检查下载文件的 SHA-256，并与发行页的 `SHA256SUMS.txt` 比较：
 
 ```powershell
-Get-FileHash .\tia-guard-v0.1.0-prealpha.1-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\tia-guard-tia-v0.2.0-alpha.1-windows-x64.zip -Algorithm SHA256
 ```
 
 ## GitHub → TIA

@@ -30,6 +30,9 @@ $guiBin = Join-Path $repoRoot "src\TiaGuard.Gui\bin\$Configuration\net48"
 $packageName = "tia-guard-v$Version-windows-x64"
 $stage = Join-Path $OutputDirectory $packageName
 $zip = Join-Path $OutputDirectory ($packageName + ".zip")
+if (-not ([IO.Path]::GetFullPath($stage).StartsWith($OutputDirectory.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase))) {
+    throw 'Package stage must stay within the explicit output directory.'
+}
 
 New-Item -ItemType Directory -Force $OutputDirectory | Out-Null
 $removed = $false
@@ -107,10 +110,12 @@ if (Get-ChildItem $stage -Filter "Siemens*.dll" -File -Recurse) {
 }
 
 $readme = @"
-TIA-Guard v$Version Windows x64 pre-alpha package
+TIA-Guard TIA adapter v$Version Windows x64 preview package
 
 中文说明: docs/GETTING-STARTED.md
 English guide: docs/GETTING-STARTED.en.md
+AI/MCP setup and adapter packages: docs/ADAPTER-PACKAGES.md
+From-zero generation: docs/PROJECT-GENERATION.md
 Core CLI version remains 0.1.0; the package version identifies this preview.
 See the release notes for exact verification scope.
 
@@ -130,10 +135,12 @@ Automation / AI CLI:
   tia-guard export <project.ap21> <repo-dir>
   tia-guard build <repo-dir> --output <new-output-dir>
   tia-guard verify <original.ap21> <rebuilt.ap21>
+  tia-guard init <new-input-directory>
+  tia-guard build-generation <input-directory> --output <new-output-directory> --scratch <owned-scratch-directory>
 
 Requirements:
 - Windows x64
-- Git for Windows available as git.exe (existing Git Credential Manager / SSH credentials are reused)
+- Git for Windows is needed only for the optional Git workflows (existing credentials are reused)
 - TIA Portal V21 installed
 - TIA Portal Openness installed/enabled
 - Current Windows logon token has effective Siemens TIA Openness group membership
@@ -149,7 +156,8 @@ GUI product flows:
 
 Scope:
 - bounded V21 S7-1200 demo profile only
-- no PLC online/download/write operations
+- no physical PLC online/download/write operations
+- included PLCSIM experiment remains disabled by default; complete download/RUN/I/O is unqualified
 - Siemens DLLs, licenses and TIA project binaries are not redistributed
 "@
 [IO.File]::WriteAllText(
@@ -159,9 +167,16 @@ Scope:
 
 $docStage = Join-Path $stage "docs"
 New-Item -ItemType Directory -Force $docStage | Out-Null
-foreach ($name in @("GETTING-STARTED.md", "GETTING-STARTED.en.md", "TIA-AI-BRIDGE.md", "TIA-AI-BRIDGE.en.md")) {
+foreach ($name in @("GETTING-STARTED.md", "GETTING-STARTED.en.md", "TIA-AI-BRIDGE.md", "TIA-AI-BRIDGE.en.md", "ADAPTER-PACKAGES.md", "PROJECT-GENERATION.md", "PLCSIM-AUTOMATION.md")) {
     Copy-Item (Join-Path $repoRoot ("docs\" + $name)) $docStage
 }
+Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $repoRoot 'third-party') -Destination $stage -Recurse
+New-Item -ItemType Directory -Path (Join-Path $stage 'examples') -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $repoRoot 'examples\project-generation-v1') -Destination (Join-Path $stage 'examples') -Recurse
+New-Item -ItemType Directory -Path (Join-Path $docStage 'releases') -Force | Out-Null
+$releaseNotes = Join-Path $repoRoot "docs\releases\v$Version.md"
+if (Test-Path -LiteralPath $releaseNotes) { Copy-Item -LiteralPath $releaseNotes -Destination (Join-Path $docStage 'releases') }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zipOk = $false
