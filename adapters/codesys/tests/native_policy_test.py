@@ -114,6 +114,14 @@ class WorkerTests(unittest.TestCase):
         self.compile_fixture(foreign=True);result=self.n['compile_project']()
         self.assertFalse(result['success']);self.assertFalse(result['compilation']['diagnosticsComplete'])
 
+    def test_fresh_target_phases_generate_complete_bound_proof(self):
+        self.compile_fixture();result=self.n['compile_project']()
+        self.assertTrue(result['success']);self.assertEqual(result['target'],TARGET)
+        report=result['compilation'];self.assertEqual(report['buildId'],self.n['current_context']['requestId'])
+        self.assertEqual([p['name'] for p in report['phases']],['rebuild','generate'])
+        self.assertTrue(all(d['correlated'] for d in report['diagnostics']))
+        self.assertTrue(any(d['buildSummary'] for d in report['diagnostics'] if d['phase']=='generate'))
+
     def test_missing_target_header_cannot_prove_native_compilation(self):
         self.compile_fixture(no_header=True);self.assertFalse(self.n['compile_project']()['success'])
 
