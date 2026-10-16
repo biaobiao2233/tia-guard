@@ -1,0 +1,173 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceKind": "author-second-review-repair-verification-not-independent-review-acceptance",
+  "reviewedHead": "4ff3b6dab32dba72b0069442a029bf12b25dfc8f",
+  "baseSource": "ed6a7bfe04d0fc90c718d4eda12335e4681d47c1",
+  "productAndTestSource": "ae4bb69beaabfcd9ebf78747b91fbf79810e08f7",
+  "summaryCountImplementationSource": "9bc4464617ea3fe9249ed2b037140b87ec5167d5",
+  "startedAt": "2026-10-16T14:27:07.563Z",
+  "endedAt": "2026-10-16T14:27:59.710Z",
+  "environment": {
+    "developmentSystem": "CODESYS 64 3.5.22.40",
+    "runtimeKind": "owned in-process IDE simulation",
+    "controlWinServiceReadback": "Stopped",
+    "licensePurchasedOrActivated": false,
+    "hardwareAccessed": false
+  },
+  "portableChecks": {
+    "kind": "production-functions-with-simulated-vendor-APIs-and-actual-portable-child-processes",
+    "nodeTestsPerPlatform": 19,
+    "pythonFaultInjectionTestsInsideNodeSuite": 20,
+    "platforms": [
+      "ubuntu-24.04",
+      "windows-2022"
+    ],
+    "result": "success",
+    "pushRun": "https://github.com/biaobiao2233/tia-guard/actions/runs/38915794256",
+    "prRun": "https://github.com/biaobiao2233/tia-guard/actions/runs/38915801167",
+    "sourceRegressionPushRun": "https://github.com/biaobiao2233/tia-guard/actions/runs/38915794213",
+    "sourceRegressionPrRun": "https://github.com/biaobiao2233/tia-guard/actions/runs/38915801159",
+    "nativeCompilerUsedByPortableTests": false,
+    "targetedFailures": [
+      "Generate summary claims 9 warnings with zero Warning rows",
+      "Rebuild mismatch prevents code generation",
+      "Summary omits actual warnings or claims unobserved errors",
+      "Duplicate/malformed/missing summaries cannot qualify"
+    ],
+    "validWarningCase": "Same warning in each phase matches 1 per phase and contributes 2 diagnostic occurrences; this is a simulated-vendor test, not native nonzero-warning evidence"
+  },
+  "native": {
+    "success": true,
+    "actualStProgramFunctionBlockAndGvlChanges": true,
+    "wrongInputDeclarationTypeRejected": true,
+    "invalidVariableReadRejected": true,
+    "compilation": {
+      "initialErrors": 2,
+      "initialWarnings": 0,
+      "initialPhases": [
+        {
+          "completed": true,
+          "countsMatchSummary": true,
+          "diagnosticCount": 7,
+          "errorCount": 2,
+          "headerSeen": true,
+          "name": "rebuild",
+          "summaryCounts": {
+            "errorCount": 2,
+            "warningCount": 0
+          },
+          "warningCount": 0
+        }
+      ],
+      "repairedErrors": 0,
+      "repairedWarnings": 0,
+      "nativeCodeGenerated": true,
+      "diagnosticsComplete": true,
+      "countSemantics": "phase-diagnostic-occurrences",
+      "repairedPhases": [
+        {
+          "completed": true,
+          "countsMatchSummary": true,
+          "diagnosticCount": 5,
+          "errorCount": 0,
+          "headerSeen": true,
+          "name": "rebuild",
+          "summaryCounts": {
+            "errorCount": 0,
+            "warningCount": 0
+          },
+          "warningCount": 0
+        },
+        {
+          "completed": true,
+          "countsMatchSummary": true,
+          "diagnosticCount": 11,
+          "errorCount": 0,
+          "headerSeen": true,
+          "name": "generate",
+          "summaryCounts": {
+            "errorCount": 0,
+            "warningCount": 0
+          },
+          "warningCount": 0
+        }
+      ],
+      "phaseSummaryCountsValidated": true
+    },
+    "verification": {
+      "closedAndReopened": true,
+      "expectedObjectKindsTextsTypesAndTaskMatch": true,
+      "sourceFingerprintMatchesCompilation": true,
+      "verdict": "pass"
+    },
+    "counter": {
+      "before": 31,
+      "after": 51
+    },
+    "allowlistedWrites": {},
+    "stopped": {
+      "before": 99,
+      "after": 99,
+      "result": 106
+    },
+    "resumed": {
+      "before": 121,
+      "after": 141
+    },
+    "outputWriteRejected": true,
+    "closedSessionReadRejected": true,
+    "cleanup": {
+      "steps": [
+        {
+          "operation": "stop",
+          "success": true
+        },
+        {
+          "operation": "logout",
+          "success": true
+        },
+        {
+          "operation": "dispose-online",
+          "success": true
+        },
+        {
+          "operation": "close-project",
+          "success": true
+        }
+      ],
+      "explicitAndFinalEvidenceConsistent": true,
+      "exactOwnedChildExited": true,
+      "exitCode": 0,
+      "independentProcessReadback": "owned process absent"
+    }
+  },
+  "privateEvidence": {
+    "rawReportSha256": "f8208db20acb8be6df55af8a044f57fecfb57cd94cb607ecd4cbd8db11cadb93",
+    "savedOwnedProjectSha256": "2c101606ec109813771db07e9573eee9fb5d36f11a56c476fd02f3cca7b07592",
+    "loadedFileSha256": {
+      "native.py": "3181463b5fcbcb65f9771a16c070a0a2ff518e6a6f1a48399a1e373b02bfcc6c",
+      "native_policy.py": "2e0205d344ae1adc94b6e6c7dcb24f7d139eb8727da61b757467c280ab0bb6d7",
+      "transport.js": "bc9818513c9f08d073708aebb4d96b546b767fac937012821572e1b679154340",
+      "provider.js": "e905a1f0550602f5a0a302cb3c3e22f42e023867568890cbbcdf0945292ec7d3",
+      "results.js": "95aef1746370ea5475adcc6a4e27ff5611ffbfc8358e96c814831acf9be69c7f",
+      "guard.js": "eed1b12771f4621e446bdb652c079b32662f84c1083376b992c3b220dbe13d86",
+      "schemas.js": "639896fadc5d1753312dfcd2dfe7418342c8bb8a99ee76d855efff58e945d51c",
+      "index.js": "1155e5db835ca59ec1300660e8b93f9089452a7e470c7dfc8d955e2602f9f7ea"
+    },
+    "earlierFailedQualification": {
+      "source": "9bc4464617ea3fe9249ed2b037140b87ec5167d5",
+      "result": "SDK client default 60-second timeout expired during cold startup/create; qualification failed, own process exited 0 and close succeeded",
+      "rawReportSha256": "85a581117fe2ed6e5489208fc64d42757b39d2649f3cd3ed63ce4723f4a1aeb1",
+      "correction": "Only native qualification client changed: SDK 2 options passed in argument two, 330-second client deadline covers bounded startup/operation/cleanup"
+    },
+    "rawProjectsLogsPathsPidsAndLicensesPublished": false
+  },
+  "remainingGates": [
+    "Independent read-only review of the new exact candidate head",
+    "Exact 9-warning/0-row anomaly is simulated fault injection; native nonzero-warning scenario not qualified",
+    "Deliberately induced native save/open/compiler/timeout/cleanup exceptions not qualified",
+    "Abrupt OS power loss or MCP host hard-kill parent-death cleanup not qualified",
+    "Control Win/external runtime/hardware/HMI/breakpoint/single-step limits unchanged",
+    "No merge, installer update or Release"
+  ]
+}

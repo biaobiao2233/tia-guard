@@ -65,3 +65,22 @@ Python and Node, an inconsistent Rebuild, missing reported warnings, unobserved
 errors, duplicate summaries, and the valid repeated-warning case across phases.
 New-source portable and native verification is recorded separately; a third
 independent review is still required before claiming review acceptance.
+
+Count implementation `9bc4464617ea3fe9249ed2b037140b87ec5167d5` and qualification
+client correction `ae4bb69beaabfcd9ebf78747b91fbf79810e08f7` passed 19 Node
+contracts with 20 embedded Python fault-injection checks on Linux and Windows.
+The first native attempt timed out at the SDK client's default 60 seconds during
+cold startup/create; the project then closed and the owned process exited 0.
+The test client had passed options in the old SDK argument position. SDK 2 takes
+them in argument two; the corrected 330-second client deadline covers the bounded
+native startup/operation/cleanup deadlines. Product transport limits are unchanged.
+
+Actual CODESYS requalification of `ae4bb69` passed: two real compiler errors
+repaired to zero, both phase summaries match their captured 0-error/0-warning
+diagnostics, intended object/task/source and reopen proof, counter 31→51,
+Step=DINT#7, Stop 99→99 with FB result 106, Run 121→141, and owned cleanup/exit 0.
+All eight loaded file hashes match exact Git source. The
+[new source-bound receipt](../evidence/summary-counts-20261016.json) retains the
+failed attempt's hash and separates portable count fault injection from native
+normal-path observations. No native nonzero-warning scenario was induced, no
+license was activated, and no independent acceptance is claimed.

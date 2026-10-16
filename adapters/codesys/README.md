@@ -86,16 +86,22 @@ downloads to IDE simulation, observes changing counters, writes the two test
 inputs, checks their FB effect, verifies Stop/Run, rejects an output write and
 checks native process exit. It never purchases or activates a license.
 
-Portable CI and native qualification are separate. The [repair receipt](evidence/review-repair-20261016.json)
-binds product/test source `9152c96`: actual compiler errors and repair (0 errors,
-0 warnings), all three object kinds changed/read back, expected structure and
-save/close/reopen proof, counter 37→66, Stop 132→132 with FB result 139 after
-writing Step=7, Run 167→197, rejected wrong input type/invalid monitor variable/
-output write, and exact owned process exit. Eighteen Node contracts with fifteen
-embedded Python fault-injection checks passed on Linux and Windows; those tests
-use no vendor compiler. The [earlier receipt](evidence/native-20261015.json)
-remains historical normal-path evidence only for `f856071`. Independent
-re-review of the repaired candidate is still required.
+Portable CI and native qualification are separate. The [summary-count repair receipt](evidence/summary-counts-20261016.json)
+binds product/test source `ae4bb69` (count implementation `9bc4464`): actual
+compiler errors and repair to 0 errors/0 warnings, matching numeric summaries
+and diagnostic counts in both Rebuild and Generate, all three object kinds
+changed/read back, expected structure and save/close/reopen proof, counter 31→51,
+Stop 99→99 with FB result 106 after writing Step=7, Run 121→141, rejected wrong
+input type/invalid monitor variable/output write, and exact owned process exit.
+Nineteen Node contracts with twenty embedded Python fault-injection checks
+passed on Linux and Windows; those tests use no vendor compiler. The exact
+nine-warning/zero-row mismatch is a fault-injection test, not a native warning
+observation. Counts use `phase-diagnostic-occurrences`: each phase matches its
+own summary, and repeated warnings across phases contribute separate occurrences.
+The [first repair receipt](evidence/review-repair-20261016.json) for `9152c96` and
+[initial receipt](evidence/native-20261015.json) for `f856071` remain historical.
+The second independent review closed six findings and retained the count mismatch;
+author verification of this repair still requires independent re-review.
 A discovered tool or successful process exit alone
 does not establish a supported capability. Read errors and cleanup reports even
 when preceding steps succeeded. Local paths, native exceptions and full text
