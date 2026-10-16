@@ -1,6 +1,7 @@
 "use strict";
 const test=require('node:test');const assert=require('node:assert/strict');
 const {Guard}=require('../guard');const {Provider,compilationPassed}=require('../provider');const {tools}=require('../schemas');
+const fixture=require('./fixtures');
 test('default read-only permits preview but blocks all mutation grants',()=>{
   const g=new Guard();const p=g.preview({operation:'compile'});
   assert.throws(()=>g.authorize(p.previewId),/read-only/);
@@ -17,7 +18,7 @@ test('grants are single-use, revision-bound, expiring and session-bound',()=>{
   const fresh=g.preview({operation:'run'});g.close();assert.throws(()=>g.authorize(fresh.previewId),/stale/);
 });
 test('frozen requests resist caller mutation and native failures invalidate earlier previews',async()=>{
-  const observed=[];const transport={call:async r=>{observed.push(r);return {operation:r.operation,success:false,error:'real-compile-failure'};}};
+  const observed=[];const transport={call:async r=>{observed.push(r);return {operation:r.operation,context:fixture.context(r),success:false,error:'native-rejected'};}};
   const p=new Provider({writes:true},transport);const request={operation:'stop'};
   const preview=await p.dispatch('preview_codesys',{request});request.operation='run';
   const grant=await p.dispatch('authorize_codesys',{previewId:preview.previewId});
@@ -34,13 +35,13 @@ test('no arbitrary project, controller, script, network target or output write p
   const g=new Guard({writes:true});assert.throws(()=>g.preview({operation:'write',variable:'GVL_Test.Enable',value:1}),/type-mismatch/);
   assert.equal(tools.read_codesys.schema.safeParse({variables:['PLC_PRG.Counter + 1']}).success,false);
 });
-test('compiler empty success does not qualify and complete failure diagnostics survive',async()=>{
-  let answer={operation:'compile',success:true};
-  const p=new Provider({writes:true},{call:async()=>answer});
+test('complete negative diagnostics survive; a malformed success terminates the provider',async()=>{
+  let answer={operation:'compile',success:false,compilation:{errorCount:1,diagnostics:[{code:'C0046',message:'unknown identifier'}]}};
+  const p=new Provider({writes:true},{call:async req=>({...answer,context:fixture.context(req)}),dispose:async()=>({success:true,ownedProcessExited:true})});
   async function execute(){const v=await p.dispatch('preview_codesys',{request:{operation:'compile'}});const g=await p.dispatch('authorize_codesys',{previewId:v.previewId});return p.dispatch('execute_codesys',{previewId:v.previewId,grantId:g.grantId});}
-  assert.equal((await execute()).success,false);
-  answer={operation:'compile',success:false,compilation:{errorCount:1,diagnostics:[{code:'C0046',message:'unknown identifier'}]}};
   assert.deepEqual((await execute()).compilation,answer.compilation);
+  answer={operation:'compile',success:true};assert.equal((await execute()).success,false);
+  assert.equal(p.guard.closed,true);
 });
 test('unsupported object names, case collisions and missing program entry are rejected',()=>{
   const g=new Guard();const object={kind:'program',name:'MAIN',declaration:'PROGRAM MAIN',implementation:''};
@@ -49,10 +50,10 @@ test('unsupported object names, case collisions and missing program entry are re
   assert.throws(()=>g.preview({operation:'edit',object:{...object,name:'../escape'}}));
 });
 test('unknown severity, contradictory counts, exceptions and incomplete compilation fail closed',()=>{
-  const good={buildStarted:true,buildCompleted:true,diagnosticsComplete:true,nativeCodeGenerated:true,errorCount:0,warningCount:0,diagnostics:[{severity:'Text'}]};
-  assert.equal(compilationPassed(good),true);
+  const f=fixture.compilation();const good=f.compilation;
+  assert.equal(compilationPassed(good,f.context,f.target),true);
   for(const bad of [{buildStarted:'true'},{buildCompleted:false},{diagnosticsComplete:false},{warningCount:1},
     {buildException:'vendor failure'},{diagnostics:[{severity:'Unknown'}]},{diagnostics:[{severity:'Error'}]},{diagnostics:[]}]) {
-    assert.equal(compilationPassed({...good,...bad}),false);
+    assert.equal(compilationPassed({...good,...bad},f.context,f.target),false);
   }
 });

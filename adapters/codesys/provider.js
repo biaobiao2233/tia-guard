@@ -3,19 +3,29 @@ const fs=require('node:fs/promises');
 const path=require('node:path');
 const {Guard,digest}=require('./guard');
 const {NativeTransport}=require('./transport');
-function compilationPassed(c) {
-  return c?.buildStarted===true && c.buildCompleted===true && c.diagnosticsComplete===true && c.nativeCodeGenerated===true &&
-    c.errorCount===0 && Number.isInteger(c.warningCount) && c.warningCount>=0 && !c.buildException &&
-    Array.isArray(c.diagnostics) && c.diagnostics.length>0 &&
-    c.diagnostics.every(d=>['Warning','Information','Text'].includes(d.severity)) &&
-    c.warningCount===c.diagnostics.filter(d=>d.severity==='Warning').length;
-}
+const {validateResult,compilationPassed}=require('./results');
 function fromEnvironment(env=process.env) {
   return new Provider({writes:env.CODESYS_GUARD_WRITES==='1',exe:env.CODESYS_GUARD_EXE||'',
     profile:env.CODESYS_GUARD_PROFILE||'CODESYS V3.5 SP22 Patch 4',workspace:env.CODESYS_GUARD_WORKSPACE||''});
 }
 class Provider {
-  constructor(config,transport) {this.config=config;this.guard=new Guard(config);this.transport=transport||new NativeTransport(config);this.chain=Promise.resolve();this.executionId=require('node:crypto').randomUUID();}
+  constructor(config,transport) {
+    this.config=config;this.guard=new Guard(config);this.transport=transport||new NativeTransport(config);this.chain=Promise.resolve();this.executionId=require('node:crypto').randomUUID();
+    this.nativeState={target:null,expected:null,compilation:null,verified:false};this.integrityFault=null;
+  }
+  async nativeCall(request) {
+    if(this.integrityFault) throw Error('native-session-faulted');
+    try {
+      const result=await this.transport.call(request);
+      validateResult(request,result,this.nativeState);
+      return result;
+    }catch(error) {
+      this.integrityFault=error.message;this.guard.close();this.nativeState.verified=false;this.nativeState.compilation=null;
+      try{this.faultCleanup=await (this.transport.abort?this.transport.abort(error.message):this.transport.dispose());}
+      catch(e){this.faultCleanup={success:false,ownedProcessExited:false,error:e.message};}
+      error.cleanup=this.faultCleanup;throw error;
+    }
+  }
   dispatch(name,args) {
     const next=this.chain.then(()=>this.perform(name,args));
     this.chain=next.catch(()=>{});return next;
@@ -39,16 +49,24 @@ class Provider {
         case 'authorize_codesys': result=this.guard.authorize(args.previewId);break;
         case 'execute_codesys': {
           const frozen=this.guard.consume(args.previewId,args.grantId);
-          const r=await this.transport.call(frozen.request);
+          const request=frozen.request;
+          if(['create','edit','compile'].includes(request.operation)) {this.nativeState.compilation=null;this.nativeState.verified=false;}
+          if(request.operation==='reopen') this.nativeState.verified=false;
+          const previous=this.nativeState.expected;
+          if(request.operation==='create') this.nativeState.expected=structuredClone(request);
+          if(request.operation==='edit' && previous) this.nativeState.expected={...previous,objects:previous.objects.map(o=>o.name===request.object.name?request.object:o)};
+          const r=await this.nativeCall(request);
+          if(!r.success && ['create','edit'].includes(request.operation)) this.nativeState.expected=previous;
+          if(r.success && request.operation==='create') this.nativeState.target=r.target;
+          if(r.success && request.operation==='compile') this.nativeState.compilation=r.compilation;
+          if(r.success && request.operation==='reopen') this.nativeState.verified=true;
           result={...r,operation:name,nativeOperation:r.operation,inputHash:frozen.inputHash,revision:this.guard.revision};
-          // A native result is required; a process exit, empty diagnostics or mock cannot qualify.
-          if(frozen.request.operation==='compile' && r.success && !compilationPassed(r.compilation)) result.success=false;
           break;
         }
         case 'inspect_codesys':
         case 'read_codesys':
           if(!this.transport.child) throw Error('no-owned-session');
-          result=await this.transport.call(name==='inspect_codesys'?{operation:'inspect'}:{operation:'read',...args});
+          result=await this.nativeCall(name==='inspect_codesys'?{operation:'inspect'}:{operation:'read',...args});
           result={...result,nativeOperation:result.operation,operation:name};break;
         case 'dispose_codesys': this.guard.close();result=await this.transport.dispose();break;
         default: throw Error('unknown-tool');
@@ -60,7 +78,7 @@ class Provider {
         await fs.writeFile(file,JSON.stringify({...report,resultHash:digest(report)},null,2));
       }
       return report;
-    }catch(e){return {...base,success:false,error:e.message};}
+    }catch(e){return {...base,success:false,error:e.message,...(e.cleanup?{cleanup:e.cleanup,sessionFaulted:true}:{})};}
   }
   async dispose(){await this.chain;this.guard.close();return this.transport.dispose();}
 }

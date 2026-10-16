@@ -7,7 +7,7 @@ async function main(){
   const evidencePath=process.env.CODESYS_GUARD_EVIDENCE;
   if(!evidencePath || !path.isAbsolute(evidencePath)) throw Error('private-evidence-path-required');
   const report={startedAt:new Date().toISOString(),kind:'native-CODESYS-IDE-simulation-via-stdio-MCP',steps:[],success:false};
-  for(const file of ['native.py','transport.js','provider.js','guard.js','schemas.js','index.js']) report[file]=crypto.createHash('sha256').update(await fs.readFile(path.join(__dirname,'..',file))).digest('hex');
+  for(const file of ['native.py','native_policy.py','transport.js','provider.js','results.js','guard.js','schemas.js','index.js']) report[file]=crypto.createHash('sha256').update(await fs.readFile(path.join(__dirname,'..',file))).digest('hex');
   const transport=new StdioClientTransport({command:process.execPath,args:[path.join(__dirname,'..','index.js')],env:process.env,stderr:'pipe'});
   let stderr='';transport.stderr?.on('data',b=>stderr+=b.toString());
   const client=new Client({name:'tia-guard-native-codesys-qualification',version:'1.0'});
@@ -40,10 +40,14 @@ async function main(){
     const snapshot=await call('inspect_codesys');assert.equal(snapshot.isError,false);
     for(const object of source.objects){const stored=snapshot.structuredContent.snapshot.objects.find(o=>o.name===object.name);assert.equal(stored.declaration,object.declaration);assert.equal(stored.implementation,object.implementation);}
     report.allThreeObjectKindsChanged=true;
+    const wrongType={...source.objects[2],declaration:source.objects[2].declaration.replace('Step : DINT','Step : INT')};
+    const deniedType=await execute({operation:'edit',object:wrongType},false);assert.match(deniedType.error,/input-declaration-type-mismatch|unsupported-input-declaration/);
+    report.wrongInputTypeRejected=true;
     const compiled=await execute({operation:'compile'});assert.equal(compiled.compilation.nativeCodeGenerated,true);
     assert.equal(compiled.compilation.errorCount,0);
     const reopened=await execute({operation:'reopen'});assert.equal(reopened.verification.verdict,'pass');
     await execute({operation:'login'});await execute({operation:'run'});
+    const unavailable=await call('read_codesys',{variables:['PLC_PRG.DoesNotExist'],delayMs:0});assert.equal(unavailable.isError,true);report.invalidVariableReadRejected=true;
     const first=await read(['PLC_PRG.Counter']);const second=await read(['PLC_PRG.Counter']);
     assert.ok(number(second.values['PLC_PRG.Counter'])>number(first.values['PLC_PRG.Counter']));
     report.counter={before:first.values['PLC_PRG.Counter'],after:second.values['PLC_PRG.Counter']};
