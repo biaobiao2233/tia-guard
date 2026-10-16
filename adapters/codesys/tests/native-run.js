@@ -45,6 +45,9 @@ async function main(){
     report.wrongInputTypeRejected=true;
     const compiled=await execute({operation:'compile'});assert.equal(compiled.compilation.nativeCodeGenerated,true);
     assert.equal(compiled.compilation.errorCount,0);
+    assert.equal(compiled.compilation.warningCount,0);
+    for(const phase of compiled.compilation.phases){assert.equal(phase.countsMatchSummary,true);assert.deepEqual(phase.summaryCounts,{errorCount:0,warningCount:0});assert.equal(phase.errorCount,0);assert.equal(phase.warningCount,0);}
+    report.phaseSummaryCountsValidated=true;
     const reopened=await execute({operation:'reopen'});assert.equal(reopened.verification.verdict,'pass');
     await execute({operation:'login'});await execute({operation:'run'});
     const unavailable=await call('read_codesys',{variables:['PLC_PRG.DoesNotExist'],delayMs:0});assert.equal(unavailable.isError,true);report.invalidVariableReadRejected=true;

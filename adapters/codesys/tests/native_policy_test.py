@@ -99,12 +99,18 @@ class WorkerTests(unittest.TestCase):
         self.assertFalse(first['success']);self.assertEqual(first,second);self.assertEqual(calls,['stop','logout','dispose','close'])
         self.assertEqual([r['operation'] for r in first['cleanup'] if not r['success']],['stop','dispose-online','close-project'])
 
-    def compile_fixture(self,foreign=False,exception=False,no_header=False,false_return=False):
+    def compile_fixture(self,foreign=False,exception=False,no_header=False,false_return=False,
+                        warnings=0,summary_warnings=None,summary_errors=None,duplicate_summary=False):
         messages=[]
-        def message(text,project=None):return types.SimpleNamespace(prefix='C',number=0,text=text,severity='Text',object=None,project=project,position_text=None)
+        def message(text,project=None,severity='Text'):return types.SimpleNamespace(prefix='C',number=0,text=text,severity=severity,object=None,project=project,position_text=None)
         def phase(name):
             if not no_header:messages.append(message('------ 开始构建应用程序 OwnedPLC.Sim.OwnedPLC.Application -------'))
-            messages.append(message('构建完整--0错误,0警告:准备下载',types.SimpleNamespace(handle=2) if foreign else None))
+            for _ in range(warnings):messages.append(message('same warning in both phases',severity='Warning'))
+            count=(summary_warnings or {}).get(name,warnings)
+            errors=(summary_errors or {}).get(name,0)
+            text=('编译完成' if name=='rebuild' else '构建完整')+'--%d错误,%d警告'%(errors,count)
+            messages.append(message(text,types.SimpleNamespace(handle=2) if foreign else None))
+            if duplicate_summary:messages.append(message(text))
             if exception:raise RuntimeError('compiler exception')
             if false_return:return False
         self.n['system']=types.SimpleNamespace(get_message_categories=lambda:[policy.COMPILER],clear_messages=lambda _:messages.clear(),get_message_objects=lambda _:list(messages))
@@ -132,5 +138,30 @@ class WorkerTests(unittest.TestCase):
     def test_unexpected_false_compiler_return_is_not_codegen_success(self):
         self.compile_fixture(false_return=True);result=self.n['compile_project']()
         self.assertFalse(result['success']);self.assertFalse(result['compilation']['nativeCodeGenerated'])
+
+    def test_generate_summary_nine_warnings_with_zero_warning_rows_fails(self):
+        self.compile_fixture(summary_warnings={'generate':9});result=self.n['compile_project']()
+        self.assertFalse(result['success']);self.assertFalse(result['compilation']['diagnosticsComplete'])
+        phase=result['compilation']['phases'][1]
+        self.assertEqual(phase['warningCount'],0);self.assertEqual(phase['summaryCounts']['warningCount'],9)
+        self.assertFalse(phase['countsMatchSummary'])
+
+    def test_rebuild_summary_count_mismatch_blocks_codegen(self):
+        self.compile_fixture(summary_warnings={'rebuild':9});result=self.n['compile_project']()
+        self.assertFalse(result['success']);self.assertFalse(result['compilation']['nativeCodeGenerated'])
+        self.assertEqual(len(result['compilation']['phases']),1)
+
+    def test_summary_cannot_omit_real_warnings_or_claim_unobserved_errors(self):
+        self.compile_fixture(warnings=1,summary_warnings={'generate':0});self.assertFalse(self.n['compile_project']()['success'])
+        self.compile_fixture(summary_errors={'generate':1});self.assertFalse(self.n['compile_project']()['success'])
+
+    def test_repeated_warning_across_phases_is_counted_independently(self):
+        self.compile_fixture(warnings=1);result=self.n['compile_project']()
+        self.assertTrue(result['success']);self.assertEqual(result['compilation']['warningCount'],2)
+        self.assertEqual([p['summaryCounts']['warningCount'] for p in result['compilation']['phases']],[1,1])
+        self.assertTrue(all(p['countsMatchSummary'] for p in result['compilation']['phases']))
+
+    def test_ambiguous_multiple_phase_summaries_fail_closed(self):
+        self.compile_fixture(duplicate_summary=True);self.assertFalse(self.n['compile_project']()['success'])
 
 if __name__=='__main__':unittest.main(verbosity=2)

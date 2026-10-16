@@ -10,6 +10,7 @@ function compilation(request={operation:'compile'}) {
     row(phase,phase==='generate'?'构建完整--0错误,0警告:准备下载':'编译完成--0错误,0警告',{buildSummary:phase==='generate'})]);
   return {context:ctx,target,compilation:{buildStarted:true,buildCompleted:true,diagnosticsComplete:true,nativeCodeGenerated:true,errorCount:0,warningCount:0,
     buildId:ctx.requestId,requestHash:ctx.requestHash,target,sourceFingerprint:'b'.repeat(64),buildException:null,diagnostics,
-    phases:['rebuild','generate'].map(name=>({name,completed:true,headerSeen:true,diagnosticCount:2}))}};
+    countSemantics:'phase-diagnostic-occurrences',
+    phases:['rebuild','generate'].map(name=>({name,completed:true,headerSeen:true,diagnosticCount:2,errorCount:0,warningCount:0,summaryCounts:{errorCount:0,warningCount:0},countsMatchSummary:true}))}};
 }
 module.exports={target,context,compilation};

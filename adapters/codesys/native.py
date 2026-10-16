@@ -7,7 +7,7 @@ from scriptengine import *
 root = os.environ['CODESYS_GUARD_SESSION']
 sys.path.insert(0, root)
 from native_policy import (COMPILER, ANALYSIS, INPUTS, object_metadata, check_input_declaration,
-    structure_differences, zero_codegen_summary, scalar_value, checked_monitor_value)
+    structure_differences, parse_summary_counts, phase_counts, scalar_value, checked_monitor_value)
 secret = os.environ['CODESYS_GUARD_KEY']
 project_path = os.path.join(root, 'Owned.project')
 project = None
@@ -125,7 +125,8 @@ def diagnostics(phase):
         m['correlated']=bool(headers) and not m['foreignOrigin'] and m['category'] in (COMPILER,ANALYSIS)
         # Reject another application's build header even in this owned IDE.
         if m['category']==COMPILER and m['message'].startswith('------ ') and not m['targetHeader']: m['correlated']=False
-        m['buildSummary']=m['category']==COMPILER and m['code']=='C0' and phase=='generate' and zero_codegen_summary(m['message'])
+        counts=parse_summary_counts(m['message'],phase) if m['category']==COMPILER and m['code']=='C0' else None
+        m['buildSummary']=phase=='generate' and counts is not None and counts['errorCount']==0
     return result
 
 def compile_project():
@@ -147,15 +148,16 @@ def compile_project():
         except:
             build_exception=traceback.format_exc()
         captured=diagnostics(phase); messages.extend(captured)
-        phases.append({'name':phase,'completed':completed,'headerSeen':any(m['targetHeader'] for m in captured),
-            'diagnosticCount':len(captured)})
-        if build_exception: break
+        phase_report={'name':phase,'completed':completed,'headerSeen':any(m['targetHeader'] for m in captured),
+            'diagnosticCount':len(captured)}
+        phase_report.update(phase_counts(captured,phase)); phases.append(phase_report)
+        if build_exception or not phase_report['countsMatchSummary']: break
         if phase=='generate': generated=completed
     errors=[m for m in messages if m['severity'] in ('Error','FatalError')]
     warnings=[m for m in messages if m['severity']=='Warning']
     # C0 is a build summary, not a successful process exit. Missing summary fails closed.
     summaries=[m for m in messages if m['buildSummary'] and m['correlated']]
-    known=bool(messages) and all(m['severity'] in ('Error','FatalError','Warning','Information','Text') and m['correlated'] for m in messages)
+    known=bool(messages) and all(m['severity'] in ('Error','FatalError','Warning','Information','Text') and m['correlated'] for m in messages) and all(p['countsMatchSummary'] for p in phases)
     compiled=generated and not build_exception and known and not errors and bool(summaries)
     try: project.save()
     except: compiled=False; build_exception=traceback.format_exc()
@@ -163,6 +165,7 @@ def compile_project():
     return {'success':compiled,'target':target_identity(),'compilation':{'buildStarted':True,'buildCompleted':build_exception is None,
         'buildId':current_context['requestId'],'requestHash':current_context['requestHash'],
         'target':target_identity(),'sourceFingerprint':fingerprint(source),'phases':phases,
+        'countSemantics':'phase-diagnostic-occurrences',
         'diagnosticsComplete':known,'errorCount':len(errors),'warningCount':len(warnings),
         'nativeCodeGenerated':generated,'diagnostics':messages,'buildException':build_exception}}
 

@@ -39,3 +39,29 @@ boolean success contract). Sudden OS power loss or killing the MCP host without
 letting it clean up is not fully qualified: the native idle deadline is five
 minutes and normal signal/stdio closure is handled, but this is not an OS-level
 parent-death guarantee. No automatic reattachment/recovery is introduced.
+
+## Second independent review: remaining summary-count mismatch
+
+Review of `4ff3b6d` confirmed the three P1 and three other P2 fixes, but reproduced
+one remaining P2: `构建完整--0错误,9警告:准备下载` with zero Warning rows still passed.
+That finding is accepted; earlier statements of complete repair did not establish
+count consistency and are superseded on this point.
+
+The worker and outer validator now independently parse the numeric error/warning
+counts from exactly one C0 summary per phase and compare them with that phase's
+actual diagnostic severities. Missing, malformed, duplicate or contradictory
+summaries fail closed. An inconsistent Rebuild prevents Generate. Phase proof
+records observed counts, parsed summary counts and whether they match.
+
+The report's aggregate `errorCount`/`warningCount` explicitly uses
+`countSemantics=phase-diagnostic-occurrences`: it sums captured occurrences, not
+unique source findings. The same warning reported once in Rebuild and once in
+Generate must match 1 in each phase and contributes 2 captured occurrences in
+the report; neither phase is compared against the cross-phase sum. Diagnostics
+are not silently deduplicated.
+
+Regression tests cover the exact nine-warning/zero-row repro in both production
+Python and Node, an inconsistent Rebuild, missing reported warnings, unobserved
+errors, duplicate summaries, and the valid repeated-warning case across phases.
+New-source portable and native verification is recorded separately; a third
+independent review is still required before claiming review acceptance.

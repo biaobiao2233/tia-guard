@@ -73,8 +73,24 @@ def structure_differences(snapshot, expected):
     if snapshot.get('tasks') != [wanted_task]: differences.append('task-configuration')
     return differences
 
-def zero_codegen_summary(message):
-    return bool(re.match(u'\A(?:构建完整|Build complete)\\s*--\\s*0\\s*(?:错误|errors?)\\s*,\\s*\\d+\\s*(?:警告|warnings?)(?::.*)?\\s*\\Z', message, re.I))
+SUMMARY_PREFIX = u'(?:编译完成|构建完整|Compile complete|Compilation complete|Build complete)'
+
+def parse_summary_counts(message, phase):
+    prefix = u'(?:编译完成|Compile complete|Compilation complete)' if phase == 'rebuild' else u'(?:构建完整|Build complete)'
+    match = re.match(u'\A' + prefix + u'\\s*--\\s*(\\d+)\\s*(?:错误|errors?)\\s*,\\s*(\\d+)\\s*(?:警告|warnings?)(?::.*)?\\s*\\Z', message, re.I)
+    if not match: return None
+    errors, warnings = [int(value) for value in match.groups()]
+    if errors > 2147483647 or warnings > 2147483647: return None
+    return {'errorCount':errors, 'warningCount':warnings}
+
+def phase_counts(rows, phase):
+    errors = sum(m['severity'] in ('Error','FatalError') for m in rows)
+    warnings = sum(m['severity'] == 'Warning' for m in rows)
+    candidates = [m for m in rows if m['category'] == COMPILER and m['code'] == 'C0' and
+        re.match(u'\A' + SUMMARY_PREFIX, m['message'], re.I)]
+    summary = parse_summary_counts(candidates[0]['message'], phase) if len(candidates) == 1 else None
+    return {'errorCount':errors,'warningCount':warnings,'summaryCounts':summary,
+        'countsMatchSummary':summary == {'errorCount':errors,'warningCount':warnings}}
 
 def scalar_value(variable, observed):
     if not isinstance(observed, str) or not observed: raise ValueError('missing-monitor-value')

@@ -26,6 +26,24 @@ test('compile proof rejects foreign target, phase, request, missing summary and 
     const c=structuredClone(proof.compilation);mutate(c);assert.equal(check(c),false);
   }
 });
+test('phase summaries must match diagnostic counts, including the exact nine-warning review repro',()=>{
+  const proof=f.compilation();const check=c=>compilationPassed(c,proof.context,proof.target);
+  for(const index of [1,3]) {
+    const c=structuredClone(proof.compilation);c.diagnostics[index].message=c.diagnostics[index].message.replace('0警告','9警告');
+    assert.equal(check(c),false);
+    // Even a self-consistent claimed phase proof cannot substitute for actual Warning rows.
+    c.phases[index===1?0:1].summaryCounts.warningCount=9;assert.equal(check(c),false);
+  }
+  const c=structuredClone(proof.compilation);
+  for(const p of c.phases) {
+    const header=c.diagnostics.find(d=>d.phase===p.name&&d.targetHeader);
+    c.diagnostics.push({...header,message:'same warning in both phases',severity:'Warning',targetHeader:false});
+    const summary=c.diagnostics.find(d=>d.phase===p.name&&!d.targetHeader&&d.severity==='Text');summary.message=summary.message.replace('0警告','1警告');
+    p.diagnosticCount++;p.warningCount=1;p.summaryCounts.warningCount=1;
+  }
+  c.warningCount=2;assert.equal(check(c),true);
+  c.diagnostics[3].message=c.diagnostics[3].message.replace('0错误','1错误');assert.equal(check(c),false);
+});
 test('every success operation needs specific evidence, not success:true alone',()=>{
   for(const request of [{operation:'create',...source},{operation:'edit',object:source.objects[0]},{operation:'reopen'},{operation:'login'},
     {operation:'run'},{operation:'stop'},{operation:'write',variable:'GVL_Test.Step',value:7},{operation:'read',variables:['PLC_PRG.Counter']}]) {

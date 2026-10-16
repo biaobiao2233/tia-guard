@@ -12,7 +12,14 @@ const snapshotSchema=z.strictObject({
 });
 const COMPILER='97f48d64-a2a3-4856-b640-75c046e37ea9';
 const ANALYSIS='220493a1-f49b-4416-9a3f-a545db707cbe';
-const summaryPattern=/^(?:构建完整|Build complete)\s*--\s*0\s*(?:错误|errors?)\s*,\s*\d+\s*(?:警告|warnings?)(?::.*)?\s*$/i;
+const summaryCandidate=/^(?:编译完成|构建完整|Compile complete|Compilation complete|Build complete)/i;
+function parseSummaryCounts(message,phase) {
+  const prefix=phase==='rebuild'?'(?:编译完成|Compile complete|Compilation complete)':'(?:构建完整|Build complete)';
+  const match=new RegExp('^'+prefix+'\\s*--\\s*(\\d+)\\s*(?:错误|errors?)\\s*,\\s*(\\d+)\\s*(?:警告|warnings?)(?::.*)?\\s*$','i').exec(message);
+  if(!match) return null;
+  const [errorCount,warningCount]=match.slice(1).map(Number);
+  return [errorCount,warningCount].every(n=>Number.isInteger(n)&&n>=0&&n<=2147483647)?{errorCount,warningCount}:null;
+}
 const sameTarget=(a,b)=>!!a&&!!b&&['projectId','applicationId','applicationName','deviceId'].every(k=>a[k]===b[k]);
 const normalize=s=>s.replace(/\r\n?/g,'\n').replace(/\n+$/,'');
 function snapshotMatches(snapshot,expected) {
@@ -33,17 +40,23 @@ function compilationPassed(c,context,target) {
     c.errorCount!==0 || !Number.isInteger(c.warningCount) || c.warningCount<0 || c.buildException ||
     c.buildId!==context.requestId || c.requestHash!==context.requestHash || !sameTarget(c.target,target) ||
     !hex.safeParse(c.sourceFingerprint).success || !Array.isArray(c.diagnostics) || !c.diagnostics.length ||
-    !Array.isArray(c.phases) || c.phases.length!==2) return false;
+    !Array.isArray(c.phases) || c.phases.length!==2 || c.countSemantics!=='phase-diagnostic-occurrences') return false;
   for(const name of ['rebuild','generate']) {
     const phases=c.phases.filter(p=>p.name===name);const rows=c.diagnostics.filter(d=>d.phase===name);
-    if(phases.length!==1 || phases[0].completed!==true || phases[0].headerSeen!==true || phases[0].diagnosticCount!==rows.length ||
+    const errorCount=rows.filter(d=>['Error','FatalError'].includes(d.severity)).length,warningCount=rows.filter(d=>d.severity==='Warning').length;
+    const summaries=rows.filter(d=>d.category===COMPILER&&d.code==='C0'&&summaryCandidate.test(d.message));
+    const counts=summaries.length===1?parseSummaryCounts(summaries[0].message,name):null;
+    if(!counts || counts.errorCount!==errorCount || counts.warningCount!==warningCount ||
+      phases.length!==1 || phases[0].errorCount!==errorCount || phases[0].warningCount!==warningCount || phases[0].countsMatchSummary!==true ||
+      phases[0].summaryCounts?.errorCount!==errorCount || phases[0].summaryCounts?.warningCount!==warningCount ||
+      phases[0].completed!==true || phases[0].headerSeen!==true || phases[0].diagnosticCount!==rows.length ||
       !rows.some(d=>d.category===COMPILER && d.code==='C0' && d.targetHeader===true && /^------ /.test(d.message) && d.message.split(/\s+/).includes('OwnedPLC.Sim.OwnedPLC.Application'))) return false;
   }
   if(!c.diagnostics.every(d=>['Warning','Information','Text'].includes(d.severity) && [COMPILER,ANALYSIS].includes(d.category) &&
     d.requestId===context.requestId && d.buildId===c.buildId && sameTarget(d.target,target) && d.correlated===true && d.foreignOrigin===false &&
     ['rebuild','generate'].includes(d.phase) && typeof d.message==='string')) return false;
   return c.warningCount===c.diagnostics.filter(d=>d.severity==='Warning').length &&
-    c.diagnostics.some(d=>d.phase==='generate' && d.category===COMPILER && d.code==='C0' && d.buildSummary===true && summaryPattern.test(d.message));
+    c.diagnostics.some(d=>d.phase==='generate' && d.category===COMPILER && d.code==='C0' && d.buildSummary===true && parseSummaryCounts(d.message,'generate')?.errorCount===0);
 }
 function typedValue(variable,value) {
   if(variable==='GVL_Test.Enable') {if(value!=='TRUE'&&value!=='FALSE') throw Error('invalid-native-result');return value==='TRUE';}
