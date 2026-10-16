@@ -160,7 +160,7 @@ def compile_project():
     try: project.save()
     except: compiled=False; build_exception=traceback.format_exc()
     if compiled: compiled_fingerprint=fingerprint(source)
-    return {'success':compiled,'compilation':{'buildStarted':True,'buildCompleted':build_exception is None,
+    return {'success':compiled,'target':target_identity(),'compilation':{'buildStarted':True,'buildCompleted':build_exception is None,
         'buildId':current_context['requestId'],'requestHash':current_context['requestHash'],
         'target':target_identity(),'sourceFingerprint':fingerprint(source),'phases':phases,
         'diagnosticsComplete':known,'errorCount':len(errors),'warningCount':len(warnings),

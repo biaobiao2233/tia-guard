@@ -85,6 +85,7 @@ class WorkerTests(unittest.TestCase):
     def test_metadata_uses_exported_native_object_and_type(self):
         self.assertEqual(policy.object_metadata('<project><pou name="X" pouType="functionBlock"/></project>','X'),('functionBlock',{}))
         self.assertEqual(policy.object_metadata('<globalVars name="GVL_Test"><variable name="Step"><type><INT/></type></variable></globalVars>','GVL_Test'),('gvl',{'Step':'INT'}))
+        self.assertEqual(policy.object_metadata('\ufeff<?xml version="1.0" encoding="utf-8"?><project><!-- 中文 --><pou name="X" pouType="program"/></project>','X'),('program',{}))
 
     def test_cleanup_retains_failure_and_attempts_logout_even_after_stop_failure(self):
         calls=[]

@@ -15,6 +15,8 @@ def local_name(element):
     return element.tag.split('}')[-1]
 
 def object_metadata(xml, name):
+    # IronPython's bundled Expat cannot feed a Unicode BOM/non-ASCII string directly.
+    if not isinstance(xml, bytes): xml = xml.encode('utf-8')
     root = ET.fromstring(xml)
     pous = [e for e in root.iter() if local_name(e) == 'pou' and e.get('name') == name]
     gvls = [e for e in root.iter() if local_name(e) == 'globalVars' and e.get('name') == name]
