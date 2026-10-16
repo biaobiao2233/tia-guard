@@ -6,7 +6,7 @@
 
 ## Download and prerequisites
 
-Download `tia-guard-v0.1.0-prealpha.1-windows-x64.zip` from [Releases](https://github.com/biaobiao2233/tia-guard/releases). This experimental preview is intended for your own offline project copies. Read the verification scope on the same release page first.
+Download `tia-guard-tia-v0.2.0-alpha.1-windows-x64.zip` from [Releases](https://github.com/biaobiao2233/tia-guard/releases). This experimental preview is intended for your own offline project copies. Read the verification scope on the same release page first. See [adapter packages](ADAPTER-PACKAGES.md) for AI/MCP setup and the separate TwinCAT package, or [project generation](PROJECT-GENERATION.md) to start from SCL. The GUI Git workflows below are optional.
 
 Requirements: Windows x64, .NET Framework 4.8, installed TIA Portal V21 and Openness, Git for Windows, and effective **Siemens TIA Openness** group membership in the current logon token. The Gateway includes its .NET 8 runtime. Siemens DLLs, licenses and TIA installers are not included.
 
@@ -18,7 +18,7 @@ Requirements: Windows x64, .NET Framework 4.8, installed TIA Portal V21 and Open
 Check the downloaded ZIP's SHA-256 against the release's `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\tia-guard-v0.1.0-prealpha.1-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\tia-guard-tia-v0.2.0-alpha.1-windows-x64.zip -Algorithm SHA256
 ```
 
 ## GitHub → TIA

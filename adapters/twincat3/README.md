@@ -1,5 +1,7 @@
 # TIA-Guard 的 TwinCAT 3 适配器
 
+使用发行包可直接下载 `tia-guard-twincat-v<版本>-windows-x64.zip`，其中包含生产 MCP 依赖和原生绑定 Worker，不必自行构建本项目。工程软件、.NET Desktop Runtime、Node 和本机 interop 仍需准备，详见[适配包安装指南](../../docs/ADAPTER-PACKAGES.md#twincat-3)。下列证据描述各自注明的源码与环境，不因安装新包自动扩大。
+
 目前提供独立的 ST 工程生成、真实编译诊断和保存关闭重开后的源码核验。通过 Node stdio MCP 调用自有 Windows Worker；使用 Beckhoff Automation Interface，沿用仓库中的上游许可证声明。
 
 已在 TwinCAT XAE 3.1.4026.27 / `TwinCAT OS (x64)` 上实际创建并编译电机逻辑示例，核对 MAIN、FB、GVL、结构体、任务调用及固定版本库。真实 MCP 测试已观察到“故意错误被拒绝 → 修改 ST → 新预览和授权 → 编译通过 → 独立核验通过”。这不等于伺服硬件或 Runtime 验收。
