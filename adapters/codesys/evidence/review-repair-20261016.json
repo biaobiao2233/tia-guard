@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceKind": "author-repair-verification-not-independent-review-acceptance",
+  "reviewedHead": "26d46c20917ab97ff437e346f408398a507a2b3d",
+  "baseSource": "ed6a7bfe04d0fc90c718d4eda12335e4681d47c1",
+  "productAndTestSource": "9152c96754ab155b4046abaaeec51cb54f714680",
+  "timezone": "Asia/Singapore",
+  "startedAt": "2026-10-16T18:07:54.280+08:00",
+  "endedAt": "2026-10-16T18:08:22.053+08:00",
+  "environment": {
+    "developmentSystem": "CODESYS 64 3.5.22.40",
+    "runtimeKind": "owned in-process IDE simulation",
+    "controlWinServiceReadback": "Stopped",
+    "licensePurchasedOrActivated": false,
+    "hardwareAccessed": false
+  },
+  "portableChecks": {
+    "kind": "production-functions-with-simulated-vendor-APIs-and-actual-portable-child-processes",
+    "nodeTestsPerPlatform": 18,
+    "pythonFaultInjectionTestsInsideNodeSuite": 15,
+    "platforms": ["ubuntu-24.04", "windows-2022"],
+    "result": "success",
+    "pushRun": "https://github.com/biaobiao2233/tia-guard/actions/runs/38885048822",
+    "prRun": "https://github.com/biaobiao2233/tia-guard/actions/runs/38885055150",
+    "sourceRegressionPushRun": "https://github.com/biaobiao2233/tia-guard/actions/runs/38885048829",
+    "sourceRegressionPrRun": "https://github.com/biaobiao2233/tia-guard/actions/runs/38885055251",
+    "nativeCompilerUsedByPortableTests": false,
+    "coveredFailures": [
+      "Missing/wrong task, wrong object kind and input type cannot pass identical snapshots",
+      "Save/open exception revokes old reopen qualification and prevents login",
+      "Timeout, wrong operation/context and child exit make the transport terminal",
+      "Bounded cleanup kills/awaits only the actual owned portable child when needed",
+      "Foreign/stale/missing compiler phase/header/summary and contradictory success are rejected",
+      "Incomplete operation-specific success structures are rejected",
+      "INT#7 cannot qualify a DINT write, before or after write",
+      "Stop/Dispose/Close failures persist across repeated cleanup",
+      "Null monitor value and unexpected False compiler return cannot qualify success"
+    ]
+  },
+  "native": {
+    "success": true,
+    "actualStProgramFunctionBlockAndGvlChanges": true,
+    "wrongInputDeclarationTypeRejected": true,
+    "invalidVariableReadRejected": true,
+    "compilation": {
+      "initialErrors": 2,
+      "initialWarnings": 0,
+      "repairedErrors": 0,
+      "repairedWarnings": 0,
+      "nativeCodeGenerated": true,
+      "diagnosticsComplete": true,
+      "targetRequestAndBuildProofValidated": true,
+      "rebuildPhaseDiagnostics": 5,
+      "generatePhaseDiagnostics": 11
+    },
+    "verification": {
+      "closedAndReopened": true,
+      "expectedObjectKindsTextsTypesAndTaskMatch": true,
+      "sourceFingerprintMatchesCompilation": true,
+      "verdict": "pass"
+    },
+    "counter": {"before": 37, "after": 66},
+    "allowlistedWrites": {"GVL_Test.Enable": "TRUE", "GVL_Test.Step": "DINT#7"},
+    "stopped": {"before": 132, "after": 132, "functionBlockResult": 139},
+    "resumed": {"before": 167, "after": 197},
+    "outputWriteRejected": true,
+    "closedSessionReadRejected": true,
+    "cleanup": {
+      "stop": true,
+      "logout": true,
+      "onlineConnectionDisposed": true,
+      "projectClosed": true,
+      "explicitAndFinalCleanupEvidenceConsistent": true,
+      "exactOwnedChildExited": true,
+      "exitCode": 0,
+      "independentProcessReadback": "owned process absent"
+    }
+  },
+  "privateEvidence": {
+    "rawReportSha256": "cb458bef45e82f36bd5d0e5bd0b8347d0fd51a72087d4152bb50cb4fb2609baf",
+    "savedOwnedProjectSha256": "fa0ab4a0efd789e2e4276a629320d8d78e442b1379c11e53b742607eb00d1dab",
+    "loadedFileSha256": {
+      "native.py": "765786d50f50201b1f60b40b328d3cafcf58b6902bd59d60638c673b0f3ba370",
+      "native_policy.py": "4f868ecbc925d2be3460e500e1217ea2b65d05ce11cf4a3abb8a830097806cab",
+      "transport.js": "bc9818513c9f08d073708aebb4d96b546b767fac937012821572e1b679154340",
+      "provider.js": "e905a1f0550602f5a0a302cb3c3e22f42e023867568890cbbcdf0945292ec7d3",
+      "results.js": "799c52e5ff9952fc84903dafe732b9b138ad0091ebd609690ca240f04cf50d4c",
+      "guard.js": "eed1b12771f4621e446bdb652c079b32662f84c1083376b992c3b220dbe13d86",
+      "schemas.js": "639896fadc5d1753312dfcd2dfe7418342c8bb8a99ee76d855efff58e945d51c",
+      "index.js": "1155e5db835ca59ec1300660e8b93f9089452a7e470c7dfc8d955e2602f9f7ea"
+    },
+    "earlierFailedRepairObservation": {
+      "source": "263ecb730bee66361cd171ed7d23f2e1db11fa93",
+      "result": "native XML parsing rejected the Unicode BOM; no PASS; owned process exited cleanly",
+      "rawReportSha256": "006d05589a1ac01d4c3cc26f7a33de0602cb1c1ade973988596d81b827fdcb30"
+    },
+    "rawProjectsLogsPathsPidsAndLicensesPublished": false
+  },
+  "remainingGates": [
+    "Independent read-only re-review of the new exact candidate head",
+    "No native claim that save/open/compiler/cleanup exceptions or timeouts were deliberately induced in CODESYS",
+    "No qualification of abrupt OS power loss or MCP host hard kill parent-death cleanup",
+    "Existing hardware/runtime/graphical/HMI/breakpoint/single-step limits remain unchanged",
+    "No merge, installer update or Release"
+  ]
+}

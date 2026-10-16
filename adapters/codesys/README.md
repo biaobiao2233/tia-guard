@@ -46,6 +46,16 @@ No general scripting, force, routes, gateway management, licensing or service
 management tool exists. Native idle timeout is five minutes; cleanup then ends
 the session rather than reconnecting to an old instance.
 
+Independent review of the initial candidate found seven state/evidence gaps.
+The [repair response](docs/review-response-20261016.md) maps each finding to its
+fix and tests. Current guards validate expected object kinds/sets/text/types and
+the exact cyclic task, revoke old qualifications before a new attempt, bind
+fresh compiler phases/targets/requests, strictly validate each success result,
+check native input types before/after writes, and retain cumulative cleanup
+failures. Timeouts, child loss or invalid native success make the session terminal;
+only bounded owned safety cleanup remains allowed. A hard-killed MCP host or OS
+power loss is not covered by a parent-death cleanup guarantee.
+
 Example trusted-host MCP configuration (adjust your own absolute paths):
 
 ```json
@@ -66,7 +76,8 @@ Example trusted-host MCP configuration (adjust your own absolute paths):
 ```
 
 Install locked dependencies with `npm ci --ignore-scripts`; run portable contracts
-with `npm test`. They do not invoke a PLC compiler. `tests/native-run.js` is an
+with `npm test` (Node ≥22 and Python 3 required for development tests). The runtime
+worker uses CODESYS' installed IronPython. Portable tests do not invoke a PLC compiler. `tests/native-run.js` is an
 explicit opt-in native qualification client: set the above trusted host settings
 with writes enabled and `CODESYS_GUARD_EVIDENCE` to an absolute private JSON output
 path, then `node tests/native-run.js`. This test creates an owned project, tests
@@ -75,12 +86,16 @@ downloads to IDE simulation, observes changing counters, writes the two test
 inputs, checks their FB effect, verifies Stop/Run, rejects an output write and
 checks native process exit. It never purchases or activates a license.
 
-Portable CI and native qualification are separate. The [source-bound receipt](evidence/native-20261015.json)
-qualifies product source `f856071`: actual compiler errors and repair (0 errors,
-0 warnings), all three object kinds changed/read back, save/close/reopen,
-counter 36→66, Stop 123→123 with FB result 130 after writing Step=7, Run 158→188,
-rejected output write, and exact owned process exit. Eight portable contracts
-passed on Linux and Windows; those tests use no vendor compiler.
+Portable CI and native qualification are separate. The [repair receipt](evidence/review-repair-20261016.json)
+binds product/test source `9152c96`: actual compiler errors and repair (0 errors,
+0 warnings), all three object kinds changed/read back, expected structure and
+save/close/reopen proof, counter 37→66, Stop 132→132 with FB result 139 after
+writing Step=7, Run 167→197, rejected wrong input type/invalid monitor variable/
+output write, and exact owned process exit. Eighteen Node contracts with fifteen
+embedded Python fault-injection checks passed on Linux and Windows; those tests
+use no vendor compiler. The [earlier receipt](evidence/native-20261015.json)
+remains historical normal-path evidence only for `f856071`. Independent
+re-review of the repaired candidate is still required.
 A discovered tool or successful process exit alone
 does not establish a supported capability. Read errors and cleanup reports even
 when preceding steps succeeded. Local paths, native exceptions and full text

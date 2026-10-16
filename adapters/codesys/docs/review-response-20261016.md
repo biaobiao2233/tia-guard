@@ -21,6 +21,18 @@ they do not prove that the corresponding exceptions occurred in CODESYS. Native
 qualification of a new exact source is recorded separately, after cloud checks.
 No independent re-review PASS is claimed by the author.
 
+Repair/test source `9152c96754ab155b4046abaaeec51cb54f714680` passed 18 Node
+contracts and 15 embedded Python fault-injection checks on Linux and Windows,
+plus the existing source regression workflow. Actual stdio MCP / CODESYS
+normal-path requalification also passed: native type/phase/proof validation,
+wrong reserved input type and invalid monitor variable rejection, compile repair
+to 0 errors/0 warnings, request-based reopen verification, counter 37→66,
+Stop 132→132 with FB result 139, Run 167→197, and exact owned process exit.
+See [source-bound repair receipt](../evidence/review-repair-20261016.json).
+The first repair run failed on a Unicode BOM in native PLCopenXML export; its
+failure/hash is retained and UTF-8 byte parsing is now tested. No licenses were
+activated. This result does not replace an independent review of the new head.
+
 Additional doubts from review: null/empty monitoring now fails; explicit False
 from a compiler API fails conservatively (installed stubs do not document a
 boolean success contract). Sudden OS power loss or killing the MCP host without

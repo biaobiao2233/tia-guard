@@ -135,7 +135,7 @@ PLC 工程文本化、版本管理和 AI 工程接口已有有价值的工具。
 
 ## 实验性 CODESYS 适配器
 
-[CODESYS 适配器](adapters/codesys/README.md)提供独立 stdio MCP → 官方 ScriptEngine → IDE 仿真接入。源 `f856071` 已在 CODESYS 64 3.5.22.40 实际完成：从零建工程，创建并修改 ST 程序/功能块/GVL，捕获真实编译错误并修复至 0 错误/0 警告，保存关闭重开比对，下载到自有 IDE 仿真并监视真实变量，写入限定测试输入，Stop/Run 和自有会话清理。[源绑定证据](adapters/codesys/evidence/native-20261015.json)分别记录云端契约和原生结果；纯测试不代替编译/运行证据。
+[CODESYS 适配器](adapters/codesys/README.md)提供独立 stdio MCP → 官方 ScriptEngine → IDE 仿真接入。修复源 `9152c96` 已在 CODESYS 64 3.5.22.40 实际完成：从零建工程，创建并修改 ST 程序/功能块/GVL，捕获真实编译错误并修复至 0 错误/0 警告，按预期结构核验并保存关闭重开，下载到自有 IDE 仿真并监视真实变量，写入限定测试输入，Stop/Run 和自有会话清理。[源绑定修复证据](adapters/codesys/evidence/review-repair-20261016.json)分别记录云端契约、故障注入和原生正常路径结果；纯测试不代替编译/运行证据。初次独立复审提出的七项门禁/证据问题已有[逐项修复响应](adapters/codesys/docs/review-response-20261016.md)，新候选仍待独立复审，不将作者验证等同于审阅通过。
 
 默认只读，写入需可信本机配置和一次性预览授权；不接触真实设备、现有工程或 Control Win 服务。官方 Development System MCP Server 属于另需 PDE 许可的产品，本适配器复用已安装的 Scripting 与 IDE 仿真，未购买或激活许可。尚未接入 TIA GUI/CLI/HTTP 安装包，不涵盖硬件、实时性、图形语言、HMI、断点/单步或任意现有工程。[官方能力、许可证与开源复用调查](adapters/codesys/RESEARCH.md)说明了范围和前提。
 
