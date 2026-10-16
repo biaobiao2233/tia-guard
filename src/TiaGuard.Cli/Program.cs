@@ -30,6 +30,21 @@ namespace TiaGuard.Cli
 
             try
             {
+                if (invocation.Command == "build-generation")
+                {
+                    var result = ProjectGenerationWorkflow.Build(invocation.Source, invocation.Target, invocation.Scratch, invocation.PublicApi);
+                    Console.WriteLine(new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(result));
+                    return result.Published && result.Verification?.Verdict == "PASS" && result.Failures.Count == 0 && result.CleanupFailures.Count == 0 ? 0 : 5;
+                }
+                if (invocation.Command == "init")
+                {
+                    var input = ProjectGenerationInitializer.Initialize(invocation.Target);
+                    Console.WriteLine("specFile=" + System.IO.Path.Combine(input.SourceRoot, ProjectGenerationSpecLoader.DefaultSpecFileName));
+                    Console.WriteLine("template=" + ProjectGenerationInitializer.TemplateIdentity);
+                    Console.WriteLine("validation=offline-input-only; V21 creation/compile/readback required");
+                    return 0;
+                }
+
                 if (invocation.Command == "ai-view")
                 {
                     Console.WriteLine("aiDirectory=" + AiEngineeringPublisher.Generate(invocation.Source));

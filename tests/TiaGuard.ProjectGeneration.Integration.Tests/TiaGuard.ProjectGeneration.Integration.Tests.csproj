@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+    <DefineConstants>$(DefineConstants);PROJECT_GENERATION_SPEC_V1;PROJECT_GENERATION_COMPILATION_V1</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Xml.Linq" />
+    <Compile Include="../../src/TiaGuard.Openness/ProjectGeneration*.cs" Exclude="../../src/TiaGuard.Openness/*Openness.cs;../../src/TiaGuard.Openness/ProjectGenerationReadback.cs;../../src/TiaGuard.Openness/ProjectGenerationHardware.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../src/TiaGuard.Openness/Compilation*.cs" Exclude="../../src/TiaGuard.Openness/*Openness.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../src/TiaGuard.Openness/FileSystemSafety.cs" Link="Core/FileSystemSafety.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/RoundTripProfile.cs" Link="Core/RoundTripProfile.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SnapshotAddressParser.cs" Link="Core/SnapshotAddressParser.cs" />
+    <Compile Include="../../src/TiaGuard.Openness/SnapshotV1.cs" Link="Core/SnapshotV1.cs" />
+  </ItemGroup>
+</Project>

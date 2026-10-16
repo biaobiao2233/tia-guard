@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0",
+  "tiaVersion": "V21",
+  "projectName": "MultipleObjects",
+  "plc": {
+    "name": "PLC_1",
+    "cpuTypeIdentifier": "OrderNumber:6ES7 212-1AE40-0XB0/V4.7"
+  },
+  "tagTables": [
+    {
+      "name": "Signals",
+      "tags": [
+        {
+          "name": "Start",
+          "dataType": "Bool",
+          "logicalAddress": "%I0.0"
+        },
+        {
+          "name": "Speed",
+          "dataType": "Real",
+          "logicalAddress": "%MD10"
+        }
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "main",
+      "kind": "OB",
+      "name": "Main",
+      "format": "scl",
+      "sourcePath": "sources/Main.scl",
+      "dependsOn": [
+        "scale"
+      ]
+    },
+    {
+      "id": "scale",
+      "kind": "FC",
+      "name": "FC_BasicScaleLimit",
+      "format": "scl",
+      "sourcePath": "sources/Scale.scl",
+      "dependsOn": []
+    }
+  ]
+}

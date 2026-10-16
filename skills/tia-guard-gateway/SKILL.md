@@ -1,6 +1,6 @@
 ---
 name: tia-guard-gateway
-description: Inspect, modify, compile and verify bounded TIA Portal V21 S7-1200 offline engineering projects through the local TIA-Guard Gateway. Use for PLC LAD logic, tags, project context and TIA-Guard Git publish/restore requests from Codex, Cursor, Claude Code or another agent with local shell/HTTP access.
+description: Create, inspect, modify, compile and verify bounded TIA Portal V21 S7-1200 offline engineering projects through the local TIA-Guard Gateway. Use for from-zero SCL projects, PLC LAD logic, tags, project context and TIA-Guard Git publish/restore requests from an agent with local shell/HTTP access.
 ---
 
 # TIA-Guard Gateway
@@ -16,7 +16,40 @@ At the beginning of every TIA task:
 1. Call `GET /health`. Check the product identity and healthy status. If unavailable, tell the user **“请打开 TIA-Guard”** and stop dependent operations. Do not ask for a URL, port or MCP configuration, or start a bridge executable.
 2. Call `GET /capabilities`. Treat the live response as the capability and authorization truth; a list in this Skill is never permission to exceed it. Interpret `health.accessMode = read-only` as no standing write grant, not a blanket prohibition: supported patches can still proceed through `one-shot-gui-approval`. A manually started no-key Gateway cannot be approved; never try to turn it into a writable session yourself.
 3. Call `GET /openapi.json` when request or response details are needed. Use its current schemas instead of inventing fields.
-4. Read `GET /api/v1/state` and `GET /api/v1/project` as appropriate. If no project is bound, use the user's selected owned project with the documented offline-copy workflow; obtain a missing project choice rather than guessing.
+4. Read `GET /api/v1/state` and `GET /api/v1/project` as appropriate. Existing-project edits require the user's selected owned project with the offline-copy workflow. For a from-zero request, follow the separate generation workflow below; it requires no bound existing project.
+
+## Create a project from SCL
+
+Use this workflow only when live capabilities expose project generation. Its source declarations are authoritative input; the original round-trip `tia-source` contract and derived AI views are separate formats.
+
+1. Prepare `project-generation.json` and all declared SCL sources according to the live schema and [generation guide](../../docs/PROJECT-GENERATION.md). `tia-guard init` can create the minimal input. Use the exact supported CPU profile and explicit artifact dependencies. Preserve upstream attribution when reusing examples.
+2. Use three nonoverlapping absolute paths: the input, a nonexistent output directory and an existing task-owned scratch directory. Ensure the Gateway has no bound project; do not disconnect an unrelated user's session.
+3. Call `POST /api/project-generation/preview` or `preview_project_generation` with `sourceDirectory`, `outputDirectory`, `ownedScratchRoot` and optional `publicApiDirectory`. Read the input summary and any validation failures.
+4. Submit the same request plus the returned `safetyToken` to `POST /api/project-generation/build` or `build_project_generation`. Follow the current authorization mode: default HTTP requires the user's one-time GUI approval; explicitly authorized headless mode retains the preview token. Never approve your own GUI request.
+5. Claim success only with `success=true`, `status=published-verified`, `Published=true`, complete successful compilation, `Verification.Verdict=PASS`, no failure/cleanup entries and an existing returned `.ap21`.
+6. On 422 or MCP `isError`, read `Phase`, `Compile.FullResult`, `Verification.Findings` and failures. Repair supported source problems, preview again and build to a new output directory. A previous token cannot authorize changed input or another attempt.
+
+Report the created engineering project and its compile/readback results in PLC terms. This workflow does not prove scan-cycle behavior or provide PLC download/RUN/STOP. Unknown interface defaults, unsupported storage settings and unsupported hardware cannot be treated as PASS.
+
+## Test an owned Standard PLCSIM instance (experimental)
+
+Use only when the user requested simulator testing and live `/capabilities` reports `simulation.enabled=true`. Do not enable broader flags, restart the Gateway, adopt an existing instance or select a physical adapter yourself. The candidate is experimental; `runtimeQualified=false` must not be presented as acceptance.
+
+1. Use the verified generated `.ap21` and a complete declaration of supported Bool I/Q addresses. Read the [simulator guide](../../docs/PLCSIM-AUTOMATION.md) and live OpenAPI.
+2. For end-to-end assertions, call `/api/simulation/test` or `run_simulation_test` without an existing simulation session. Alternatively, create one session and use its exact handle for RUN, inputs, scan and actual output reads.
+3. Preserve `phase`, preparation/compilation diagnostics, actual values and failures. A failed setup, missing observation, mismatch, uncertain RUN/STOP or failed cleanup is not PASS. Never fill actual values from expected values.
+4. Retry a failed download only through `/api/simulation/load` or `load_simulation_session` on that already prepared owned session. The product rechecks its exact project-copy binding and current simulator identity.
+5. Close that exact session after success or failure. If `closeRequired=true`, stop further writes and retry cleanup; report unresolved resources. Never close a user's unrelated software or project.
+
+Physical PLC, force, Safety and DB-value operations remain unavailable. Only actual complete, successful runtime observations can support the test's bounded qualification claim.
+
+For native desktop diagnostics use `open_plcsim_desktop`, `inspect_plcsim_desktop`, `act_plcsim_desktop` and `close_plcsim_desktop`, with the returned exact session. Actions are semantic and bounded: create, open-details, rename, power-on/off, prepare-io and delete. `prepare-io` creates a new bound SIM view/table from `inputAddresses`/`outputAddresses`; it does not write values. Respect `io.valuesQualified=false`, and treat a hidden instance overview's null count/power as unknown. Creation and unresolved power toggles must not be blindly repeated. Always close the owned session.
+
+Read `requiredInteraction` from simulation status, or `tia.requiredInteraction` from Gateway status, while engineering is waiting. `waiting-for-openness-access` means the current task's TIA requires a user's access confirmation; do not automatically acknowledge it or alter access settings. A timed-out/cancelled session needs explicit cleanup before a new attempt.
+
+Hardware and software compilation are separate gates. Read both `hardwareCompilation` and `compilation`; a failed hardware compile must not start a virtual CPU. `configureTemporaryPlcPassword` defaults to false. Set it only with explicit operator approval to generate a temporary password in the owned offline copy's unconfigured default protection state. Never request a real PLC password, disable protection, overwrite existing credentials or treat this opt-in as successful download/RUN qualification.
+
+`configureTemporaryPlcUser` is a separate default-false opt-in requiring explicit operator approval. It creates a dedicated temporary project-local user/custom role with `ProtectionLevelFullAccess` only on the owned CPU, without engineering/admin/Anonymous rights or existing-user changes. Both options passed a fresh V21 hardware/software compile-only test, not download/RUN/I/O. Do not replay a user-creation mutation after an uncertain result. A request using these flags on `/api/simulation/create` would continue toward simulation/download, so do not call it when the user authorized compile-only work.
 
 ## Read the engineering state
 
@@ -61,7 +94,7 @@ Do not expose tokens, content IDs, hashes, fingerprints or internal protocol det
 
 If live capabilities do not support the requested operation, say that the Gateway cannot safely perform it and stop. Never guess a patch or use an alternate write path.
 
-Unsupported scope includes OR mutation, arbitrary parallel graph rewrites, stateful instructions, unknown graphs, arbitrary project/hardware creation, S7-1500, HMI, Safety engineering, drives, online PLC writes, download, CPU start/stop and force.
+Unsupported scope includes OR mutation, arbitrary parallel graph rewrites, stateful instructions, unknown graphs, arbitrary project/hardware creation, S7-1500, HMI, Safety engineering, drives, physical PLC writes/download/start-stop and force. Simulator operations are available only under the separate explicitly enabled experimental surface above.
 
 ## Publish or restore with Git
 

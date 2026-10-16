@@ -1,0 +1,151 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "tiaVersion",
+    "projectName",
+    "plc",
+    "tagTables",
+    "artifacts"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "tiaVersion": {
+      "const": "V21"
+    },
+    "projectName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "plc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "cpuTypeIdentifier"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+        },
+        "cpuTypeIdentifier": {
+          "const": "OrderNumber:6ES7 212-1AE40-0XB0/V4.7"
+        }
+      }
+    },
+    "tagTables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "tags"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "dataType",
+                "logicalAddress"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+                },
+                "dataType": {
+                  "enum": [
+                    "Bool",
+                    "Byte",
+                    "Char",
+                    "SInt",
+                    "USInt",
+                    "Word",
+                    "Int",
+                    "UInt",
+                    "DWord",
+                    "DInt",
+                    "UDInt",
+                    "Real"
+                  ]
+                },
+                "logicalAddress": {
+                  "type": "string",
+                  "pattern": "^%?[IQMiqm](?:[Xx]?[0-9]+\\.[0-7]|[BbWwDd][0-9]+)$"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "format",
+          "sourcePath",
+          "dependsOn"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+          },
+          "kind": {
+            "enum": [
+              "OB",
+              "FB",
+              "FC",
+              "DB",
+              "UDT"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+          },
+          "format": {
+            "const": "scl"
+          },
+          "sourcePath": {
+            "type": "string",
+            "pattern": "^(?!.*(?:\\\\|:|(?:^|/)\\.{1,2}(?:/|$)))[^/]+(?:/[^/]+)*\\.scl$"
+          },
+          "dependsOn": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 1
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/biaobiao2233/tia-guard/project-generation-v1.schema.json",
+  "title": "Project Generation v1 offline SCL input",
+  "$comment": "Schema checks JSON shape. The pure loader additionally checks paths/reparse points, file set, identities, tag widths/overlaps, dependencies and pinned bytes. SD/SimaticML reserved by coordination contract but rejected until evidence-specific validators are integrated. Acceptance is not a TIA compile/verification result."
+}

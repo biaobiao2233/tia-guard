@@ -9,9 +9,9 @@ namespace TiaGuard.Openness
         private static readonly object Gate = new object();
         private static string[] _searchDirectories;
 
-        public static string DefaultPublicApiDirectory => Path.Combine(
+        public static string DefaultPublicApiDirectory => _searchDirectories == null ? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            @"Siemens\Automation\Portal V21\PublicAPI\V21\net48");
+            @"Siemens\Automation\Portal V21\PublicAPI\V21\net48") : _searchDirectories[0];
 
         // Siemens binaries stay in the local TIA installation. The application
         // resolves them there at runtime instead of copying them into output.

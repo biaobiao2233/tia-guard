@@ -17,6 +17,8 @@ TIA-Guard 是独立的 **pre-alpha** 工程工具，面向本机 **Siemens TIA P
 - [发行版](https://github.com/biaobiao2233/tia-guard/releases)：预览包与校验值。
 - [快速开始](docs/GETTING-STARTED.md)：环境前提、解压、GUI 流程与常见问题。
 - [AI Gateway 指南](docs/TIA-AI-BRIDGE.md)：本机 Agent、MCP 与受控离线修改。
+- [从零创建 PLC 工程](docs/PROJECT-GENERATION.md)：通过 CLI / HTTP / MCP 从 SCL 创建、编译并回读验证新 `.ap21`；源码入口及验证范围见该指南。
+- [普通 PLCSIM 自动化（实验）](docs/PLCSIM-AUTOMATION.md)：仿真专用 HTTP/MCP 接口；完整下载、扫描和输入输出断言尚未验收，公开 Release 不包含此功能。
 
 首个发行版为 pre-alpha 预览版。GUI 当前为中文；页面顶部链接切换的是仓库文档语言。
 
@@ -27,7 +29,7 @@ TIA-Guard 是独立的 **pre-alpha** 工程工具，面向本机 **Siemens TIA P
 | 模块 | 当前实现 |
 | --- | --- |
 | Windows GUI | 中文 WPF 界面、自定义标题栏；GitHub → TIA 重建、TIA → GitHub 导出并提交；一个仓库可管理多个工程 |
-| CLI | `doctor`、`--version`、`export`、`build`、`verify`、`ai-view` |
+| CLI | `doctor`、`--version`、`export`、`build`、`verify`、`ai-view`、`init`、`build-generation` |
 | AI 工程视图 | 从受验证的 canonical source 派生 JSON / Markdown、变量表、有限 LAD 图和来源引用 |
 | API Gateway | GUI 自动启动本机 `127.0.0.1:18761` 服务；提供能力发现、工程上下文、程序图、引用查询和受控 patch |
 | MCP | stdio 与 Streamable HTTP；默认只读工具，显式启用的写工具保留 preview / apply 验证 |

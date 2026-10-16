@@ -132,6 +132,254 @@
         }
       }
     },
+    "/api/simulation/status": {
+      "get": {
+        "operationId": "simulationStatus",
+        "summary": "Current owned simulator session and phase. Does not launch a simulator.",
+        "responses": {
+          "200": {
+            "description": "Capability and session state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/simulation/create": {
+      "post": {
+        "operationId": "simulationCreate",
+        "summary": "Experimental: copy/compile a CPU1212C/V4.7 project, create an owned Standard PLCSIM instance, download hardware/software and initialize Bool I/Q monitoring. Requires --allow-write --enable-simulation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "422": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/simulation/load": {
+      "post": {
+        "operationId": "simulationLoad",
+        "summary": "Retry a failed download in an already prepared owned instance. Rechecks current identity and PLCSIM discovery; does not recreate the project.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "422": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/simulation/test": {
+      "post": {
+        "operationId": "simulationTest",
+        "summary": "Experimental: create/load an owned simulator, run input/scan/actual-output assertions and STOP. A failed setup, missing output, mismatch or STOP failure cannot qualify. Close the retained session explicitly.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationTestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "422": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/simulation/run": {
+      "post": {
+        "operationId": "simulationRun",
+        "summary": "Set RUN/STOP for the loaded owned simulator. RUN also pauses automatic scanning.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "422": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/simulation/inputs": {
+      "post": {
+        "operationId": "simulationInputs",
+        "summary": "Write exactly all declared Bool I inputs in the owned simulator. Q writes and force are unavailable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationInputsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/simulation/scan": {
+      "post": {
+        "operationId": "simulationScan",
+        "summary": "Step 1-100 scans in the owned RUN/paused simulator.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationScanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/simulation/outputs/{sessionId}": {
+      "get": {
+        "operationId": "simulationOutputs",
+        "summary": "Read actual monitored Bool Q values in the loaded owned simulator.",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/simulation/close": {
+      "post": {
+        "operationId": "simulationClose",
+        "summary": "STOP/power off/delete only the owned simulator and release the project copy. A partial cleanup returns closeRequired=true and retains a retryable handle.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "422": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/api/project-generation/preview": {
+      "post": {
+        "operationId": "previewProjectGeneration",
+        "summary": "Inspect editable sources without opening TIA, bind the full input hash and output/scratch/API paths to a single-use token, and request one-shot GUI approval when needed. Requires no connected project.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationRequest" } } } },
+        "responses": {
+          "200": { "description": "Validated creation preview. No engineering project is created or modified.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationPreview" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/project-generation/build": {
+      "post": {
+        "operationId": "buildProjectGeneration",
+        "summary": "Build the exact previewed new offline PLC project after token/GUI approval. Rechecks frozen input hash, rejects a connected old session, compiles and independently verifies before publication.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationBuildRequest" } } } },
+        "responses": {
+          "200": { "description": "Published and independently verified V21 project. success=true only with complete successful compilation, verification PASS and no cleanup failures.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationBuildResult" } } } },
+          "422": { "description": "Creation, compilation, verification or publication failed. Includes the full core reports; a worker protocol success does not mean the project passed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProjectGenerationBuildResult" } } } },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/api/v1/ai/patches/preview": {
       "post": {
         "operationId": "previewPatch",
@@ -153,16 +401,492 @@
           "400": { "$ref": "#/components/responses/Error" }
         }
       }
+    },
+    "/api/simulation/desktop/status": {
+      "get": {
+        "operationId": "plcsimDesktopStatus",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          }
+        },
+        "summary": "Report native FlaUI desktop capability and local session binding without launching Siemens software."
+      }
+    },
+    "/api/simulation/desktop/open": {
+      "post": {
+        "operationId": "plcsimDesktopOpen",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/SimulationReport"
+          }
+        },
+        "summary": "Launch an owned, signed V21 PLCSIM GUI and persistent FlaUI session. Protects existing applications. Requires explicit simulation mode. No CPU power or TIA project operation."
+      }
+    },
+    "/api/simulation/desktop/{sessionId}": {
+      "get": {
+        "operationId": "plcsimDesktopInspect",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/SimulationReport"
+          }
+        },
+        "summary": "Inspect the current owned control tree, including localized names, stable ancestor IDs, enabled states, values and UI patterns.",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "sessionId"
+          }
+        ]
+      }
+    },
+    "/api/simulation/desktop/act": {
+      "post": {
+        "operationId": "plcsimDesktopAct",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/SimulationReport"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlcsimDesktopActionRequest"
+              }
+            }
+          }
+        },
+        "summary": "Create, open-details, rename, power-on, power-off, prepare-io or delete the uniquely owned S7-1200. prepare-io configures a new bound SIM table without writing values. Power uses the owned signed virtual CPU process and stable UI. No arbitrary UI clicks/scripts or physical PLC actions."
+      }
+    },
+    "/api/simulation/desktop/close": {
+      "post": {
+        "operationId": "plcsimDesktopClose",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SimulationReport"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "422": {
+            "$ref": "#/components/responses/SimulationReport"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationSessionRequest"
+              }
+            }
+          }
+        },
+        "summary": "Remove the confirmed owned instance and normally close only its owned application. Retains the session binding on failed cleanup."
+      }
     }
   },
   "components": {
     "responses": {
+      "SimulationReport": {
+        "description": "Actual simulator operation report. Inspect success, phase and diagnostics; HTTP setup failure is not runtime acceptance.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SimulationReport"
+            }
+          }
+        }
+      },
       "Error": {
         "description": "The gateway rejected the call before or during the operation.",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorBody" } } }
       }
     },
     "schemas": {
+      "SimulationStatus": {
+        "type": "object",
+        "required": [
+          "enabled",
+          "sessionId",
+          "loaded",
+          "running",
+          "runStateKnown",
+          "closeRequired",
+          "phase",
+          "backend",
+          "scope"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "sessionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "loaded": {
+            "type": "boolean"
+          },
+          "running": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Last acknowledged command state; null after an uncertain RUN/STOP. Not an independent live PLC observation."
+          },
+          "runStateKnown": {
+            "type": "boolean"
+          },
+          "closeRequired": {
+            "type": "boolean"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "create-backend",
+              "prepare",
+              "create-instance",
+              "load",
+              "initialize-io",
+              "ready",
+              "close"
+            ]
+          },
+          "backend": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          }
+        }
+      },
+      "SimulationRequest": {
+        "type": "object",
+        "required": [
+          "projectPath",
+          "inputAddresses",
+          "outputAddresses"
+        ],
+        "properties": {
+          "projectPath": {
+            "type": "string",
+            "description": "Absolute original .ap21 path. Only an owned disposable copy is opened."
+          },
+          "configureTemporaryPlcPassword": {
+            "type": "boolean",
+            "default": false,
+            "description": "Requires explicit operator approval. Generate an in-memory temporary configuration password only in the owned offline copy with unconfigured default protection; never overwrite existing security settings. The password is not returned or logged."
+          },
+          "configureTemporaryPlcUser": {
+            "type": "boolean",
+            "default": false,
+            "description": "Requires explicit operator approval. Create a dedicated temporary project-local user and custom role with ProtectionLevelFullAccess only on the owned CPU. Preserve existing users/roles, do not enable Anonymous or add engineering rights. No password is returned or logged."
+          },
+          "inputAddresses": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^I(?:0|[1-9][0-9]{0,3})\\.[0-7]$"
+            }
+          },
+          "outputAddresses": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^Q(?:0|[1-9][0-9]{0,3})\\.[0-7]$"
+            }
+          },
+          "steps": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/SimulationTestStep"
+            }
+          }
+        }
+      },
+      "SimulationTestRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SimulationRequest"
+          },
+          {
+            "type": "object",
+            "required": [
+              "steps"
+            ],
+            "properties": {
+              "steps": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1000,
+                "items": {
+                  "$ref": "#/components/schemas/SimulationTestStep"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "SimulationTestStep": {
+        "type": "object",
+        "required": [
+          "name",
+          "inputs",
+          "expectedOutputs"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/SimulationBoolValues"
+          },
+          "expectedOutputs": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Nonempty subset of declared outputs. Inputs must provide exactly the declared input set."
+          },
+          "scans": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 1
+          }
+        }
+      },
+      "SimulationBoolValues": {
+        "type": "object",
+        "maxProperties": 64,
+        "additionalProperties": {
+          "type": "boolean"
+        }
+      },
+      "SimulationSessionRequest": {
+        "type": "object",
+        "required": [
+          "sessionId"
+        ],
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "SimulationRunRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SimulationSessionRequest"
+          },
+          {
+            "type": "object",
+            "required": [
+              "run"
+            ],
+            "properties": {
+              "run": {
+                "type": "boolean"
+              }
+            }
+          }
+        ]
+      },
+      "SimulationScanRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SimulationSessionRequest"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "scans": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 1
+              }
+            }
+          }
+        ]
+      },
+      "SimulationInputsRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SimulationSessionRequest"
+          },
+          {
+            "type": "object",
+            "required": [
+              "inputs"
+            ],
+            "properties": {
+              "inputs": {
+                "$ref": "#/components/schemas/SimulationBoolValues"
+              }
+            }
+          }
+        ]
+      },
+      "SimulationReport": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "qualified": {
+            "type": "boolean"
+          },
+          "executed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "planned": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sessionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "phase": {
+            "type": "string"
+          },
+          "closed": {
+            "type": "boolean"
+          },
+          "closeRequired": {
+            "type": "boolean"
+          },
+          "preparation": {
+            "type": "object",
+            "nullable": true
+          },
+          "load": {
+            "type": "object"
+          },
+          "report": {
+            "type": "object"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "observedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "values": {
+            "$ref": "#/components/schemas/SimulationBoolValues"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Preserves inputs, expected, actual, pass, scans and observation time for each completed step."
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "ProjectGenerationRequest": {
+        "type": "object",
+        "required": ["sourceDirectory", "outputDirectory", "ownedScratchRoot"],
+        "properties": {
+          "sourceDirectory": { "type": "string", "description": "Absolute directory containing project-generation.json and editable declared sources." },
+          "outputDirectory": { "type": "string", "description": "Absolute new output directory; must not exist. Must not overlap source or scratch." },
+          "ownedScratchRoot": { "type": "string", "description": "Absolute existing dedicated directory for task-owned temporary projects; must not overlap source/output." },
+          "publicApiDirectory": { "type": "string", "nullable": true, "description": "Optional absolute installed V21 PublicAPI path. Must match preview exactly." }
+        }
+      },
+      "ProjectGenerationBuildRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProjectGenerationRequest" },
+          { "type": "object", "required": ["safetyToken"], "properties": { "safetyToken": { "type": "string", "description": "Single-use token from preview. All request paths and source bytes must still match." } } }
+        ]
+      },
+      "ProjectGenerationPreview": {
+        "type": "object",
+        "required": ["InputHash", "safetyToken", "expiresAt", "request", "status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["previewed"] },
+          "InputHash": { "type": "string", "description": "SHA-256 of the complete frozen engineering input." },
+          "ProjectName": { "type": "string" },
+          "PlcName": { "type": "string" },
+          "ArtifactCount": { "type": "integer" },
+          "TagCount": { "type": "integer" },
+          "request": { "$ref": "#/components/schemas/ProjectGenerationRequest" },
+          "safetyToken": { "type": "string" },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "approvalId": { "type": "string" },
+          "approvalSummary": { "type": "string" },
+          "mutatesProject": { "type": "boolean", "enum": [false] },
+          "savesOriginalProject": { "type": "boolean", "enum": [false] }
+        },
+        "additionalProperties": true
+      },
+      "ProjectGenerationBuildResult": {
+        "type": "object",
+        "required": ["status", "success", "Published", "Phase", "Failures", "CleanupFailures"],
+        "properties": {
+          "status": { "type": "string", "enum": ["published-verified", "generation_failed"] },
+          "success": { "type": "boolean" },
+          "Published": { "type": "boolean", "description": "Core publication observation; use success/status for full acceptance including cleanup." },
+          "ProjectFile": { "type": "string", "nullable": true },
+          "Phase": { "type": "string", "description": "Failure stage, including the source path for import failures." },
+          "Compile": { "type": "object", "nullable": true, "description": "Complete compilation evidence. AllowsPublication is false for incomplete or failed reports; FullResult contains diagnostics." },
+          "Verification": { "type": "object", "nullable": true, "description": "Independent verification report; PASS required, UNKNOWN/FAIL refuse publication." },
+          "Failures": { "type": "array", "items": { "type": "string" } },
+          "CleanupFailures": { "type": "array", "items": { "type": "string" } },
+          "gatewayFailure": { "type": "string" },
+          "savesOriginalProject": { "type": "boolean", "enum": [false] }
+        },
+        "additionalProperties": true
+      },
       "ErrorBody": {
         "type": "object",
         "required": ["error"],
@@ -332,6 +1056,56 @@
           "reason": { "type": "string", "nullable": true }
         },
         "additionalProperties": true
+      },
+      "PlcsimDesktopActionRequest": {
+        "required": [
+          "sessionId",
+          "action"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "rename",
+              "open-details",
+              "delete",
+              "power-on",
+              "power-off",
+              "prepare-io"
+            ]
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^TiaGuard_[A-Za-z0-9_]{1,50}$",
+            "type": "string",
+            "description": "Required for rename; optional owned name for create."
+          },
+          "inputAddresses": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^I(?:0|[1-9][0-9]{0,3})\\.[0-7]$"
+            },
+            "description": "Required for prepare-io. Configuration only, without writing input values."
+          },
+          "outputAddresses": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^Q(?:0|[1-9][0-9]{0,3})\\.[0-7]$"
+            },
+            "description": "Required for prepare-io. Output addresses are read-only monitor declarations."
+          }
+        }
       }
     }
   }

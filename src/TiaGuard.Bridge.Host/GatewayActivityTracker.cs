@@ -58,7 +58,8 @@ public sealed class GatewayActivityTracker
     {
         if (path.Contains("/patches", StringComparison.OrdinalIgnoreCase) ||
             path.Contains("/tags/", StringComparison.OrdinalIgnoreCase) ||
-            path.Contains("/publish", StringComparison.OrdinalIgnoreCase))
+            path.Contains("/publish", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(path, "/api/project-generation/build", StringComparison.OrdinalIgnoreCase))
             return "write";
         if (path.Contains("/open-offline", StringComparison.OrdinalIgnoreCase) ||
             path.Contains("/disconnect", StringComparison.OrdinalIgnoreCase) ||

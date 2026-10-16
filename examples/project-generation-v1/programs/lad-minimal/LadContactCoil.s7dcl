@@ -1,0 +1,24 @@
+// Derived from bulaofen0036-coder/TIA_Portal_Openness_MCP
+// tools/tiaportal-mcp/skill/lad-cookbook/MCPVerify_FB_LAD_v3.s7dcl at
+// 3e8f8810924657a1adc4b41c0166a0829ad1caf7. Copyright (c) 2026 bulaofen0036-coder.
+// MIT license: third-party/project-generation-verification/bulaofen-LICENSE.txt.
+{
+    S7_Optimized := "TRUE";
+    S7_PreferredLanguage := "LAD";
+    S7_Version := "0.1"
+}
+FUNCTION_BLOCK "LadContactCoil"
+    VAR_INPUT
+        Enable : Bool;
+    END_VAR
+    VAR_OUTPUT
+        Active : Bool;
+    END_VAR
+    { S7_Language := "LAD" }
+    NETWORK
+        RUNG wire#powerrail
+            Contact( #Enable )
+            Coil( #Active )
+        END_RUNG
+    END_NETWORK
+END_FUNCTION_BLOCK

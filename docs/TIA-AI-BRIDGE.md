@@ -8,7 +8,7 @@
 
 当前源码包括 GUI 自动启动的本机 API Gateway、AI Engineering v2 上下文、结构化 patch preview/apply、逐次 GUI 确认，以及隔离打包的 worker。精确版本检查见[集成验证记录](https://github.com/biaobiao2233/tia-guard/blob/main/docs/verification/publication-20261001.md)。下文的旧版变量及发布接口仍支持，但不代表全部 v2 API。
 
-当前 JSON patch 为 `upsert_tag` 和 `replace_output_condition`。先查询 `/capabilities` 与 `/openapi.json`。默认 HTTP apply 需要 GUI 对相应 preview 进行确认；默认 MCP 工具只读。显式 headless `--allow-write` 跳过 GUI 确认，但仍保留单次 token 和离线副本验证。
+当前 JSON patch 为 `upsert_tag` 和 `replace_output_condition`。先查询 `/capabilities` 与 `/openapi.json`。默认 HTTP apply 需要 GUI 对相应 preview 进行确认；stdio MCP 默认只读。新工程创建可通过 HTTP 或 HTTP MCP 发起，同样必须逐次 GUI 确认。显式 headless `--allow-write` 跳过 GUI 确认，但仍保留单次 token 和离线副本验证。
 
 源码公开、二进制发行和真实 TIA 工程验收是独立状态。
 
@@ -45,7 +45,7 @@ Host 不加载 Siemens 程序集。发行包将 net48 worker 放在独立 `worke
 
 默认只读，支持工程发现、精确绑定、元数据及有限快照。旧版变量/发布写工具需显式 `--allow-write`，且只作用于临时离线副本：根变量 upsert 先在内存进行，发布到新目录另需独立 preview。发布先编译，用 SaveAs 写全新目录，再以新的临时副本重新打开并核对工程 `contentId`。
 
-任何模式都不提供 PLC 下载、启停、force、在线变量写入、Safety、附着用户工程的写入/覆盖保存、归档或原位置 SaveAs。
+任何模式都不提供真实 PLC 下载、启停、force、在线变量写入、Safety、附着用户工程的写入/覆盖保存、归档或原位置 SaveAs。实验候选可额外启用[仿真专用接口](PLCSIM-AUTOMATION.md)，但完整运行流程尚未验收。
 
 ## 精确工程绑定
 
@@ -67,6 +67,8 @@ AI v2 查询工具：`get_ai_project_context`、`get_program_graph`、`get_netwo
 
 写模式额外注册 `preview_tag_upsert` / `apply_tag_upsert`、`preview_patch` / `apply_patch`、`preview_publish_modified_copy` / `apply_publish_modified_copy`。默认只读模式不注册写工具。
 
+从零创建工程的 `preview_project_generation` 在 stdio 只读模式也可用；`build_project_generation` 在 stdio 下需 `--allow-write`。HTTP MCP 注册这两个工具，默认 build 等待 GUI 批准该次 preview。
+
 ## 本机 HTTP
 
 ```powershell
@@ -86,6 +88,30 @@ tia-guard-bridge.exe --transport http --port 18761
 | `POST /api/v1/ai/patches/preview`, `apply` | v2 结构化 patch |
 | `POST /api/v1/tags/preview-upsert`, `apply-upsert` | 旧版变量操作；需写模式 |
 | `POST /api/v1/project/preview-publish`, `apply-publish` | 旧版副本发布；需写模式 |
+| `POST /api/project-generation/preview`, `build` | 无需已有工程，从声明和源码创建新工程；单次 token 和默认 GUI 确认 |
+
+## 从零创建离线 PLC 工程
+
+Agent 先用 `tia-guard init <新目录>` 创建 `project-generation.json` 和可编辑的 SCL 文件，再编辑声明与源码。核心从冻结输入推导独立验证期望，和真实工程回读结果比较。声明范围及约束见[工程生成契约](contracts/project-generation-v1.md)。此入口使用新的 WithoutUI 会话创建工程，不依赖模板 `.ap21`，也不附着已经打开的用户工程。当前公开输入支持 SCL；不能把拒绝 SD/LAD 输入的规则删掉来声称兼容。
+
+请求包含三个绝对路径：`sourceDirectory`（编辑后的输入）、`outputDirectory`（必须不存在的新输出目录）、`ownedScratchRoot`（已存在且专属本次任务的临时目录），以及可选的 `publicApiDirectory`。输入、输出和临时目录彼此不得嵌套。先断开 Gateway 已绑定的工程；创建期间旧会话不能共享写入权限。
+
+```json
+{
+  "sourceDirectory": "E:\\PLC\\input",
+  "outputDirectory": "E:\\PLC\\new-project",
+  "ownedScratchRoot": "E:\\PLC\\scratch",
+  "publicApiDirectory": "D:\\Siemens\\Portal V21\\PublicAPI\\V21\\net48"
+}
+```
+
+1. 将以上请求发送给 `POST /api/project-generation/preview`（或 `preview_project_generation`）。纯检查返回输入的完整 SHA-256、工程名、对象/变量数量、单次 `safetyToken`，默认 HTTP 还会生成 GUI 确认项。此时不打开 TIA、不创建工程。
+2. 将同一请求加上 `safetyToken` 发送给 `POST /api/project-generation/build`（或 `build_project_generation`）。默认模式等待 TIA-Guard 窗口批准；headless 模式仍必须持有有效 token。
+3. build 再次检查完整输入哈希、所有路径、Worker 身份与旧会话状态，然后核心冻结输入并再次匹配 preview 哈希。只有新建、导入、完整成功编译、独立回读验证都通过后，才发布 `.ap21`。
+
+HTTP 仅在 `status=published-verified` / `success=true` 时返回 200。编译、导入或验证失败返回 422，保留 `Phase`、`Compile.FullResult`、`Verification`、`Failures` 与 `CleanupFailures`，便于 Agent 读报错、修源码并重新 preview。MCP 对同样的失败设置 `isError=true`；Worker 协议传输成功不代表工程成功。输入变更、token 重放、旧会话已连接及输出目录已存在均会拒绝。`Published` 是核心发布事实，应同时检查 `success` 与 `status` 判断完整验收。
+
+纯测试、接口接通与真实 V21 验收分别记录；此入口不提供 PLC 下载、运行、在线写入或控制行为验收。
 
 ## 受控写入契约
 
