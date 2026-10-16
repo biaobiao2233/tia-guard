@@ -1,0 +1,26 @@
+[
+  {
+    "path": "programs/lad-minimal/LadContactCoil.s7dcl",
+    "transportTextSha256": "ba701123a42a547499f6ffa84303ebb3d4eb2904878cba2d01674cd89df6a665"
+  },
+  {
+    "path": "programs/scl-multiblock/FB_BasicLatch.scl",
+    "transportTextSha256": "0c362df54d5a7834c7a798d0dcef777a514c64d66d272e327b29e2bee7dd594d"
+  },
+  {
+    "path": "programs/scl-multiblock/LatchInstance.scl",
+    "transportTextSha256": "30de392fb73ba92c44bb6c333b1103736638fb5ec91c41479ec792a5d77b2adc"
+  },
+  {
+    "path": "programs/scl-multiblock/Main.scl",
+    "transportTextSha256": "b21212a3267b90de4371604ab27d3203766cdddbb19214b8fc74c349cfc21d6f"
+  },
+  {
+    "path": "programs/scl-multiblock/MotorStatus.scl",
+    "transportTextSha256": "0c31dc14df08ffb7f53540d04702d670bed1ffa724d5a2c54b649a31c7d0b345"
+  },
+  {
+    "path": "programs/scl-multiblock/Status.scl",
+    "transportTextSha256": "965c6c06ae8582db4369dc47f11ae35b86e7ba587c1f2457dfcaa93e0daff220"
+  }
+]

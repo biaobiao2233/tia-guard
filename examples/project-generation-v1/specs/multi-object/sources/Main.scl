@@ -1,0 +1,8 @@
+// Template: tia-guard/project-generation-v1/minimal-scl-main@1
+// Offline input only; V21 compilation and generated-object verification are required.
+ORGANIZATION_BLOCK "Main"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+BEGIN
+    // Add program logic here.
+END_ORGANIZATION_BLOCK
