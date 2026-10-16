@@ -75,8 +75,13 @@ downloads to IDE simulation, observes changing counters, writes the two test
 inputs, checks their FB effect, verifies Stop/Run, rejects an output write and
 checks native process exit. It never purchases or activates a license.
 
-Portable CI and native qualification are separate. See the source-bound receipt
-in `evidence/` when available; a discovered tool or successful process exit alone
+Portable CI and native qualification are separate. The [source-bound receipt](evidence/native-20261015.json)
+qualifies product source `f856071`: actual compiler errors and repair (0 errors,
+0 warnings), all three object kinds changed/read back, save/close/reopen,
+counter 36→66, Stop 123→123 with FB result 130 after writing Step=7, Run 158→188,
+rejected output write, and exact owned process exit. Eight portable contracts
+passed on Linux and Windows; those tests use no vendor compiler.
+A discovered tool or successful process exit alone
 does not establish a supported capability. Read errors and cleanup reports even
 when preceding steps succeeded. Local paths, native exceptions and full text
 receipts remain private under the configured workspace.
