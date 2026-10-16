@@ -14,6 +14,17 @@
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeWorkerClient.cs" Link="BridgeWorkerClient.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeWorkerProcess.cs" Link="BridgeWorkerProcess.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/WorkerInteractionProbe.cs" Link="WorkerInteractionProbe.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeSimulationCoordinator.cs" Link="BridgeSimulationCoordinator.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/SimulationProcessEnvironment.cs" Link="SimulationProcessEnvironment.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/GatewaySimulationEndpoints.cs" Link="GatewaySimulationEndpoints.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeSimulationTools.cs" Link="BridgeSimulationTools.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgePlcsimDesktopCoordinator.cs" Link="BridgePlcsimDesktopCoordinator.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/WorkerPlcsimSimulationBackend.cs" Link="WorkerPlcsimSimulationBackend.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/BridgePlcsimDesktopTools.cs" Link="BridgePlcsimDesktopTools.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Host/GatewayPlcsimDesktopEndpoints.cs" Link="GatewayPlcsimDesktopEndpoints.cs" />
+    <Compile Include="../../src/TiaGuard.Bridge.Worker/PlcsimUiIdentity.cs" Link="PlcsimUiIdentity.cs" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeProjectGenerationCoordinator.cs" Link="BridgeProjectGenerationCoordinator.cs" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/GatewayProjectGenerationEndpoints.cs" Link="GatewayProjectGenerationEndpoints.cs" />
     <Compile Include="../../src/TiaGuard.Bridge.Host/BridgeProjectGenerationTools.cs" Link="BridgeProjectGenerationTools.cs" />

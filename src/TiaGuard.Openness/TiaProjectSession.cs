@@ -51,7 +51,7 @@ namespace TiaGuard.Openness
         public int CompileWarnings { get; internal set; }
     }
 
-    public sealed class TiaProjectSession : IDisposable
+    public sealed partial class TiaProjectSession : IDisposable
     {
         private readonly TiaPortal _portal;
         private readonly Project _project;

@@ -31,6 +31,26 @@ Use this workflow only when live capabilities expose project generation. Its sou
 
 Report the created engineering project and its compile/readback results in PLC terms. This workflow does not prove scan-cycle behavior or provide PLC download/RUN/STOP. Unknown interface defaults, unsupported storage settings and unsupported hardware cannot be treated as PASS.
 
+## Test an owned Standard PLCSIM instance (experimental)
+
+Use only when the user requested simulator testing and live `/capabilities` reports `simulation.enabled=true`. Do not enable broader flags, restart the Gateway, adopt an existing instance or select a physical adapter yourself. The candidate is experimental; `runtimeQualified=false` must not be presented as acceptance.
+
+1. Use the verified generated `.ap21` and a complete declaration of supported Bool I/Q addresses. Read the [simulator guide](../../docs/PLCSIM-AUTOMATION.md) and live OpenAPI.
+2. For end-to-end assertions, call `/api/simulation/test` or `run_simulation_test` without an existing simulation session. Alternatively, create one session and use its exact handle for RUN, inputs, scan and actual output reads.
+3. Preserve `phase`, preparation/compilation diagnostics, actual values and failures. A failed setup, missing observation, mismatch, uncertain RUN/STOP or failed cleanup is not PASS. Never fill actual values from expected values.
+4. Retry a failed download only through `/api/simulation/load` or `load_simulation_session` on that already prepared owned session. The product rechecks its exact project-copy binding and current simulator identity.
+5. Close that exact session after success or failure. If `closeRequired=true`, stop further writes and retry cleanup; report unresolved resources. Never close a user's unrelated software or project.
+
+Physical PLC, force, Safety and DB-value operations remain unavailable. Only actual complete, successful runtime observations can support the test's bounded qualification claim.
+
+For native desktop diagnostics use `open_plcsim_desktop`, `inspect_plcsim_desktop`, `act_plcsim_desktop` and `close_plcsim_desktop`, with the returned exact session. Actions are semantic and bounded: create, open-details, rename, power-on/off, prepare-io and delete. `prepare-io` creates a new bound SIM view/table from `inputAddresses`/`outputAddresses`; it does not write values. Respect `io.valuesQualified=false`, and treat a hidden instance overview's null count/power as unknown. Creation and unresolved power toggles must not be blindly repeated. Always close the owned session.
+
+Read `requiredInteraction` from simulation status, or `tia.requiredInteraction` from Gateway status, while engineering is waiting. `waiting-for-openness-access` means the current task's TIA requires a user's access confirmation; do not automatically acknowledge it or alter access settings. A timed-out/cancelled session needs explicit cleanup before a new attempt.
+
+Hardware and software compilation are separate gates. Read both `hardwareCompilation` and `compilation`; a failed hardware compile must not start a virtual CPU. `configureTemporaryPlcPassword` defaults to false. Set it only with explicit operator approval to generate a temporary password in the owned offline copy's unconfigured default protection state. Never request a real PLC password, disable protection, overwrite existing credentials or treat this opt-in as successful download/RUN qualification.
+
+`configureTemporaryPlcUser` is a separate default-false opt-in requiring explicit operator approval. It creates a dedicated temporary project-local user/custom role with `ProtectionLevelFullAccess` only on the owned CPU, without engineering/admin/Anonymous rights or existing-user changes. Both options passed a fresh V21 hardware/software compile-only test, not download/RUN/I/O. Do not replay a user-creation mutation after an uncertain result. A request using these flags on `/api/simulation/create` would continue toward simulation/download, so do not call it when the user authorized compile-only work.
+
 ## Read the engineering state
 
 Read `GET /api/v1/ai/context`, then the relevant program graph, network and symbol usage:
@@ -74,7 +94,7 @@ Do not expose tokens, content IDs, hashes, fingerprints or internal protocol det
 
 If live capabilities do not support the requested operation, say that the Gateway cannot safely perform it and stop. Never guess a patch or use an alternate write path.
 
-Unsupported scope includes OR mutation, arbitrary parallel graph rewrites, stateful instructions, unknown graphs, arbitrary project/hardware creation, S7-1500, HMI, Safety engineering, drives, online PLC writes, download, CPU start/stop and force.
+Unsupported scope includes OR mutation, arbitrary parallel graph rewrites, stateful instructions, unknown graphs, arbitrary project/hardware creation, S7-1500, HMI, Safety engineering, drives, physical PLC writes/download/start-stop and force. Simulator operations are available only under the separate explicitly enabled experimental surface above.
 
 ## Publish or restore with Git
 

@@ -10,6 +10,8 @@ public sealed class BridgeWorkerClient : IDisposable
 
     private readonly string _workerPath;
     private readonly bool _allowWrite;
+    private readonly bool _allowSimulation;
+    private readonly string? _publicApiDirectory;
     private readonly TimeSpan _timeout;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly JsonSerializerOptions _json = new()
@@ -17,7 +19,7 @@ public sealed class BridgeWorkerClient : IDisposable
         PropertyNameCaseInsensitive = true
     };
 
-    private Process? _process;
+    private BridgeWorkerProcess? _process;
     private Task? _stderrPump;
     private bool _handshakeComplete;
     private bool _disposed;
@@ -28,16 +30,21 @@ public sealed class BridgeWorkerClient : IDisposable
     public BridgeWorkerClient(
         string workerPath,
         bool allowWrite = false,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout = null,
+        bool allowSimulation = false,
+        string? publicApiDirectory = null)
     {
         _workerPath = Path.GetFullPath(workerPath);
         _allowWrite = allowWrite;
+        _allowSimulation = allowSimulation;
+        _publicApiDirectory = publicApiDirectory;
         _timeout = timeout ?? TimeSpan.FromMinutes(30);
     }
 
     public bool IsIdle => _gate.CurrentCount > 0;
 
     public bool HasStarted => _process != null;
+    public object? ReadRequiredInteraction() => WorkerInteractionProbe.Read(_process?.Process);
 
     public async Task ShutdownAsync()
     {
@@ -201,7 +208,6 @@ public sealed class BridgeWorkerClient : IDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = _workerPath,
-            Arguments = _allowWrite ? "--allow-write" : string.Empty,
             WorkingDirectory = Path.GetDirectoryName(_workerPath) ?? AppContext.BaseDirectory,
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -212,12 +218,19 @@ public sealed class BridgeWorkerClient : IDisposable
             StandardErrorEncoding = Encoding.UTF8
         };
 
-        _process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Failed to start the TIA-Guard Bridge worker.");
+        if (_allowWrite) startInfo.ArgumentList.Add("--allow-write");
+        if (_allowSimulation) startInfo.ArgumentList.Add("--allow-simulation");
+        if (_publicApiDirectory != null)
+        {
+            startInfo.ArgumentList.Add("--public-api");
+            startInfo.ArgumentList.Add(Path.GetFullPath(_publicApiDirectory));
+        }
+
+        _process = BridgeWorkerProcess.Start(startInfo);
         _stderrPump = PumpStderrAsync(_process);
     }
 
-    private static async Task PumpStderrAsync(Process process)
+    private static async Task PumpStderrAsync(BridgeWorkerProcess process)
     {
         try
         {

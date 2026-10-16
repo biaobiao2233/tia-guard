@@ -18,6 +18,7 @@ TIA-Guard is an independent **pre-alpha** engineering tool for local **Siemens T
 - [Getting started](docs/GETTING-STARTED.en.md): requirements, extraction, GUI workflows and troubleshooting.
 - [AI Gateway guide](docs/TIA-AI-BRIDGE.en.md): desktop agents, MCP and guarded offline edits.
 - [Create a PLC project from source](docs/PROJECT-GENERATION.md): candidate CLI / HTTP / MCP workflow for creating, compiling and independently verifying a new `.ap21` from SCL; see the guide for evidence and scope.
+- [Standard PLCSIM automation (experimental, Chinese guide)](docs/PLCSIM-AUTOMATION.md): simulator-only HTTP/MCP endpoints; the complete download/scan/input/output workflow is not runtime-qualified and is not in the public Release.
 
 The first release is a pre-alpha preview. The Windows GUI is currently Chinese; these links switch repository documentation languages.
 

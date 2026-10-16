@@ -57,7 +57,11 @@ if (-not $copied) { throw "Could not stage the bridge host. $copyError" }
 $flatWorkerNames = @(
     "TiaGuard.Bridge.Worker.exe",
     "TiaGuard.Bridge.Worker.exe.config",
-    "TiaGuard.Openness.dll"
+    "TiaGuard.Openness.dll",
+    "FlaUI.Core.dll",
+    "FlaUI.UIA3.dll",
+    "Interop.UIAutomationClient.dll",
+    "System.CodeDom.dll"
 )
 foreach ($name in $flatWorkerNames) {
     Remove-Item (Join-Path $stage $name) -Force -ErrorAction SilentlyContinue
@@ -69,7 +73,11 @@ $workerBin = Join-Path $repoRoot "src\TiaGuard.Bridge.Worker\bin\$Configuration\
 $workerFiles = @(
     "TiaGuard.Bridge.Worker.exe",
     "TiaGuard.Bridge.Worker.exe.config",
-    "TiaGuard.Openness.dll"
+    "TiaGuard.Openness.dll",
+    "FlaUI.Core.dll",
+    "FlaUI.UIA3.dll",
+    "Interop.UIAutomationClient.dll",
+    "System.CodeDom.dll"
 )
 foreach ($name in $workerFiles) {
     $source = Join-Path $workerBin $name

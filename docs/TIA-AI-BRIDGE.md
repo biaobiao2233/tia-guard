@@ -45,7 +45,7 @@ Host 不加载 Siemens 程序集。发行包将 net48 worker 放在独立 `worke
 
 默认只读，支持工程发现、精确绑定、元数据及有限快照。旧版变量/发布写工具需显式 `--allow-write`，且只作用于临时离线副本：根变量 upsert 先在内存进行，发布到新目录另需独立 preview。发布先编译，用 SaveAs 写全新目录，再以新的临时副本重新打开并核对工程 `contentId`。
 
-任何模式都不提供 PLC 下载、启停、force、在线变量写入、Safety、附着用户工程的写入/覆盖保存、归档或原位置 SaveAs。
+任何模式都不提供真实 PLC 下载、启停、force、在线变量写入、Safety、附着用户工程的写入/覆盖保存、归档或原位置 SaveAs。实验候选可额外启用[仿真专用接口](PLCSIM-AUTOMATION.md)，但完整运行流程尚未验收。
 
 ## 精确工程绑定
 

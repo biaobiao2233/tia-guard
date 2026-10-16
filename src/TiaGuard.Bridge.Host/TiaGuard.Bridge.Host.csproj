@@ -17,6 +17,7 @@
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.56.0" />
   </ItemGroup>
   <Target Name="BuildBridgeWorker" BeforeTargets="Build"
           Condition="'$(RuntimeIdentifier)' == ''">
@@ -32,6 +33,8 @@
       <BridgeWorkerFiles Include="../TiaGuard.Bridge.Worker/bin/$(Configuration)/net48/TiaGuard.Bridge.Worker.exe.config"
                          Condition="Exists('../TiaGuard.Bridge.Worker/bin/$(Configuration)/net48/TiaGuard.Bridge.Worker.exe.config')" />
       <BridgeWorkerFiles Include="../TiaGuard.Bridge.Worker/bin/$(Configuration)/net48/TiaGuard.Openness.dll" />
+      <BridgeWorkerFiles Include="../TiaGuard.Bridge.Worker/bin/$(Configuration)/net48/*.dll"
+                         Exclude="../TiaGuard.Bridge.Worker/bin/$(Configuration)/net48/TiaGuard.Openness.dll;../TiaGuard.Bridge.Worker/bin/$(Configuration)/net48/Siemens.*.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(BridgeWorkerFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
   </Target>

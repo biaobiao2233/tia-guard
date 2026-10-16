@@ -87,12 +87,14 @@ The default mode is intentionally read-only. It exposes project discovery, exact
 
 For the legacy tag/publish tools described below, an explicit `--allow-write` switch enables a separate guarded write tool type. Their write scope is still bounded to disposable offline project copies: one root PLC-tag upsert in memory plus an explicit, separately previewed publish-to-new-directory operation. Tag mutation itself is not saved; publication compiles the disposable copy, uses SaveAs only into a brand-new destination, then reopens the new `.ap21` through a fresh disposable copy and verifies its engineering `contentId`.
 
-Neither mode exposes:
+Simulator automation is a separate experimental candidate, enabled only with both `--allow-write` and `--enable-simulation`. See [PLCSIM automation](PLCSIM-AUTOMATION.md) for its bounded scope and unqualified runtime status.
 
-- PLC download;
-- PLC start/stop;
+No mode exposes:
+
+- physical PLC download;
+- physical PLC start/stop;
 - force;
-- online variable writes;
+- physical PLC online variable writes;
 - Safety operations;
 - writes to an attached user project;
 - overwrite/save of an attached user project;

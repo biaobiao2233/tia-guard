@@ -39,7 +39,9 @@ if (options.Transport == "stdio")
 {
     var builder = Host.CreateApplicationBuilder(Array.Empty<string>());
     builder.Logging.AddConsole(log => log.LogToStandardErrorThreshold = LogLevel.Trace);
-    builder.Services.AddSingleton(new BridgeWorkerClient(options.WorkerPath, options.AllowWrite));
+    builder.Services.AddSingleton(new BridgeWorkerClient(options.WorkerPath, options.AllowWrite,
+        allowSimulation: options.EnableSimulation, publicApiDirectory: options.PublicApiDirectory));
+    SimulationServiceRegistration.Add(builder.Services, options);
     builder.Services.AddSingleton<IBridgeEngineeringGateway>(services =>
         new BridgeWorkerEngineeringGateway(services.GetRequiredService<BridgeWorkerClient>()));
     builder.Services.AddSingleton<BridgeAiContextService>();
@@ -59,7 +61,10 @@ if (options.Transport == "stdio")
         .WithStdioServerTransport()
         .WithTools<BridgeReadTools>()
         .WithTools<BridgeAiTools>()
-        .WithTools<BridgeProjectGenerationReadTools>();
+        .WithTools<BridgeProjectGenerationReadTools>()
+        .WithTools<BridgeSimulationReadTools>()
+        .WithTools<BridgePlcsimDesktopReadTools>();
+    if (options.EnableSimulation) mcp.WithTools<BridgeSimulationWriteTools>().WithTools<BridgePlcsimDesktopWriteTools>();
     if (options.AllowWrite)
         mcp.WithTools<BridgeWriteTools>().WithTools<BridgePatchTools>().WithTools<BridgeProjectGenerationWriteTools>();
 
@@ -77,7 +82,9 @@ webBuilder.Services.AddSingleton(activity);
 webBuilder.Services.AddSingleton(approvals);
 // HTTP writes are always possible inside the worker. Without --allow-write the host
 // still refuses apply until the TIA-Guard window grants that one preview.
-webBuilder.Services.AddSingleton(new BridgeWorkerClient(options.WorkerPath, allowWrite: true));
+webBuilder.Services.AddSingleton(new BridgeWorkerClient(options.WorkerPath, allowWrite: true,
+    allowSimulation: options.EnableSimulation, publicApiDirectory: options.PublicApiDirectory));
+SimulationServiceRegistration.Add(webBuilder.Services, options);
 webBuilder.Services.AddSingleton<IBridgeEngineeringGateway>(services =>
     new BridgeWorkerEngineeringGateway(services.GetRequiredService<BridgeWorkerClient>()));
 webBuilder.Services.AddSingleton<BridgeAiContextService>();
@@ -102,7 +109,10 @@ var httpMcp = webBuilder.Services
     .WithTools<BridgeReadTools>()
     .WithTools<BridgeAiTools>()
     .WithTools<BridgeProjectGenerationReadTools>()
-    .WithTools<BridgeProjectGenerationWriteTools>();
+    .WithTools<BridgeProjectGenerationWriteTools>()
+    .WithTools<BridgeSimulationReadTools>()
+    .WithTools<BridgePlcsimDesktopReadTools>();
+if (options.EnableSimulation) httpMcp.WithTools<BridgeSimulationWriteTools>().WithTools<BridgePlcsimDesktopWriteTools>();
 if (options.AllowWrite)
     httpMcp.WithTools<BridgeWriteTools>().WithTools<BridgePatchTools>();
 
@@ -134,6 +144,8 @@ app.Use(async (context, next) =>
 
 app.MapMcp("/mcp");
 GatewayProjectGenerationEndpoints.Map(app);
+GatewaySimulationEndpoints.Map(app);
+GatewayPlcsimDesktopEndpoints.Map(app);
 
 app.MapGet("/health", () => Results.Json(new
 {
@@ -147,7 +159,7 @@ app.MapGet("/health", () => Results.Json(new
 }));
 
 app.MapGet("/capabilities", () => Results.Text(
-    GatewayCatalog.CapabilitiesJson(options.AllowWrite), "application/json"));
+    GatewayCatalog.CapabilitiesJson(options.AllowWrite, options.EnableSimulation), "application/json"));
 app.MapGet("/openapi.json", () => Results.Text(GatewayCatalog.OpenApiJson(), "application/json"));
 string? cachedGatewayState = null;
 app.MapGet("/api/v1/gateway/status", async (
@@ -201,7 +213,7 @@ app.MapGet("/api/v1/gateway/status", async (
             transport = ai.Transport,
             category = ai.Category
         },
-        tia = new { connected = tiaConnected, project },
+        tia = new { connected = tiaConnected, project, requiredInteraction = worker.ReadRequiredInteraction() },
         mode = options.AllowWrite ? "read-write" : "read-only",
         pendingApprovals = approvals.Pending().Select(item => new
         {
@@ -411,6 +423,20 @@ internal sealed class PatchApplyHttpRequest : PatchHttpRequest
     public string? InjectFailure { get; set; }
 }
 
+internal static class SimulationServiceRegistration
+{
+    public static void Add(IServiceCollection services, BridgeOptions options)
+    {
+    var simulation = new SimulationOptions { Enabled = options.EnableSimulation, ExecutablePath = options.PlcsimExecutable };
+    services.AddSingleton(simulation);
+    services.AddSingleton<ISimulationEngineering, WorkerSimulationEngineering>();
+    services.AddSingleton<Func<ISimulationBackend>>(provider => () => new WorkerPlcsimSimulationBackend(simulation, provider.GetRequiredService<IPlcsimDesktopGateway>()));
+    services.AddSingleton<BridgeSimulationCoordinator>();
+    services.AddSingleton<IPlcsimDesktopGateway, WorkerPlcsimDesktopGateway>();
+    services.AddSingleton<BridgePlcsimDesktopCoordinator>();
+    }
+}
+
 internal sealed class BridgeOptions
 {
     public const string Usage =
@@ -428,14 +454,21 @@ Defaults:
 
 The default HTTP gateway is read-only until the TIA-Guard window approves one preview.
 --allow-write skips that window and accepts the single-use preview token directly.
-It does not enable attached-project saves/overwrites, PLC download, start/stop, force,
-online writes, or Safety operations. The HTTP listener binds 127.0.0.1 only.";
+--enable-simulation (requires --allow-write) enables owned Standard PLCSIM automation.
+--plcsim-executable <absolute-path> specifies the installed S7PLCSIMV21.exe.
+--public-api <absolute-directory> specifies a non-default installed V21 PublicAPI.
+--allow-write does not enable physical PLC download, start/stop, force, online writes,
+attached-project saves/overwrites or Safety operations. Simulator commands require
+the additional --enable-simulation flag. The HTTP listener binds 127.0.0.1 only.";
 
     public string Transport { get; private set; } = "stdio";
     public int Port { get; private set; } = 18761;
     public string WorkerPath { get; private set; } = GetDefaultWorkerPath();
     public bool ShowHelp { get; private set; }
     public bool AllowWrite { get; private set; }
+    public bool EnableSimulation { get; private set; }
+    public string? PlcsimExecutable { get; private set; }
+    public string? PublicApiDirectory { get; private set; }
 
     private static string GetDefaultWorkerPath()
     {
@@ -476,6 +509,16 @@ online writes, or Safety operations. The HTTP listener binds 127.0.0.1 only.";
                 continue;
             }
 
+            if (arg == "--enable-simulation") { result.EnableSimulation = true; continue; }
+            if (arg is "--plcsim-executable" or "--public-api")
+            {
+                RequireValue(args, ref i, arg, out var value);
+                if (!Path.IsPathFullyQualified(value)) throw new ArgumentException(arg + " requires an absolute path.");
+                if (arg == "--plcsim-executable") result.PlcsimExecutable = value;
+                else result.PublicApiDirectory = value;
+                continue;
+            }
+
             if (arg == "--port")
             {
                 RequireValue(args, ref i, arg, out var value);
@@ -497,6 +540,9 @@ online writes, or Safety operations. The HTTP listener binds 127.0.0.1 only.";
 
         if (result.Transport != "stdio" && result.Transport != "http")
             throw new ArgumentException("--transport must be stdio or http.");
+
+        if (result.EnableSimulation && !result.AllowWrite)
+            throw new ArgumentException("--enable-simulation requires --allow-write; ordinary offline writes do not authorize simulator control.");
 
         return result;
     }
