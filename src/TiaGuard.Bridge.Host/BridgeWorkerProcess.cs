@@ -25,6 +25,10 @@ internal sealed class BridgeWorkerProcess : IDisposable
 
     internal static BridgeWorkerProcess Start(ProcessStartInfo info)
     {
+        // Process.StandardInput otherwise uses the caller's console code page.
+        // Keep the ordinary and packaged launch paths on the Worker's UTF-8 wire
+        // protocol, including on English Windows/CI where Chinese becomes '?'.
+        info.StandardInputEncoding ??= new UTF8Encoding(false);
         if (!OperatingSystem.IsWindows() || !HasPackageIdentity())
         {
             var ordinary = Process.Start(info) ?? throw new InvalidOperationException("Failed to start the Bridge worker.");
@@ -110,7 +114,7 @@ internal sealed class BridgeWorkerProcess : IDisposable
             process = Process.GetProcessById((int)created.Pid);
             _ = process.Handle;
             input.DisposeLocalCopyOfClientHandle(); output.DisposeLocalCopyOfClientHandle(); error.DisposeLocalCopyOfClientHandle();
-            writer = new StreamWriter(input, new UTF8Encoding(false)) { AutoFlush = true };
+            writer = new StreamWriter(input, info.StandardInputEncoding ?? new UTF8Encoding(false)) { AutoFlush = true };
             reader = new StreamReader(output, info.StandardOutputEncoding ?? Encoding.UTF8);
             errors = new StreamReader(error, info.StandardErrorEncoding ?? Encoding.UTF8);
             if (ResumeThread(created.Thread) == uint.MaxValue) throw new Win32Exception(Marshal.GetLastWin32Error());
