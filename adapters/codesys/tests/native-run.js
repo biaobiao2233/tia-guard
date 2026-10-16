@@ -13,7 +13,9 @@ async function main(){
   const client=new Client({name:'tia-guard-native-codesys-qualification',version:'1.0'});
   let disposed=false;
   async function call(name,args={}){
-    const r=await client.callTool({name,arguments:args},undefined,{timeout:180000});
+    // SDK 2 takes request options as argument two. Allow the bounded native
+    // startup + operation + cleanup deadlines to finish before the client limit.
+    const r=await client.callTool({name,arguments:args},{timeout:330000});
     report.steps.push({name,args,result:r.structuredContent,isError:r.isError});
     process.stdout.write(`${name}: ${r.isError?'FAIL':'OK'}\n`);
     return r;
