@@ -1,0 +1,9 @@
+node_modules/
+__pycache__/
+*.project
+*.project.*
+*.compileinfo
+*.app
+*.crc
+*.opt
+*.log

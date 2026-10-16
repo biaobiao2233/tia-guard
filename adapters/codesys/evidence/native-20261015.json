@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "1.0",
+  "evidenceKind": "native-IDE-simulation-via-actual-stdio-MCP-not-release-acceptance",
+  "productSource": "f85607189d1ba68cf1fb885ced133dfbf876ca41",
+  "baseSource": "ed6a7bfe04d0fc90c718d4eda12335e4681d47c1",
+  "task": "https://github.com/biaobiao2233/tia-guard/issues/63",
+  "timezone": "Asia/Singapore",
+  "startedAt": "2026-10-15T23:17:39.978+08:00",
+  "endedAt": "2026-10-15T23:18:21.370+08:00",
+  "environment": {
+    "platform": "Windows x64",
+    "developmentSystem": "CODESYS 64 3.5.22.40",
+    "profile": "CODESYS V3.5 SP22 Patch 4",
+    "scriptingPackage": "4.2.0.0",
+    "sourceDevice": {"type": 4096, "id": "0000 0001", "version": "3.5.22.40"},
+    "observedSimulationDevice": {"type": 4097, "id": "0000 000a", "version": "3.5.22.40"},
+    "runtimeKind": "IDE in-process simulation",
+    "controlWinServiceStarted": false,
+    "hardwareAccessed": false,
+    "licensePurchasedOrActivated": false,
+    "officialMcpPackageObserved": false,
+    "pdeEntitlement": "not-confirmed",
+    "controlWinEntitlement": "not-confirmed",
+    "startupCaveat": "User-local .NET hostfxr load warning; native compile and simulation behavior independently observed. No global prerequisite changes."
+  },
+  "portableChecks": {
+    "kind": "contract-tests-and-script-syntax-only-no-native-compiler",
+    "testsPerPlatform": 8,
+    "platforms": ["ubuntu-24.04", "windows-2022"],
+    "result": "success",
+    "run": "https://github.com/biaobiao2233/tia-guard/actions/runs/38758894889",
+    "sourceRegressionRun": "https://github.com/biaobiao2233/tia-guard/actions/runs/38758894925",
+    "sourceRegressionResult": "success"
+  },
+  "native": {
+    "success": true,
+    "newOwnedProjectCreated": true,
+    "programFunctionBlockAndGvlCreatedAndActuallyChanged": true,
+    "actualCompilerError": {
+      "errorCount": 2,
+      "warningCount": 0,
+      "diagnosticsComplete": true,
+      "codes": ["C32", "C46"],
+      "object": "PLC_PRG",
+      "position": "implementation line 1, column 1",
+      "cause": "Undefined DefinitelyMissing identifier and resulting type error",
+      "nativeCodeGenerated": false
+    },
+    "repairedCompiler": {
+      "errorCount": 0,
+      "warningCount": 0,
+      "diagnosticsComplete": true,
+      "nativeCodeGenerated": true,
+      "typeCheckAndCodeGenerationMessagesPreserved": true
+    },
+    "verification": {
+      "savedClosedAndReopened": true,
+      "requestTextMatches": true,
+      "objectAndTaskSnapshotsMatch": true,
+      "simulationIdentityReadBack": true,
+      "verdict": "pass"
+    },
+    "runtime": {
+      "counter": {"before": 36, "after": 66},
+      "allowlistedWrites": {"GVL_Test.Enable": "TRUE", "GVL_Test.Step": "DINT#7"},
+      "stopped": {"before": 123, "after": 123, "functionBlockResult": 130},
+      "resumed": {"before": 158, "after": 188},
+      "outputWriteRejected": true,
+      "closedSessionReadRejected": true
+    },
+    "cleanup": {
+      "stopLogout": true,
+      "onlineConnectionDisposed": true,
+      "ownedProjectClosed": true,
+      "exactOwnedChildExited": true,
+      "exitCode": 0,
+      "independentProcessReadback": "owned process absent",
+      "controlWinServiceReadback": "Stopped"
+    }
+  },
+  "privateEvidence": {
+    "rawReportSha256": "8118cf95bcaee2b54a024548f40962caeca1976520161e3c4231daa2228a741c",
+    "savedOwnedProjectSha256": "db53b491a8857de03cd7c1eca3aa478040f222916ac68c6fe65a31bab1e3ee7b",
+    "savedOwnedProjectBytes": 230496,
+    "loadedFilesMatchWorkingSource": true,
+    "loadedFileSha256": {
+      "native.py": "a261ca6084c3178f4cac1b03389751a510d0636a198a0db71326146fb070506e",
+      "transport.js": "d4def79ef1925ef95b010509822cc94b793c6ce9b1e78366b0b7533fb07377ac",
+      "provider.js": "5f6e15114542fe5a2eb7d6f484a7198776b8f155e4d81f27c55b391049e5074f",
+      "guard.js": "eed1b12771f4621e446bdb652c079b32662f84c1083376b992c3b220dbe13d86",
+      "schemas.js": "639896fadc5d1753312dfcd2dfe7418342c8bb8a99ee76d855efff58e945d51c",
+      "index.js": "1155e5db835ca59ec1300660e8b93f9089452a7e470c7dfc8d955e2602f9f7ea"
+    },
+    "rawProjectsLogsPathsPidsAndLicensesPublished": false
+  },
+  "earlierObservations": [
+    {
+      "source": "6e155530ce6b74acfe7853a63ff0242642da2a1c",
+      "result": "native loop passed; FB/GVL edits reapplied identical text, so actual changes to all three kinds were not established",
+      "rawReportSha256": "f398c98e729f173a733ca45a925c7da9d8ea907ec0247462185040f568ce4abb"
+    },
+    {
+      "source": "d9978884d4a4dbb8fb6b83265ea669cc4e5b4165",
+      "result": "native failed before compilation because strict guard expected offline device identity in simulation; owned process exited",
+      "rawReportSha256": "196e579ea0590c7ae63770c5685be9e5da621df95b435dcbd67b4307411bbef7"
+    }
+  ],
+  "notQualified": [
+    "Official PDE MCP live tools/list and license activation",
+    "Control Win SL service or external runtime",
+    "Physical PLCs, networks, I/O, fieldbuses, motion, safety or realtime",
+    "Existing user projects or cross-session project reattachment",
+    "Graphical languages, HMI, breakpoints or single stepping",
+    "TIA GUI/CLI/HTTP package integration or a public Release"
+  ]
+}

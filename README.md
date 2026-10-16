@@ -135,13 +135,19 @@ PLC 工程文本化、版本管理和 AI 工程接口已有有价值的工具。
 
 当前 NC 范围是一根软件连续轴和同步 PLC 任务；不涵盖真实电机/EtherCAT、机械回零、安全急停、实时性、HMI/Scope 或任意现有工程的完整编辑。`MC_Home/MC_Direct` 仅坐标置零，ADS 逐标量样本不是同步曲线；第二个独立 NC Worker 免再次验证码的复用尚未单独原生复测。
 
+## 实验性 CODESYS 适配器
+
+[CODESYS 适配器](adapters/codesys/README.md)提供独立 stdio MCP → 官方 ScriptEngine → IDE 仿真接入。修复源 `ae4bb69` 已在 CODESYS 64 3.5.22.40 实际完成：从零建工程，创建并修改 ST 程序/功能块/GVL，捕获真实编译错误并修复至 0 错误/0 警告，逐阶段核对摘要与诊断计数，按预期结构核验并保存关闭重开，下载到自有 IDE 仿真并监视真实变量，写入限定测试输入，Stop/Run 和自有会话清理。[源绑定修复证据](adapters/codesys/evidence/summary-counts-20261016.json)分别记录云端契约、故障注入和原生正常路径结果；纯测试不代替编译/运行证据。第二轮独立复审已关闭六项问题，剩余计数一致性 P2 已定向修复并补充[响应与回归](adapters/codesys/docs/review-response-20261016.md)，新候选仍待独立复审，不将作者验证等同于审阅通过。
+
+默认只读，写入需可信本机配置和一次性预览授权；不接触真实设备、现有工程或 Control Win 服务。官方 Development System MCP Server 属于另需 PDE 许可的产品，本适配器复用已安装的 Scripting 与 IDE 仿真，未购买或激活许可。尚未接入 TIA GUI/CLI/HTTP 安装包，不涵盖硬件、实时性、图形语言、HMI、断点/单步或任意现有工程。[官方能力、许可证与开源复用调查](adapters/codesys/RESEARCH.md)说明了范围和前提。
+
 ## 未来展望与社区适配
 
 长期希望把“工程可读化、Git 版本管理、审查与受验证的重建”逐步扩展到更多 PLC 工程，让不同平台的工程能够纳入统一的项目索引、版本历史与协作流程。适配方向会跟随实际接触的平台、可获得的开发环境和验证条件推进，也欢迎社区基于本项目贡献适配。
 
 ### 候选平台与工程环境
 
-除上文已单独验证的实验性 TwinCAT 子集外，以下方向仍为待适配、待验证的候选；具体型号、软件版本和功能范围在开展适配时确定。清单保持开放，后续接触到的新平台也欢迎加入。
+除上文已单独验证的实验性 TwinCAT / CODESYS 子集外，以下方向仍为待适配、待验证的候选；具体型号、软件版本和功能范围在开展适配时确定。清单保持开放，后续接触到的新平台也欢迎加入。
 
 | 平台 / 厂商 | 工程软件 / 目标范围 | 软件桥接的候选入口 |
 | --- | --- | --- |
@@ -153,7 +159,7 @@ PLC 工程文本化、版本管理和 AI 工程接口已有有价值的工具。
 | Schneider Electric / 施耐德 | [EcoStruxure Machine Expert](https://www.se.com/uk/en/product-range/2226-ecostruxure-machine-expert/) / [Control Expert](https://www.se.com/us/en/product-range/548-ecostruxure-control-expert-software/)（Modicon） | Machine Expert 有 [Python / Script Engine](https://product-help.schneider-electric.com/Machine%20Expert/V2.1/en/SoMProg/SoMProg/D-SE-0083846.html) 可评估；Control Expert 接入单独调研。 |
 | B&R / 贝加莱 | [Automation Studio](https://www.br-automation.com/en/products/software/automation-studio/) | 评估厂商公布的 Agentic Bridge / MCP，以及具体版本的构建和工程接口。 |
 | ABB | [Automation Builder](https://www.abb.com/global/en/areas/motion/digital-tools/automation-builder/engineering)（AC500） | 评估厂商工程扩展；脚本、API 和导入导出能力按版本调研。 |
-| CODESYS 生态 | CODESYS Development System / SoftPLC 工程 | 评估 [CODESYS Scripting / ScriptEngine](https://content.helpme-codesys.com/en/CODESYS%20Scripting/_cds_access_cds_func_in_python_scripts.html)、命令行与工程导入导出。 |
+| CODESYS 生态 | CODESYS Development System / SoftPLC 工程 | 已有独立的[实验性适配器](adapters/codesys/README.md)，已验证的 ST / IDE 仿真子集见上文；其他 Runtime、设备和工程对象待验证。 |
 | WAGO / 万可 | [CODESYS V3.5](https://www.wago.com/global/products/automation-technology/discover-software/codesys-v3)；已有 e!COCKPIT 工程 | 评估设备包、库及脚本；旧工程迁移另行验证。 |
 | Bosch Rexroth / 博世力士乐 | [ctrlX PLC Engineering](https://apps.boschrexroth.com/microsites/ctrlx-automation/en/portfolio/ctrlx-plc/) / ctrlX WORKS | 评估 CODESYS 工程脚本与 Rexroth 扩展；运行时 REST 接口另行区分。 |
 | Festo / 费斯托 | [CODESYS provided by Festo](https://www.festo.com/media/catalog/204137_documentation.pdf) 等配套工程环境 | 评估对应版本的脚本、设备描述和厂商库。 |
@@ -171,7 +177,7 @@ PLC 工程文本化、版本管理和 AI 工程接口已有有价值的工具。
 
 ### 各家工程软件的 API 桥接
 
-长期适配对象既包括 PLC 工程，也包括创建、编辑和验证这些工程的软件。现有产品入口使用 **TIA Portal V21 / Openness**，另有上文独立的实验性 TwinCAT 3 适配器；上表其余软件及接口均为候选方向，尚未接入和验证。厂商已有某个 API，不等于本项目已适配。
+长期适配对象既包括 PLC 工程，也包括创建、编辑和验证这些工程的软件。现有产品入口使用 **TIA Portal V21 / Openness**，另有上文独立的实验性 TwinCAT 3 / CODESYS 适配器；上表其余软件及接口均为候选方向，尚未接入和验证。厂商已有某个 API，不等于本项目已适配。
 
 计划按“工程软件 + 版本 + 设备系列 + 支持能力”建立适配边界，将工程读取、变量/程序查询、修改预览、受控离线修改、编译、导出、重建与验证逐步接到共用的 GUI / CLI / HTTP API / MCP 流程。共用接口与适配器契约需要随实际实现逐步设计，不能假定现有 TIA 接口已经通用于其他软件。
 

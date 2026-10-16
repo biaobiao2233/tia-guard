@@ -135,13 +135,19 @@ Source `9ece75f` passed actual MCP creation, compilation, independent verificati
 
 NC scope is one software continuous axis with a synchronized PLC task. Physical motors/EtherCAT, mechanical homing, safety stops, deterministic realtime, HMI/Scope and complete editing of arbitrary existing projects are not qualified. `MC_Home/MC_Direct` only sets coordinates; sequential ADS scalars are not synchronized curves. Reuse by a second independent NC Worker without another security code has not been separately native-tested.
 
+## Experimental CODESYS adapter
+
+The independent [CODESYS adapter](adapters/codesys/README.md) connects stdio MCP → official ScriptEngine → IDE simulation. Repair source `ae4bb69` passed actual CODESYS 64 3.5.22.40 creation from zero, creation and real edits of ST programs/function blocks/GVLs, native compiler error capture and repair to 0 errors/0 warnings, per-phase summary/diagnostic count reconciliation, expected-structure verification and save/close/reopen comparison, owned IDE simulation download and real monitoring, allowlisted input writes, Stop/Run and owned session cleanup. The [source-bound repair receipt](adapters/codesys/evidence/summary-counts-20261016.json) separates cloud contracts, fault injection and native normal-path results; pure tests do not replace compiler/runtime evidence. The second independent review closed six findings and retained one count-consistency P2, now addressed by a targeted [repair and regressions](adapters/codesys/docs/review-response-20261016.md). The new candidate still requires independent re-review; author verification is not review acceptance.
+
+The default is read-only; mutations need trusted local configuration and single-use preview authorization. Real devices, existing projects and Control Win services are outside scope. The official Development System MCP Server is a separate PDE-licensed product; this adapter uses installed Scripting and IDE simulation without purchasing or activating a license. It is not integrated into the TIA GUI/CLI/HTTP package. Hardware, realtime, graphical languages, HMI, breakpoints/single stepping and arbitrary existing projects remain unqualified. See [official capabilities, licensing and open-source reuse](adapters/codesys/RESEARCH.md).
+
 ## Future direction and community adapters
 
 The long-term goal is to extend readable engineering source, Git versioning, review and verified rebuilds to more PLC projects, bringing different platforms into shared project indexing, version history and collaboration workflows. Adapter work will follow the platforms we actually use, available engineering environments and opportunities for verification. Community adapters built on this project are welcome.
 
 ### Candidate platforms and engineering environments
 
-Except for the separately qualified experimental TwinCAT subset above, the following directions await implementation and verification. Specific models, software versions and capability boundaries will be determined when adapter work begins. The list stays open to additional platforms encountered in practice.
+Except for the separately qualified experimental TwinCAT / CODESYS subsets above, the following directions await implementation and verification. Specific models, software versions and capability boundaries will be determined when adapter work begins. The list stays open to additional platforms encountered in practice.
 
 | Platform / vendor | Engineering software / target scope | Candidate software-bridge entry points |
 | --- | --- | --- |
@@ -153,7 +159,7 @@ Except for the separately qualified experimental TwinCAT subset above, the follo
 | Schneider Electric | [EcoStruxure Machine Expert](https://www.se.com/uk/en/product-range/2226-ecostruxure-machine-expert/) / [Control Expert](https://www.se.com/us/en/product-range/548-ecostruxure-control-expert-software/) (Modicon) | Evaluate Machine Expert's [Python / Script Engine](https://product-help.schneider-electric.com/Machine%20Expert/V2.1/en/SoMProg/SoMProg/D-SE-0083846.html); research Control Expert integration separately. |
 | B&R | [Automation Studio](https://www.br-automation.com/en/products/software/automation-studio/) | Evaluate the vendor's announced Agentic Bridge / MCP and version-specific build and engineering interfaces. |
 | ABB | [Automation Builder](https://www.abb.com/global/en/areas/motion/digital-tools/automation-builder/engineering) (AC500) | Evaluate vendor engineering extensions; research scripts, APIs and import/export per version. |
-| CODESYS ecosystem | CODESYS Development System / SoftPLC projects | Evaluate [CODESYS Scripting / ScriptEngine](https://content.helpme-codesys.com/en/CODESYS%20Scripting/_cds_access_cds_func_in_python_scripts.html), command-line access and project import/export. |
+| CODESYS ecosystem | CODESYS Development System / SoftPLC projects | An independent [experimental adapter](adapters/codesys/README.md) exists; the qualified ST / IDE simulation subset is described above. Other runtimes, devices and objects remain unqualified. |
 | WAGO | [CODESYS V3.5](https://www.wago.com/global/products/automation-technology/discover-software/codesys-v3); existing e!COCKPIT projects | Evaluate device packages, libraries and scripting; qualify legacy project migration separately. |
 | Bosch Rexroth | [ctrlX PLC Engineering](https://apps.boschrexroth.com/microsites/ctrlx-automation/en/portfolio/ctrlx-plc/) / ctrlX WORKS | Evaluate CODESYS engineering scripts and Rexroth extensions; distinguish runtime REST interfaces. |
 | Festo | [CODESYS provided by Festo](https://www.festo.com/media/catalog/204137_documentation.pdf) and related engineering environments | Evaluate version-specific scripting, device descriptions and vendor libraries. |
@@ -171,7 +177,7 @@ Except for the separately qualified experimental TwinCAT subset above, the follo
 
 ### API bridges for engineering software
 
-Long-term adapters cover both PLC projects and the software used to create, edit and verify them. Existing product entry points use **TIA Portal V21 / Openness**, with the separate experimental TwinCAT 3 adapter described above. The remaining software and interfaces in the table are candidates, not integrated or qualified. A vendor providing an API does not mean this project already supports it.
+Long-term adapters cover both PLC projects and the software used to create, edit and verify them. Existing product entry points use **TIA Portal V21 / Openness**, with the separate experimental TwinCAT 3 / CODESYS adapters described above. The remaining software and interfaces in the table are candidates, not integrated or qualified. A vendor providing an API does not mean this project already supports it.
 
 Plan adapter boundaries around engineering software, version, controller family and supported capability. Progressively connect project reads, tag/program queries, edit previews, guarded offline edits, compilation, export, rebuild and verification to shared GUI / CLI / HTTP API / MCP workflows. Shared interfaces and adapter contracts must evolve through implementation; the existing TIA interface is not automatically a common interface for other software.
 
