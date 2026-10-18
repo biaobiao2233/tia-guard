@@ -10,6 +10,46 @@ namespace TiaGuard.ProjectGeneration.Verify.Tests
 {
     public sealed class VerificationTests
     {
+        [Theory]
+        [InlineData(true, true, "PASS")]
+        [InlineData(false, true, "UNKNOWN")]
+        [InlineData(null, true, "UNKNOWN")]
+        [InlineData(true, false, "UNKNOWN")]
+        [InlineData(true, null, "UNKNOWN")]
+        public void S71500RequiresSoftwareUnitAndRackReadback(bool? unitsEmpty, bool? rackOnlyCpu, string verdict)
+        {
+            var expected = Expected(); var actual = Actual();
+            expected.CpuTypeIdentifier = actual.CpuTypeIdentifier = ProjectGenerationCpuProfiles.S71500CpuTypeIdentifier;
+            actual.SoftwareUnitsEmpty = unitsEmpty; actual.NoExtraRackModules = rackOnlyCpu;
+            actual.ReopenedFromDisk = true;
+            Assert.Equal(verdict, ProjectGenerationVerifier.Compare(expected, actual).Verdict);
+        }
+
+        [Fact]
+        public void S71500CannotPassUsing1200IdentityOrAReadFailure()
+        {
+            var expected = Expected(); var actual = Actual();
+            expected.CpuTypeIdentifier = ProjectGenerationCpuProfiles.S71500CpuTypeIdentifier;
+            actual.SoftwareUnitsEmpty = true; actual.NoExtraRackModules = true;
+            actual.ReopenedFromDisk = true;
+            Assert.Equal("FAIL", ProjectGenerationVerifier.Compare(expected, actual).Verdict);
+            actual.CpuTypeIdentifier = expected.CpuTypeIdentifier;
+            actual.ReadFailures.Add(new ProjectGenerationVerificationFinding { Code = "SOFTWARE_UNIT_READ_FAILED", Path = "plc", Detail = "synthetic unavailable enumeration" });
+            Assert.Equal("UNKNOWN", ProjectGenerationVerifier.Compare(expected, actual).Verdict);
+        }
+
+        [Fact]
+        public void S71500SameSessionReadbackCannotReplaceDiskReopen()
+        {
+            var expected = Expected(); var actual = Actual();
+            expected.CpuTypeIdentifier = actual.CpuTypeIdentifier = ProjectGenerationCpuProfiles.S71500CpuTypeIdentifier;
+            actual.SoftwareUnitsEmpty = true; actual.NoExtraRackModules = true;
+            Assert.False(actual.ReopenedFromDisk);
+            var result = ProjectGenerationVerifier.Compare(expected, actual);
+            Assert.Equal("UNKNOWN", result.Verdict);
+            Assert.Contains(result.Findings, f => f.Code == "REOPEN_UNPROVEN");
+        }
+
         private static ProjectGenerationVerificationObject Object(string name = "Main") => new ProjectGenerationVerificationObject
         {
             Scope = "blocks", Name = name, Kind = "OB", Language = "SCL", Number = 1,

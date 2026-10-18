@@ -54,7 +54,7 @@ namespace TiaGuard.Openness
         // Accepted as offline generation INPUT, not a claim of V21 runtime support.
         // SD/XML stay closed until B/D establish format-specific identity/coverage evidence.
         public static bool Supports(string tiaVersion, string cpu, string kind, string format) =>
-            tiaVersion == "V21" && RoundTripProfile.SupportsCpu(cpu) && format == "scl" &&
+            tiaVersion == "V21" && ProjectGenerationCpuProfiles.SupportsCpu(cpu) && format == "scl" &&
             (kind == "OB" || kind == "FB" || kind == "FC" || kind == "DB" || kind == "UDT");
     }
 }

@@ -13,6 +13,22 @@ namespace TiaGuard.ProjectGeneration.Engine.Tests
     public sealed class EngineTests
     {
         [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void S71500PlanRequiresTheExactActuallyCreatedCpu(bool matchingCpu)
+        {
+            using (var f = new Fixture())
+            {
+                f.Plan.CpuTypeIdentifier = ProjectGenerationCpuProfiles.S71500CpuTypeIdentifier;
+                if (matchingCpu) f.Session.Cpu = f.Plan.CpuTypeIdentifier;
+                var result = f.Build();
+                Assert.Equal(matchingCpu, result.Published);
+                Assert.Equal(matchingCpu, Directory.Exists(f.Output));
+                if (!matchingCpu) { Assert.NotEmpty(result.Failures); Assert.Empty(f.Session.Calls); }
+            }
+        }
+
+        [Theory]
         [InlineData("FAIL")]
         [InlineData("UNKNOWN")]
         [InlineData(null)]

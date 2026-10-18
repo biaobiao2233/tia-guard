@@ -9,6 +9,7 @@ namespace TiaGuard.Cli
         internal string Target { get; set; }
         internal string Scratch { get; set; }
         internal string PublicApi { get; set; }
+        internal string CpuProfile { get; set; }
     }
 
     internal static class CliCommandLine
@@ -17,7 +18,7 @@ namespace TiaGuard.Cli
             "Usage:" + Environment.NewLine +
             "  tia-guard doctor" + Environment.NewLine +
             "  tia-guard --version" + Environment.NewLine +
-            "  tia-guard init <new-directory>" + Environment.NewLine +
+            "  tia-guard init <new-directory> [--profile <exact-cpu-profile-id>]" + Environment.NewLine +
             "  tia-guard ai-view <tia-source-dir>" + Environment.NewLine +
             "  tia-guard export <project.ap21> <repo-dir>" + Environment.NewLine +
             "  tia-guard build <repo-dir> --output <new-output-dir>" + Environment.NewLine +
@@ -37,9 +38,10 @@ namespace TiaGuard.Cli
                 return true;
             }
 
-            if (args.Length == 2 && args[0] == "init" && Present(args[1]))
+            if ((args.Length == 2 || args.Length == 4) && args[0] == "init" && Present(args[1]) &&
+                (args.Length == 2 || args[2] == "--profile" && Present(args[3])))
             {
-                invocation = new CliInvocation { Command = "init", Target = args[1] };
+                invocation = new CliInvocation { Command = "init", Target = args[1], CpuProfile = args.Length == 4 ? args[3] : null };
                 return true;
             }
 

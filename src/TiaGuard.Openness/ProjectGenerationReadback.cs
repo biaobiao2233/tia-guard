@@ -28,6 +28,10 @@ namespace TiaGuard.Openness
         // Projection selects only export format; inventory always scans ALL objects.
         public static ProjectGenerationVerificationObservation Capture(Project project, string evidenceDirectory,
             Func<string, string, string> projection = null)
+            => Capture(project, evidenceDirectory, projection, reopenedFromDisk: false);
+
+        public static ProjectGenerationVerificationObservation Capture(Project project, string evidenceDirectory,
+            Func<string, string, string> projection, bool reopenedFromDisk)
         {
             if (project == null) throw new ArgumentNullException(nameof(project));
             var root = Path.GetFullPath(evidenceDirectory);
@@ -36,6 +40,7 @@ namespace TiaGuard.Openness
             Directory.CreateDirectory(root);
             var reader = new Reader(root, projection ?? ((scope, name) => "simatic-sd"));
             var result = reader.Read(project);
+            result.ReopenedFromDisk = reopenedFromDisk;
             File.WriteAllText(Path.Combine(root, "observation.json"),
                 new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(result), new UTF8Encoding(false));
             return result;
@@ -82,6 +87,26 @@ namespace TiaGuard.Openness
                             throw new InvalidDataException("PLC software owner is not a CPU DeviceItem.");
                         result.PlcName = plc.Name;
                     });
+                    if (ProjectGenerationCpuProfiles.FindByCpu(result.CpuTypeIdentifier)?.Family == "S7-1500")
+                        Run("RACK_MODULE_READ_FAILED", "hardware", () =>
+                        {
+                            // Parent/DeviceItems describe logical ownership, not plugged
+                            // hardware. Use Container/Items for the actual rack relation.
+                            var rack = cpu.Container as DeviceItem;
+                            if (rack == null) throw new InvalidDataException("S7-1500 CPU rack could not be read.");
+                            var station = rack.Container as Device;
+                            if (station == null || !devices.Contains(station))
+                                throw new InvalidDataException("S7-1500 rack station could not be identified.");
+                            var racks = station.Items.ToArray();
+                            var modules = rack.Items.ToArray();
+                            result.NoExtraRackModules = racks.Length == 1 && racks[0].Equals(rack)
+                                && !station.UnpluggedItems.Any() && modules.Length == 1
+                                && modules[0].Equals(cpu) && modules[0].TypeIdentifier == result.CpuTypeIdentifier;
+                            result.CoverageNotes["rack-modules"] = "Container/Items; racks=" + racks.Length
+                                + "; modules=" + string.Join(",", modules.Select(m => m.TypeIdentifier));
+                            if (result.NoExtraRackModules != true)
+                                Failure("EXTRA_RACK_MODULES_UNSUPPORTED", "hardware", "Only the exact standalone CPU without additional rack modules is in scope.");
+                        });
                     Run("BLOCK_ROOT_READ_FAILED", "blocks", () => Blocks(plc.BlockGroup, "blocks", plc));
                     Run("SYSTEM_BLOCK_ROOT_READ_FAILED", "system-blocks", () =>
                         Collect(() => plc.BlockGroup.SystemBlockGroups, g => SystemBlocks(g, "system-blocks", plc), "system-blocks"));
@@ -100,11 +125,12 @@ namespace TiaGuard.Openness
                         var provider = plc.GetService<PlcUnitProvider>();
                         if (provider != null)
                         {
-                            if (provider.UnitGroup.Units.Any() || provider.UnitGroup.SafetyUnits.Any())
+                            result.SoftwareUnitsEmpty = !provider.UnitGroup.Units.Any() && !provider.UnitGroup.SafetyUnits.Any();
+                            if (result.SoftwareUnitsEmpty != true)
                                 Failure("SOFTWARE_UNITS_UNSUPPORTED", "plc", "Unit-scoped objects are outside the root-only contract.");
                             else result.CoverageNotes["software-units"] = "V21 PlcUnitProvider: empty Units and SafetyUnits";
                         }
-                        else if (result.CpuTypeIdentifier == "OrderNumber:6ES7 212-1AE40-0XB0/V4.7")
+                        else if (result.CpuTypeIdentifier == ProjectGenerationCpuProfiles.DefaultCpuTypeIdentifier)
                             result.CoverageNotes["software-units"] = "No PlcUnitProvider on exact S7-1200 profile; V21 software units are S7-1500-only. API exceptions remain unknown.";
                         else Failure("SOFTWARE_UNIT_SERVICE_UNAVAILABLE", "plc", "Unit service unavailable on an unproven CPU.");
                     });

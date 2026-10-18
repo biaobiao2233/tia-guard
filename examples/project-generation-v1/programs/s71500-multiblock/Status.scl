@@ -1,0 +1,8 @@
+DATA_BLOCK "Status"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR
+      Motor : "MotorStatus";
+   END_VAR
+BEGIN
+END_DATA_BLOCK

@@ -1,0 +1,369 @@
+{
+  "receiptVersion": "1.0",
+  "observedAtUtc": "2026-10-18T03:31:29.6988298Z",
+  "issue": "https://github.com/biaobiao2233/tia-guard/issues/67",
+  "pullRequest": "https://github.com/biaobiao2233/tia-guard/pull/68",
+  "productSourceRevision": "37eae4f0a97d908c53703ba55442ab674055d101",
+  "baseMainRevision": "48a067c53a1d4b2ded1d2e4058790d798d7a2f3c",
+  "cliSha256": "107673fe529e5276c57c9ad27b7ac451fd934d325fa14f62cad114af8354d8ee",
+  "coreSha256": "62fe48b5badb118b4f670816ce9dfa304f15d6c3bc96d4f2a48f3838d581081f",
+  "catalogSha256": "140f0dbe029ed6adcac6ecb2112e394d162c34a68e46e41ecc4e737246ea77fe",
+  "catalogEntry": {
+    "ArticleNumber": "6ES7 511-1AK02-0AB0",
+    "TypeIdentifier": "OrderNumber:6ES7 511-1AK02-0AB0/V2.9",
+    "TypeName": "CPU 1511-1 PN",
+    "Version": "V2.9",
+    "CatalogPath": "Root\\控制器\\SIMATIC S7-1500\\CPU\\CPU 1511-1 PN\\6ES7 511-1AK02-0AB0"
+  },
+  "environment": {
+    "tia": "V21",
+    "api": "21.0.0.0",
+    "processMode": "WithoutUserInterface",
+    "cachesAndScratch": "E drive",
+    "dotnetSdk": "8.0.425"
+  },
+  "qualification": "PASS: exact S7-1500 profile offline SCL generation/software compilation/save-close-reopen/readback; unmerged candidate",
+  "physicalPlc": false,
+  "simulation": false,
+  "download": false,
+  "hardwareCompile": false,
+  "pureTests": [
+    {
+      "passed": 175,
+      "suite": "Bridge.Host",
+      "total": 175,
+      "failed": 0
+    },
+    {
+      "passed": 52,
+      "suite": "Compilation",
+      "total": 52,
+      "failed": 0
+    },
+    {
+      "passed": 152,
+      "suite": "Contracts",
+      "total": 152,
+      "failed": 0
+    },
+    {
+      "passed": 82,
+      "suite": "ProjectGeneration.Engine",
+      "total": 82,
+      "failed": 0
+    },
+    {
+      "passed": 31,
+      "suite": "ProjectGeneration.Integration",
+      "total": 31,
+      "failed": 0
+    },
+    {
+      "passed": 96,
+      "suite": "ProjectGeneration.Spec",
+      "total": 96,
+      "failed": 0
+    },
+    {
+      "passed": 70,
+      "suite": "ProjectGeneration.Verify",
+      "total": 70,
+      "failed": 0
+    }
+  ],
+  "pureTestTotal": 658,
+  "schema": {
+    "positives": 4,
+    "negatives": 38
+  },
+  "ciRuns": [
+    "https://github.com/biaobiao2233/tia-guard/actions/runs/39093608819",
+    "https://github.com/biaobiao2233/tia-guard/actions/runs/39093611115"
+  ],
+  "mcp": {
+    "mode": "actual stdio preview only",
+    "nativeBuildQualifiedViaMcp": false,
+    "sourceAtPreview": "acca091e570df6c179df861305dfc543d1d8d007"
+  },
+  "cases": [
+    {
+      "name": "minimal",
+      "expectedSuccess": true,
+      "published": true,
+      "phase": "complete",
+      "inputHash": "822a813f1b347b710916ff51cf5c720018b8b0909cd2a102d0ecba30c67e4da9",
+      "verification": "PASS",
+      "compile": {
+        "Executed": true,
+        "State": "Success",
+        "ErrorCount": 0,
+        "WarningCount": 0,
+        "DiagnosticsComplete": true
+      },
+      "cpu": "OrderNumber:6ES7 511-1AK02-0AB0/V2.9",
+      "reopenedFromDisk": true,
+      "softwareUnitsEmpty": true,
+      "noExtraRackModules": true,
+      "objects": {
+        "Scope": "blocks",
+        "Kind": "OB",
+        "Name": "Main",
+        "Number": 1,
+        "InstanceOfName": ""
+      },
+      "tagCount": 0,
+      "readFailures": null,
+      "cleanupFailures": [],
+      "resultSha256": "5ef556feffea071b531312639d1245b564ca0f22d35be53b182e4a30e13f94de",
+      "projectFileSha256": "6021414ef23747c01ddfd8810c8be0331b486f0afd7cb368b7bd8ea7c81d0628",
+      "localEvidence": "s1500-n2/minimal-result.json",
+      "remainingBuildStages": 0,
+      "diagnostics": [],
+      "failures": []
+    },
+    {
+      "name": "multiblock",
+      "expectedSuccess": true,
+      "published": true,
+      "phase": "complete",
+      "inputHash": "cd4cc8153d2e51166e4b235a1760b2e8098f15f9f0a9ff6cbe18f448522d1b34",
+      "verification": "PASS",
+      "compile": {
+        "Executed": true,
+        "State": "Warning",
+        "ErrorCount": 0,
+        "WarningCount": 1,
+        "DiagnosticsComplete": true
+      },
+      "cpu": "OrderNumber:6ES7 511-1AK02-0AB0/V2.9",
+      "reopenedFromDisk": true,
+      "softwareUnitsEmpty": true,
+      "noExtraRackModules": true,
+      "objects": [
+        {
+          "Scope": "blocks",
+          "Kind": "FB",
+          "Name": "FB_BasicLatch",
+          "Number": 100,
+          "InstanceOfName": ""
+        },
+        {
+          "Scope": "blocks",
+          "Kind": "DB",
+          "Name": "LatchInstance",
+          "Number": 100,
+          "InstanceOfName": "FB_BasicLatch"
+        },
+        {
+          "Scope": "blocks",
+          "Kind": "DB",
+          "Name": "Status",
+          "Number": 101,
+          "InstanceOfName": ""
+        },
+        {
+          "Scope": "blocks",
+          "Kind": "OB",
+          "Name": "Main",
+          "Number": 1,
+          "InstanceOfName": ""
+        },
+        {
+          "Scope": "types",
+          "Kind": "UDT",
+          "Name": "MotorStatus",
+          "Number": null,
+          "InstanceOfName": ""
+        }
+      ],
+      "tagCount": 5,
+      "readFailures": null,
+      "cleanupFailures": [],
+      "resultSha256": "53293a2a97f463772d5c657dfc3b9bbaf12e54cf8b4fd3a582cbd927e8f3bb13",
+      "projectFileSha256": "e5fac991f01e56461eecf1167c99844e8dcb6a6c97b44745cd47af8c5effde08",
+      "localEvidence": "s1500-multiblock-1/multiblock-result.json",
+      "remainingBuildStages": 0,
+      "diagnostics": [],
+      "failures": []
+    },
+    {
+      "name": "fc-return",
+      "expectedSuccess": true,
+      "published": true,
+      "phase": "complete",
+      "inputHash": "8e9b12a70dcd0eed1c6b62c629960d1f5079bd4eba9e7f147ac4222368a10757",
+      "verification": "PASS",
+      "compile": {
+        "Executed": true,
+        "State": "Success",
+        "ErrorCount": 0,
+        "WarningCount": 0,
+        "DiagnosticsComplete": true
+      },
+      "cpu": "OrderNumber:6ES7 511-1AK02-0AB0/V2.9",
+      "reopenedFromDisk": true,
+      "softwareUnitsEmpty": true,
+      "noExtraRackModules": true,
+      "objects": [
+        {
+          "Scope": "blocks",
+          "Kind": "FC",
+          "Name": "Calculate",
+          "Number": 100,
+          "InstanceOfName": ""
+        },
+        {
+          "Scope": "blocks",
+          "Kind": "OB",
+          "Name": "Main",
+          "Number": 1,
+          "InstanceOfName": ""
+        }
+      ],
+      "tagCount": 1,
+      "readFailures": null,
+      "cleanupFailures": [],
+      "resultSha256": "f61c1a4a60febecdc6660fcc725255424ba12150753744680a98ee657ae5fda4",
+      "projectFileSha256": "516abeb5fc9fbd04b81d0463b62117ded2e5b25ea4496ca2a687b1ff169b97b5",
+      "localEvidence": "s1500-fc-1/fc-result.json",
+      "remainingBuildStages": 0,
+      "diagnostics": [],
+      "failures": []
+    },
+    {
+      "name": "bad-source",
+      "expectedSuccess": false,
+      "published": false,
+      "phase": "compile",
+      "inputHash": "02dcebbe3bda2415943f2a4a7c8943325c687eca4add499053fc9659d84da864",
+      "verification": null,
+      "compile": {
+        "Executed": true,
+        "State": "Error",
+        "ErrorCount": 1,
+        "WarningCount": 0,
+        "DiagnosticsComplete": true
+      },
+      "cpu": null,
+      "reopenedFromDisk": null,
+      "softwareUnitsEmpty": null,
+      "noExtraRackModules": null,
+      "objects": null,
+      "tagCount": null,
+      "readFailures": null,
+      "cleanupFailures": [],
+      "resultSha256": "278e4349256418152931e5260bcf515a27609a6eb1ae7d8b6f021d0fbe76baa8",
+      "projectFileSha256": null,
+      "localEvidence": "s1500-bad-repair-1/bad-source-result.json",
+      "remainingBuildStages": 0,
+      "diagnostics": [
+        {
+          "Severity": "error",
+          "Description": "",
+          "EngineeringPath": "PLC_1"
+        },
+        {
+          "Severity": "error",
+          "Description": "",
+          "EngineeringPath": "Program blocks"
+        },
+        {
+          "Severity": "error",
+          "Description": "",
+          "EngineeringPath": "Main (OB1)"
+        },
+        {
+          "Severity": "error",
+          "Description": "Tag UndefinedNativeIdentifier not defined.",
+          "EngineeringPath": "3"
+        },
+        {
+          "Severity": "error",
+          "Description": "Compiling finished (errors: 1; warnings: 0)",
+          "EngineeringPath": null
+        }
+      ],
+      "failures": [
+        "InvalidOperationException: Compilation missing/failed/incomplete; generated project will not be published."
+      ]
+    },
+    {
+      "name": "repaired-source",
+      "expectedSuccess": true,
+      "published": true,
+      "phase": "complete",
+      "inputHash": "822a813f1b347b710916ff51cf5c720018b8b0909cd2a102d0ecba30c67e4da9",
+      "verification": "PASS",
+      "compile": {
+        "Executed": true,
+        "State": "Success",
+        "ErrorCount": 0,
+        "WarningCount": 0,
+        "DiagnosticsComplete": true
+      },
+      "cpu": "OrderNumber:6ES7 511-1AK02-0AB0/V2.9",
+      "reopenedFromDisk": true,
+      "softwareUnitsEmpty": true,
+      "noExtraRackModules": true,
+      "objects": {
+        "Scope": "blocks",
+        "Kind": "OB",
+        "Name": "Main",
+        "Number": 1,
+        "InstanceOfName": ""
+      },
+      "tagCount": 0,
+      "readFailures": null,
+      "cleanupFailures": [],
+      "resultSha256": "fd5dfe3f4d43dd3d0ec7ed5bb5b6acc1b3aba5d377ce7999b0e051002a97c354",
+      "projectFileSha256": "6021414ef23747c01ddfd8810c8be0331b486f0afd7cb368b7bd8ea7c81d0628",
+      "localEvidence": "s1500-bad-repair-1/repaired-source-result.json",
+      "remainingBuildStages": 0,
+      "diagnostics": [],
+      "failures": []
+    },
+    {
+      "name": "baseline1200",
+      "expectedSuccess": true,
+      "published": true,
+      "phase": "complete",
+      "inputHash": "e53b302caf213d35d9650d4131ea9569fb56e543f385e74b0ca63fe3bf392f70",
+      "verification": "PASS",
+      "compile": {
+        "Executed": true,
+        "State": "Success",
+        "ErrorCount": 0,
+        "WarningCount": 0,
+        "DiagnosticsComplete": true
+      },
+      "cpu": "OrderNumber:6ES7 212-1AE40-0XB0/V4.7",
+      "reopenedFromDisk": false,
+      "softwareUnitsEmpty": null,
+      "noExtraRackModules": null,
+      "objects": {
+        "Scope": "blocks",
+        "Kind": "OB",
+        "Name": "Main",
+        "Number": 1,
+        "InstanceOfName": ""
+      },
+      "tagCount": 0,
+      "readFailures": null,
+      "cleanupFailures": [],
+      "resultSha256": "70e3a7ec00b8f66e6d818aeec36ebdb017883904ad02fa1766ae6ccba22ab89e",
+      "projectFileSha256": "6021414ef23747c01ddfd8810c8be0331b486f0afd7cb368b7bd8ea7c81d0628",
+      "localEvidence": "s1500-baseline1200-1/baseline1200-result.json",
+      "remainingBuildStages": 0,
+      "diagnostics": [],
+      "failures": []
+    }
+  ],
+  "limits": [
+    "Exact CPU 1511-1 PN/V2.9 only; not all S7-1500 models/firmware.",
+    "Root SCL OB1/FC/FB/DB/UDT/tags only; no software units, Safety program or extra rack modules.",
+    "PLC software compilation only; hardware compilation and runtime unqualified.",
+    "CLI native builds and MCP preview tested; no separate actual HTTP/MCP native build in this qualification.",
+    "Original S7-1200 generation still uses same-session readback; its baseline is not a close/reopen claim.",
+    "No merge, release, credentials, permission, license or user-project changes."
+  ]
+}

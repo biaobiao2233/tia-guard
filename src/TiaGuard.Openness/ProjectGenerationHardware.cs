@@ -13,7 +13,7 @@ namespace TiaGuard.Openness
             var candidates = new List<Tuple<PlcSoftware, string>>();
             foreach (var item in device.DeviceItems) Walk(item, candidates);
             if (candidates.Count != 1 || candidates[0].Item2 != expected)
-                throw new InvalidOperationException("Fresh device CPU/software identity does not match the exact 1212C/V4.7 request.");
+                throw new InvalidOperationException("Fresh device CPU/software identity does not match the exact generation CPU request.");
             return candidates[0].Item1;
         }
         private static void Walk(DeviceItem item, List<Tuple<PlcSoftware, string>> found)

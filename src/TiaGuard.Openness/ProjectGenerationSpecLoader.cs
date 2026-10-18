@@ -63,7 +63,7 @@ namespace TiaGuard.Openness
             var name = String(json, "projectName"); Require(RoundTripProfile.SafeFileName(name) && name.Length <= 64, "Unsafe project name.");
             var p = Object(json["plc"]); Keys(p, "name", "cpuTypeIdentifier");
             var plc = new ProjectGenerationPlc(Name(p), String(p, "cpuTypeIdentifier"));
-            Require(RoundTripProfile.SupportsCpu(plc.CpuTypeIdentifier), "Unsupported exact CPU identity.");
+            Require(ProjectGenerationCpuProfiles.SupportsCpu(plc.CpuTypeIdentifier), "Unsupported exact generation CPU identity.");
             var tables = new List<ProjectGenerationTagTable>(); var tableNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var symbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var addresses = new List<Tuple<string, long, long>>();
