@@ -49,7 +49,7 @@ MCP 是主要的 Agent 接口。TIA 同时提供 HTTP / CLI；TwinCAT 直接通�
 
 ## TIA Portal
 
-S7-1500 离线工程候选 [PR #68](https://github.com/biaobiao2233/tia-guard/pull/68) 已在 V21 通过 CPU 1511-1 PN/V2.9 的实际新建、软件编译、关闭重开、源码核验及错误诊断/修复。候选尚未合并或发布，不代表全系列、硬件编译或下载运行资格。详情见[CPU 配置与状态](docs/PROJECT-GENERATION.md#cpu-配置与验证状态)。
+S7-1500 离线工程扩展 [PR #68](https://github.com/biaobiao2233/tia-guard/pull/68) 已在 V21 通过 CPU 1511-1 PN/V2.9 的实际新建、软件编译、关闭重开、源码核验及错误诊断/修复。现有 `v0.2.0-alpha.1` 发布包不包含此能力；验证范围不涵盖全系列、硬件编译或下载运行。详情见[CPU 配置与状态](docs/PROJECT-GENERATION.md#cpu-配置与验证状态)。
 
 需要 Windows x64、TIA Portal V21、Openness，以及当前登录用户有效的 Openness 访问权限。首次访问确认由用户在博图中处理；工具不自动修改用户组、访问许可或软件许可证。当前 CPU profile 为 `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`。
 

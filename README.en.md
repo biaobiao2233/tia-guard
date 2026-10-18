@@ -49,7 +49,7 @@ MCP is the primary agent interface. TIA also exposes HTTP and CLI; TwinCAT conne
 
 ## TIA Portal
 
-The S7-1500 offline candidate in [PR #68](https://github.com/biaobiao2233/tia-guard/pull/68) has passed native V21 creation, software compilation, save/close/reopen, source verification and diagnostic/repair tests for CPU 1511-1 PN/V2.9. It is unmerged and unreleased; family-wide support, hardware compilation and download/runtime remain unqualified. See [CPU profiles and status](docs/PROJECT-GENERATION.md#cpu-配置与验证状态).
+The S7-1500 offline extension in [PR #68](https://github.com/biaobiao2233/tia-guard/pull/68) has passed native V21 creation, software compilation, save/close/reopen, source verification and diagnostic/repair tests for CPU 1511-1 PN/V2.9. The existing `v0.2.0-alpha.1` packages do not include this capability; family-wide support, hardware compilation and download/runtime remain unqualified. See [CPU profiles and status](docs/PROJECT-GENERATION.md#cpu-配置与验证状态).
 
 Requires Windows x64, TIA Portal V21, Openness and effective Openness membership in the current logon token. The user handles any official access confirmation; this tool does not change groups, access permissions or licenses. The current CPU profile is `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`.
 

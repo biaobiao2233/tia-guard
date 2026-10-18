@@ -20,7 +20,7 @@ dotnet build src/TiaGuard.Bridge.Host -c Release -p:TiaPortalPublicApi="D:\Sieme
 | `init --profile` | manifest 的准确 `cpuTypeIdentifier` | 状态 |
 | --- | --- | --- |
 | `s7-1200-1212c-v4.7`（默认） | `OrderNumber:6ES7 212-1AE40-0XB0/V4.7` | 原有已验证范围，保持现有行为 |
-| `s7-1500-1511-1pn-v2.9` | `OrderNumber:6ES7 511-1AK02-0AB0/V2.9` | PR #68 候选；本机目录、新建、软件编译、关闭重开与错误修复通过，尚未合并/发布 |
+| `s7-1500-1511-1pn-v2.9` | `OrderNumber:6ES7 511-1AK02-0AB0/V2.9` | PR #68；本机目录、新建、软件编译、关闭重开与错误修复通过，`v0.2.0-alpha.1` 发布包尚不包含 |
 
 S7-1500 候选只接受此准确型号和固件；不允许自动选择另一型号或固件。目标依据 [Siemens CPU 1511-1 PN 数据表](https://support.industry.siemens.com/teddatasheet/?caller=SIOS&format=pdf&language=en&mlfbs=6ES7511-1AK02-0AB0)，本机 V21 目录已确认该准确条目。候选记录见 [S7-1500 验证说明](verification/s71500-offline-20261018.md)。
 
