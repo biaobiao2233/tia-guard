@@ -90,10 +90,20 @@ namespace TiaGuard.Openness
                     if (ProjectGenerationCpuProfiles.FindByCpu(result.CpuTypeIdentifier)?.Family == "S7-1500")
                         Run("RACK_MODULE_READ_FAILED", "hardware", () =>
                         {
-                            var rack = cpu.Parent as DeviceItem;
+                            // Parent/DeviceItems describe logical ownership, not plugged
+                            // hardware. Use Container/Items for the actual rack relation.
+                            var rack = cpu.Container as DeviceItem;
                             if (rack == null) throw new InvalidDataException("S7-1500 CPU rack could not be read.");
-                            var modules = rack.DeviceItems.ToArray();
-                            result.NoExtraRackModules = modules.Length == 1 && modules[0].TypeIdentifier == result.CpuTypeIdentifier;
+                            var station = rack.Container as Device;
+                            if (station == null || !devices.Contains(station))
+                                throw new InvalidDataException("S7-1500 rack station could not be identified.");
+                            var racks = station.Items.ToArray();
+                            var modules = rack.Items.ToArray();
+                            result.NoExtraRackModules = racks.Length == 1 && racks[0].Equals(rack)
+                                && !station.UnpluggedItems.Any() && modules.Length == 1
+                                && modules[0].Equals(cpu) && modules[0].TypeIdentifier == result.CpuTypeIdentifier;
+                            result.CoverageNotes["rack-modules"] = "Container/Items; racks=" + racks.Length
+                                + "; modules=" + string.Join(",", modules.Select(m => m.TypeIdentifier));
                             if (result.NoExtraRackModules != true)
                                 Failure("EXTRA_RACK_MODULES_UNSUPPORTED", "hardware", "Only the exact standalone CPU without additional rack modules is in scope.");
                         });
