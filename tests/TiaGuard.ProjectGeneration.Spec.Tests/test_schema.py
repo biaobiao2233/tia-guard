@@ -13,6 +13,11 @@ for fixture in fixtures:
     validator.validate(json.loads(fixture.read_text(encoding='utf-8')))
 base = json.loads(fixtures[0].read_text(encoding='utf-8'))
 negatives = []
+for cpu in ('OrderNumber:6ES7 511-1AK02-0AB0/V2.8', 'OrderNumber:6ES7 511-1AK02-0AB0/V3.0',
+            'OrderNumber:6ES7 511-1AL03-0AB0/V2.9', 'OrderNumber:6ES7511-1AK02-0AB0/V2.9'):
+    value = copy.deepcopy(base)
+    value['plc']['cpuTypeIdentifier'] = cpu
+    negatives.append(value)
 for key in ('schemaVersion', 'tiaVersion', 'projectName', 'plc', 'tagTables', 'artifacts'):
     for wrong in (None, True, 21):
         value = copy.deepcopy(base)

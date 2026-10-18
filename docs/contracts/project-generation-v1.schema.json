@@ -34,7 +34,10 @@
           "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
         },
         "cpuTypeIdentifier": {
-          "const": "OrderNumber:6ES7 212-1AE40-0XB0/V4.7"
+          "enum": [
+            "OrderNumber:6ES7 212-1AE40-0XB0/V4.7",
+            "OrderNumber:6ES7 511-1AK02-0AB0/V2.9"
+          ]
         }
       }
     },

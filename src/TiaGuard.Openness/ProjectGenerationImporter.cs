@@ -63,8 +63,8 @@ namespace TiaGuard.Openness
         {
             if (plan == null || string.IsNullOrWhiteSpace(plan.ContractRevision) ||
                 !RoundTripProfile.SafeFileName(plan.ProjectName) || !RoundTripProfile.SafeFileName(plan.PlcName) ||
-                !RoundTripProfile.SupportsCpu(plan.CpuTypeIdentifier) || plan.Artifacts == null || plan.TagTables == null)
-                throw new ArgumentException("A version-bound, validated V21/1212C plan is required.");
+                !ProjectGenerationCpuProfiles.SupportsCpu(plan.CpuTypeIdentifier) || plan.Artifacts == null || plan.TagTables == null)
+                throw new ArgumentException("A version-bound, validated V21 generation CPU profile is required.");
             FileSystemSafety.RequirePlainAncestors(Path.GetFullPath(plan.SourceRoot));
             if (!Directory.Exists(plan.SourceRoot)) throw new DirectoryNotFoundException("Source root is missing.");
             var ids = new HashSet<string>(StringComparer.Ordinal);

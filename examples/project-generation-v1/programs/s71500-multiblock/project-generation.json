@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "tiaVersion": "V21",
+  "projectName": "MotorControl",
+  "plc": { "name": "PLC_1", "cpuTypeIdentifier": "OrderNumber:6ES7 511-1AK02-0AB0/V2.9" },
+  "tagTables": [{ "name": "IO", "tags": [
+    { "name": "StartRequest", "dataType": "Bool", "logicalAddress": "%I0.0" },
+    { "name": "StopRequest", "dataType": "Bool", "logicalAddress": "%I0.1" },
+    { "name": "FaultRequest", "dataType": "Bool", "logicalAddress": "%I0.2" },
+    { "name": "ResetRequest", "dataType": "Bool", "logicalAddress": "%I0.3" },
+    { "name": "RunOutput", "dataType": "Bool", "logicalAddress": "%Q0.0" }
+  ] }],
+  "artifacts": [
+    { "id": "motor_status", "kind": "UDT", "name": "MotorStatus", "format": "scl", "sourcePath": "MotorStatus.scl", "dependsOn": [] },
+    { "id": "status", "kind": "DB", "name": "Status", "format": "scl", "sourcePath": "Status.scl", "dependsOn": ["motor_status"] },
+    { "id": "latch", "kind": "FB", "name": "FB_BasicLatch", "format": "scl", "sourcePath": "FB_BasicLatch.scl", "dependsOn": [] },
+    { "id": "latch_instance", "kind": "DB", "name": "LatchInstance", "format": "scl", "sourcePath": "LatchInstance.scl", "dependsOn": ["latch"] },
+    { "id": "main", "kind": "OB", "name": "Main", "format": "scl", "sourcePath": "Main.scl", "dependsOn": ["status", "latch_instance"] }
+  ]
+}

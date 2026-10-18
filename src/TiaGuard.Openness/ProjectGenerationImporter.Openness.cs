@@ -225,6 +225,22 @@ namespace TiaGuard.Openness
             }
             return string.Join("/", path);
         }
+        internal void ReopenOwnedProjectForReadback()
+        {
+            var file = Path.GetFullPath(ProjectFile);
+            if (!string.Equals(Path.GetFullPath(project.Path.FullName), file, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Owned project path changed before reopen.");
+            project.Save();
+            project.Close(); project = null; plc = null;
+            FileSystemSafety.RequirePlainFile(file);
+            project = portal.Projects.Open(new FileInfo(file));
+            if (!string.Equals(Path.GetFullPath(project.Path.FullName), file, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Reopened project identity differs from the owned stage.");
+            var devices = project.Devices.ToArray();
+            if (devices.Length != 1) throw new InvalidOperationException("Reopened project must contain exactly one device.");
+            plc = ProjectGenerationHardware.RequireExactPlc(devices[0], CpuTypeIdentifier);
+        }
+
         public void Save() => project.Save();
         public void Dispose()
         {

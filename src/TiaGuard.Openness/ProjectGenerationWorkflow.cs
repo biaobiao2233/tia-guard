@@ -12,6 +12,8 @@ namespace TiaGuard.Openness
         public string InputHash { get; internal set; }
         public string ProjectName { get; internal set; }
         public string PlcName { get; internal set; }
+        public string CpuTypeIdentifier { get; internal set; }
+        public string CpuProfileId { get; internal set; }
         public int ArtifactCount { get; internal set; }
         public int TagCount { get; internal set; }
     }
@@ -28,7 +30,9 @@ namespace TiaGuard.Openness
         {
             var input = Prepare(sourceDirectory).Input;
             return new ProjectGenerationPreview { InputHash = input.InputHash, ProjectName = input.Spec.ProjectName,
-                PlcName = input.Spec.Plc.Name, ArtifactCount = input.Spec.Artifacts.Count,
+                PlcName = input.Spec.Plc.Name, CpuTypeIdentifier = input.Spec.Plc.CpuTypeIdentifier,
+                CpuProfileId = ProjectGenerationCpuProfiles.FindByCpu(input.Spec.Plc.CpuTypeIdentifier).Id,
+                ArtifactCount = input.Spec.Artifacts.Count,
                 TagCount = input.Spec.TagTables.Sum(t => t.Tags.Count) };
         }
 

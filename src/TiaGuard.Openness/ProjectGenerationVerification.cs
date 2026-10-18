@@ -30,6 +30,10 @@ namespace TiaGuard.Openness
         public bool HardwareComplete { get; set; }
         public bool ObjectsComplete { get; set; }
         public bool TagTablesComplete { get; set; }
+        // Null means no proven read. Required for the root-only S7-1500 profile.
+        public bool? SoftwareUnitsEmpty { get; set; }
+        public bool? NoExtraRackModules { get; set; }
+        public bool ReopenedFromDisk { get; set; }
         public List<ProjectGenerationVerificationObject> Objects { get; set; } = new List<ProjectGenerationVerificationObject>();
         public List<ProjectGenerationVerificationTagTable> TagTables { get; set; } = new List<ProjectGenerationVerificationTagTable>();
         public List<ProjectGenerationVerificationFinding> ReadFailures { get; set; } = new List<ProjectGenerationVerificationFinding>();

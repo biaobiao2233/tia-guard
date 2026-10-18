@@ -25,8 +25,15 @@ namespace TiaGuard.Openness
             Equal(r, "PROJECT_NAME", "project", expected.ProjectName, actual.ProjectName);
             Equal(r, "PLC_NAME", "plc", expected.PlcName, actual.PlcName);
             Equal(r, "CPU_IDENTITY", "plc", expected.CpuTypeIdentifier, actual.CpuTypeIdentifier);
-            if (expected.CpuTypeIdentifier != "OrderNumber:6ES7 212-1AE40-0XB0/V4.7")
-                Add(r, "CPU_PROFILE_UNPROVEN", "plc", "Only the exact dispatched 1212C/V4.7 profile is in scope.", true);
+            var profile = ProjectGenerationCpuProfiles.FindByCpu(expected.CpuTypeIdentifier);
+            if (profile == null)
+                Add(r, "CPU_PROFILE_UNPROVEN", "plc", "CPU identity is outside the exact generation profile allowlist.", true);
+            else if (profile.RequiresSoftwareUnitReadback && actual.SoftwareUnitsEmpty != true)
+                Add(r, "SOFTWARE_UNITS_UNPROVEN", "plc", "S7-1500 requires an actual empty software-unit and Safety-unit readback; root blocks alone are insufficient.", true);
+            if (profile?.Family == "S7-1500" && actual.NoExtraRackModules != true)
+                Add(r, "HARDWARE_MODULES_UNPROVEN", "hardware", "The root-only S7-1500 profile requires the actual rack to contain only the declared CPU.", true);
+            if (profile?.Family == "S7-1500" && !actual.ReopenedFromDisk)
+                Add(r, "REOPEN_UNPROVEN", "project", "S7-1500 generation must be saved, closed and reopened from its owned project file before comparison.", true);
             Equal(r, "TIA_VERSION", "project", "V21", actual.TiaVersion);
             Version apiVersion;
             if (!Version.TryParse(actual.ApiVersion, out apiVersion) || apiVersion.Major != 21)

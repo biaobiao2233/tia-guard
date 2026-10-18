@@ -38,7 +38,8 @@ namespace TiaGuard.Cli
                 }
                 if (invocation.Command == "init")
                 {
-                    var input = ProjectGenerationInitializer.Initialize(invocation.Target);
+                    var input = invocation.CpuProfile == null ? ProjectGenerationInitializer.Initialize(invocation.Target)
+                        : ProjectGenerationInitializer.Initialize(invocation.Target, invocation.CpuProfile);
                     Console.WriteLine("specFile=" + System.IO.Path.Combine(input.SourceRoot, ProjectGenerationSpecLoader.DefaultSpecFileName));
                     Console.WriteLine("template=" + ProjectGenerationInitializer.TemplateIdentity);
                     Console.WriteLine("validation=offline-input-only; V21 creation/compile/readback required");

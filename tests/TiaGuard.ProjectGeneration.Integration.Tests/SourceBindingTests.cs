@@ -9,6 +9,28 @@ namespace TiaGuard.ProjectGeneration.Integration.Tests
     public sealed class SourceBindingTests
     {
         [Fact]
+        public void S71500PreviewReportsSelectedCpuAndBindsItToApprovalHash()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "cpu-preview-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                var source = Path.Combine(root, "source");
+                ProjectGenerationInitializer.Initialize(source, ProjectGenerationCpuProfiles.S71500ProfileId);
+                var first = ProjectGenerationWorkflow.Inspect(source);
+                Assert.Equal(ProjectGenerationCpuProfiles.S71500CpuTypeIdentifier, first.CpuTypeIdentifier);
+                Assert.Equal(ProjectGenerationCpuProfiles.S71500ProfileId, first.CpuProfileId);
+                var manifest = Path.Combine(source, ProjectGenerationSpecLoader.DefaultSpecFileName);
+                File.WriteAllText(manifest, File.ReadAllText(manifest).Replace(ProjectGenerationCpuProfiles.S71500CpuTypeIdentifier,
+                    ProjectGenerationCpuProfiles.DefaultCpuTypeIdentifier));
+                var changed = ProjectGenerationWorkflow.Inspect(source);
+                Assert.Equal(ProjectGenerationCpuProfiles.DefaultProfileId, changed.CpuProfileId);
+                Assert.NotEqual(first.InputHash, changed.InputHash);
+            }
+            finally { FileSystemSafety.DeleteOwnedTree(root); }
+        }
+
+        [Fact]
         public void InitCanBeInspectedWithoutSiemensAndApprovalIncludesSourceAndManifestBytes()
         {
             var root = Path.Combine(Path.GetTempPath(), "tg43-" + Guid.NewGuid().ToString("N"));

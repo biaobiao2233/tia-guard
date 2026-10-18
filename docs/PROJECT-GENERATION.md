@@ -13,7 +13,18 @@ dotnet build src/TiaGuard.Cli -c Release -p:TiaPortalPublicApi="D:\Siemens\Porta
 dotnet build src/TiaGuard.Bridge.Host -c Release -p:TiaPortalPublicApi="D:\Siemens\Portal V21\PublicAPI\V21\net48"
 ```
 
-输入遵循[生成契约](contracts/project-generation-v1.md)，所有源文件都必须在 manifest 中声明。当前 profile 是单 PLC、`OrderNumber:6ES7 212-1AE40-0XB0/V4.7`，支持 SCL 的 Main/OB1、FC（包括 Void 和有返回值）、FB、全局 DB、实例 DB、UDT 和根 PLC 变量表。编号由 manifest 的 artifact ID 确定，Main 为 OB1，其余块从 100 开始按种类分配。
+输入遵循[生成契约](contracts/project-generation-v1.md)，所有源文件都必须在 manifest 中声明。工程为单 PLC，支持 SCL 的 Main/OB1、FC（包括 Void 和有返回值）、FB、全局 DB、实例 DB、UDT 和根 PLC 变量表。编号由 manifest 的 artifact ID 确定，Main 为 OB1，其余块从 100 开始按种类分配。
+
+### CPU 配置与验证状态
+
+| `init --profile` | manifest 的准确 `cpuTypeIdentifier` | 状态 |
+| --- | --- | --- |
+| `s7-1200-1212c-v4.7`（默认） | `OrderNumber:6ES7 212-1AE40-0XB0/V4.7` | 原有已验证范围，保持现有行为 |
+| `s7-1500-1511-1pn-v2.9` | `OrderNumber:6ES7 511-1AK02-0AB0/V2.9` | #67 候选；本机目录、真实编译和关闭重开验证仍待完成，未进入已发布版本 |
+
+S7-1500 候选只接受此准确型号和固件；不允许自动选择另一型号或固件。首次目标依据 [Siemens CPU 1511-1 PN 数据表](https://support.industry.siemens.com/teddatasheet/?caller=SIOS&format=pdf&language=en&mlfbs=6ES7511-1AK02-0AB0)，本机是否安装该条目须另由 V21 目录确认。候选记录见 [S7-1500 验证说明](verification/s71500-offline-20261018.md)。
+
+这份生成配置独立于旧 `RoundTripProfile`：不开放 S7-1500 的 Git 往返、已有工程 LAD patch 或 PLCSIM 操作。CLI、HTTP、MCP 的生成输入共用上述校验；后两者仍从 manifest 读取 CPU，预览返回准确 CPU 和 profile ID。
 
 输入、输出、scratch 使用三个互不嵌套的绝对目录。输出必须不存在；scratch 必须已存在且专属当前任务。源文件始终保持原样，TIA 所需的 UTF-8 BOM 只写到临时导入副本。
 
@@ -22,6 +33,8 @@ dotnet build src/TiaGuard.Bridge.Host -c Release -p:TiaPortalPublicApi="D:\Sieme
 ```powershell
 # 在新的目录生成 manifest 和 Main.scl，然后编辑源码与声明。
 tia-guard.exe init E:\PLC\input
+# 或选择 S7-1500 候选；须使用另一个新目录
+tia-guard.exe init E:\PLC\input1500 --profile s7-1500-1511-1pn-v2.9
 New-Item -ItemType Directory -Path E:\PLC\scratch
 
 tia-guard.exe build-generation E:\PLC\input `
@@ -46,6 +59,8 @@ GUI 管理的 Gateway 默认要求一次确认；独立 headless 写模式用 `-
 HTTP 完整成功返回 200；创建工作流失败返回 422 和完整报告，包括部分 preflight 失败，具体看 `Phase`。Gateway 入口的请求、token 或会话校验拒绝返回 400。MCP 的工程失败设置 `isError=true`。Agent 可读取诊断、修正源码、申请新的 preview，然后构建到另一个新目录。完整请求示例见[Gateway 指南](TIA-AI-BRIDGE.md#从零创建离线-plc-工程)。
 
 ## 验证和当前边界
+
+原有生成流程独立比对冻结输入与实际工程读回，在当前自有会话内完成；它不等同于保存关闭重开。S7-1500 候选额外保存、关闭并从同一自有工程文件重开，再读取对象和源码，报告 `ReopenedFromDisk=true`。同时必须实际读取软件单元与 Safety 单元为空、机架只包含准确 CPU；任何缺失、额外内容或读取异常都不能 PASS。候选编译目标仍是 PLC 软件，不能把软件编译结果称为硬件和软件完整编译，也不能据此声称可下载运行。
 
 编译必须成功且完整收集诊断。回读比较独立冻结输入中的工程/CPU 身份、完整对象集合、编号、全部 SCL 非注释 token、接口、UDT 展开字段、实例目标、变量类型和地址。`scl-source-v2` 仅接受已实证的 V21 默认标题、本地变量 `#` 前缀、空声明段和接口默认属性；未知 XML 节点、访问属性、保留属性或起始值阻止完整 PASS。
 

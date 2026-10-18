@@ -33,9 +33,12 @@ namespace TiaGuard.Openness
                 session => ProjectGenerationBuilder.FromCompilationReport(CompilationService.Compile((PlcSoftware)session.NativePlc)),
                 session =>
                 {
+                    var native = (ProjectGenerationOpennessSession)session;
+                    var reopen = ProjectGenerationCpuProfiles.FindByCpu(prepared.Plan.CpuTypeIdentifier).Family == "S7-1500";
+                    if (reopen) native.ReopenOwnedProjectForReadback();
                     var evidence = Path.Combine(Path.GetFullPath(scratchRoot), "readback-" + Guid.NewGuid().ToString("N"));
-                    observation = ProjectGenerationReadback.Capture(((ProjectGenerationOpennessSession)session).NativeProject,
-                        evidence, (scope, name) => "scl");
+                    observation = ProjectGenerationReadback.Capture(native.NativeProject,
+                        evidence, (scope, name) => "scl", reopen);
                     return ProjectGenerationVerifier.Compare(prepared.Expected, observation);
                 });
             result.InputHash = prepared.Input.InputHash;

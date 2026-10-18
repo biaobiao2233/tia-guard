@@ -31,7 +31,7 @@ Start with [package installation and MCP configuration](docs/ADAPTER-PACKAGES.md
 | Create from source | SCL → new `.ap21`, with supported OB1 / FC / FB / DB / UDT / tags | ST → new project, with supported Program / FB / GVL / structures / tasks and libraries |
 | Edit and repair | Change generation inputs and rebuild; bounded tag / LAD patches on a disposable copy | Change ST inputs, then obtain a new preview and grant to generate or compile an owned copy |
 | Compile and diagnose | Actual Openness compilation and complete diagnostics | Actual XAE compilation, with error locations where available |
-| Independently verify | Close/reopen the new project and compare supported source and engineering semantics | Save/close/reopen and independently compare objects, source and configuration |
+| Independently verify | Compare frozen inputs with actual engineering readback; the S7-1500 candidate adds a save/close/reopen gate | Save/close/reopen and independently compare objects, source and configuration |
 | Software simulation | **Experimental, disabled by default**: instance lifecycle, power, SIM table addresses and compile preparation verified; full download / RUN / scans / actual I/O remain unqualified | Owned Usermode PLC simulation, RUN/STOP, scalar feedback and valid-license reuse verified; separate single-axis NC/PTP simulation evidence |
 | Git engineering | Optional readable source, diffing, GitHub rebuild/export/commit and multi-project GUI | Existing text-project and Git tooling can be used directly |
 
@@ -48,6 +48,8 @@ Capabilities are bounded to the stated software versions, objects and environmen
 MCP is the primary agent interface. TIA also exposes HTTP and CLI; TwinCAT connects directly through its own stdio MCP and does not need the TIA Gateway. Use your existing AI model and client.
 
 ## TIA Portal
+
+S7-1500 offline support is being developed in [#67](https://github.com/biaobiao2233/tia-guard/issues/67), limited to a candidate 1511-1 PN/V2.9 profile. Local catalog, creation, real compilation and close/reopen qualification are pending. It is not released or family-wide support. See [CPU profiles and status](docs/PROJECT-GENERATION.md#cpu-配置与验证状态).
 
 Requires Windows x64, TIA Portal V21, Openness and effective Openness membership in the current logon token. The user handles any official access confirmation; this tool does not change groups, access permissions or licenses. The current CPU profile is `OrderNumber:6ES7 212-1AE40-0XB0/V4.7`.
 
