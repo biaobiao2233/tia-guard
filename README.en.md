@@ -8,6 +8,12 @@ TIA-Guard is an open-source local integration tool with separate **TIA Portal** 
 
 Existing names, commands and configuration remain compatible. The main focus is now **AI access to engineering software and verified operations**. TIA source conversion, Git workflows and round-trip rebuilding remain optional features.
 
+## Automation policy: interfaces and command-line access first
+
+Every current and future adapter follows the same rule: **when a task needs a GUI operation, first assess and reuse official APIs, SDKs, COM, scripts or CLI entry points, then implement repeatable CLI / MCP / API operations within the task's scope.** Treat GUI dependencies as integration gaps to resolve rather than a permanent reliance on screenshot coordinates or repeated manual steps.
+
+Bounded GUI fallback is allowed when no usable interface covers the action, with researched entry points, dependencies and replacement direction documented. Wrapping mouse actions in an API does not establish native API support. See the [repository-wide automation principles](docs/AUTOMATION-PRINCIPLES.md#english), [Agent rules](AGENTS.md) and [contribution guide](CONTRIBUTING.md). This policy does not expand the verified capabilities below.
+
 ## Download for your software
 
 Choose the adapter you need from [one GitHub Release](https://github.com/biaobiao2233/tia-guard/releases). Install both packages if you use both applications; a shared Gateway or core installation is not required.
