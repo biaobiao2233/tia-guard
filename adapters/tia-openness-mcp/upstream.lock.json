@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "repository": "bulaofen0036-coder/TIA_Portal_Openness_MCP",
+  "license": "MIT",
+  "candidate": {
+    "version": "2.7.11",
+    "tag": "v2.7.11",
+    "sourceCommit": "70764a118bc74eb11adc39e0936d0181882acfa3",
+    "assetName": "TIA_MCP_Delivery_v2.7.11_20261107.zip",
+    "assetUrl": "https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP/releases/download/v2.7.11/TIA_MCP_Delivery_v2.7.11_20261107.zip",
+    "assetSha256": "678c46fc7a6fc3fac92a3362edcd1cc3a19869405f23a5d6f0c51cb6694fd3c5",
+    "runtimePrefix": "TIA_MCP_Delivery_v2.7.11/runtime/v21/",
+    "runtimeManifestSha256": "8bd5b44f6188b4fea050567b607c612f46cfbe04d01b7bc014a25c260cb33f80",
+    "mutableRuntimeFiles": ["TiaMcpServer.startup.log"],
+    "executable": "TiaMcpServer.exe",
+    "executableSha256": "a2c6406920c42ebc9d248f9489aa3d1c211b71fe4177bb7e474cdbed02d3c9ea",
+    "tiaMajorVersion": 21,
+    "protocol": {
+      "serverName": "TiaMcpServer",
+      "serverVersion": "2.7.11.0",
+      "toolCount": 238,
+      "schemaSha256": "db8ef384c0323fb79e3ea0807089703d1a5f647e17c9787bd270b2195dadc641"
+    }
+  },
+  "accepted": null,
+  "rollback": null
+}

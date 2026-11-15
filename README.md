@@ -14,6 +14,10 @@ TIA-Guard 是面向本机工程软件的开源 AI 接入工具。目前提供 **
 
 确无可用接口时允许受限 GUI 备选，但必须说明已核查入口、实现依赖及后续替换方向；把鼠标包装成 API 不代表原生接口已适配。详见[项目长期适配原则](docs/AUTOMATION-PRINCIPLES.md)、[仓库 Agent 规则](AGENTS.md)和[贡献指南](CONTRIBUTING.md)。这些是开发要求，不提升当前能力表中的支持状态。
 
+**接入方向（2026-11-14）**：MCP 优先作为 Agent 入口，CLI 用于诊断、批处理与回归；已有 MCP 能力直接复用。第三方引擎保持独立、默认不改源码，通过公开协议和薄适配层接入。以固定版本候选、契约检查、真实工程验收和回退推进升级，避免长期停在旧版。见[上游 MCP 接入方案](docs/UPSTREAM-MCP-INTEGRATION.md)；接入候选的验证范围独立记录，不提升上述发行包能力。
+
+首个[独立上游 MCP 候选](adapters/tia-openness-mcp/README.md)提供 P0 协议发现、无连接诊断与更新元数据检查。它尚不提供工程读写或 PLC 运行，不包含在现有发行包中。
+
 ## 按工程软件下载
 
 在[同一个 Release](https://github.com/biaobiao2233/tia-guard/releases) 中选择需要的适配包；使用两种软件就安装两个包，无需安装统一 Gateway 或公共核心包。
