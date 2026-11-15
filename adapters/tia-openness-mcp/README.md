@@ -82,5 +82,5 @@ Prepare an official checksum-verified archive with `prepare.py`, point `TG_TIA_U
 ## Sources and licenses
 
 - [TIA_Portal_Openness_MCP](https://github.com/bulaofen0036-coder/TIA_Portal_Openness_MCP), MIT, version identity pinned in [upstream.lock.json](upstream.lock.json). Source and vendor DLLs are not copied into this adapter.
-- [Official TypeScript MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk), MIT, installed through pinned npm dependencies.
+- [Official TypeScript MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk), Apache-2.0 for the pinned client/server 2.3.1 packages, installed through pinned npm dependencies.
 - [MCP stdio transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports); protocol comes from the SDK rather than a new parser.
