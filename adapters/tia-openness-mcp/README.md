@@ -2,7 +2,7 @@
 
 此候选通过公开 MCP stdio 协议调用原版 `TIA_Portal_Openness_MCP`，不引用其内部 C# 类型，不修改其源码。Node SDK 处理协议，`upstream.js` 处理本适配器的子进程和版本约束，`contract.js` 集中处理结果/契约兼容。原有 TIA-Guard Worker、软件 CPU 和 Factory I/O 后端保持独立。
 
-**当前范围：P0 协议诊断，以及显式启用的工程副本读取/导出候选。** 版本清单中的 `accepted` 和 `rollback` 仍为空；本候选不替换已发行适配器，不提供工程修改、编译、HMI 制作或 PLC 控制。上游工具数量不等于本适配器开放的能力。
+**当前范围：协议诊断、显式启用的工程副本读取，以及受限单个新函数写入/编译/保存重开候选。** 版本清单中的 `accepted` 和 `rollback` 仍为空；本候选不替换已发行适配器，不提供任意工程写入、HMI 制作或通用 PLC 下载工具。上游工具数量不等于本适配器开放的能力。
 
 ## 本轮可调用的 MCP
 
@@ -16,6 +16,16 @@
 | `upstream_close` | 结束本适配器拥有的引擎，确认进程退出；会话不可自动重连 |
 
 没有任意工具转发、命令、参数、HTTP 端口或 GUI 后备入口。调用者不能通过 `fix=true` 或工具名绕过此范围。
+
+## 受限 MCP 写入
+
+机器配置中显式增加 `ownedProgram` 后开放 `upstream_program_copy({})`。字段为绝对路径 `sourceProjectFile`、`artifactRoot`、`sourceFile`，以及 `sourceSha256` 和 `blockName`。源码哈希须为准确 SHA-256；仅允许单个新建的 `FC_TG_*` FUNCTION。此版本拒绝已有同名块、额外块声明、注释、包含文件和调用者参数，不能改写 OB1 或已有控制块。
+
+`upstream_status` 可以先调用；写入须为本适配器会话首次启动引擎的操作，不能将已启动的只读会话升级。执行会新建副本和独立 TIA，核对实际工程 Path，基线编译、导入源码、生成、真实编译、保存重开、比较 XML NetworkSource 并再次编译，最后断连和关闭引擎。失败返回编译错误数、有限诊断及本机证据目录，不把上游生成成功当编译成功。
+
+源码修改后需更新本机计划中的哈希并显式启动新会话；MCP 不接受临时路径或任意工具转发。当前不开放 PLC 下载工具，软件 CPU 下载和产线联调复用既有独立后端。实际范围见[本轮验证](../../docs/verification/upstream-mcp-line-20261115.md)。
+
+`node native-program-mcp-smoke.js` 可经实际 MCP 客户端复验这个工具，`TG_TIA_UPSTREAM_CONFIG` 指向明确配置了 ownedProgram 的本机配置；客户端需允许最多 600 秒。此配置不自动写入全局 MCP 设置。
 
 ## 自有工程副本读取
 
@@ -111,7 +121,7 @@ node probe.js --check-update
 
 ## English
 
-This candidate integrates an unchanged upstream engine through public MCP stdio, with pinned release/source/artifact/runtime and protocol identities. Six bounded discovery/diagnostic/lifecycle/update tools are available by default. Explicit machine-local ownedRead settings enable one additional no-argument MCP workflow that creates a fresh offline copy, starts isolated TIA, reads/exports PLC-root blocks and tags, reopens and compares block identities, verifies the unchanged source and disconnects. Large responses use the upstream public pagination API. There is no arbitrary forwarding, project edit/save/compile, HMI authoring or PLC control.
+This candidate integrates an unchanged upstream engine through public MCP stdio with pinned identities. Six diagnostic/lifecycle/update tools are available by default. Explicit ownedRead settings enable owned-copy inspection. Explicit ownedProgram settings enable a separate no-argument workflow for one hash-pinned new FC_TG_* function, with real compilation, save/reopen logic comparison and source protection. A running diagnostic session cannot be upgraded to a write session. Compiler failures return bounded diagnostics and local evidence paths. There is no arbitrary forwarding, replacement of existing blocks, HMI authoring or generic PLC download. Independent runtime-backend evidence is scoped separately.
 
 Prepare an official checksum-verified archive with `prepare.py`, point `TG_TIA_UPSTREAM_CONFIG` to its absolute config path, and start `node index.js`. Keep raw receipts local. Use `node probe.js --check-update` to discover newer stable releases without downloading or promotion. Qualify candidates separately and retain a genuinely verified rollback version; none exists at first onboarding.
 

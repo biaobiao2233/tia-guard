@@ -1,0 +1,74 @@
+{
+  "date": "2026-11-15",
+  "scope": "Restricted new-FC MCP plus isolated download and existing C16 line regression",
+  "restrictedMcp": {
+    "positive": true,
+    "negativeCompileErrors": 1,
+    "callerOverrideRejected": true,
+    "saveReopenLogicVerified": true,
+    "sourceUnchanged": true,
+    "generalDownloadTool": false
+  },
+  "tests": {
+    "nodePassed": 32,
+    "pythonPassed": 4
+  },
+  "download": {
+    "state": "Success",
+    "errors": 0,
+    "warnings": 0,
+    "tags": 311,
+    "candidateContainsMcpCreatedFC": true,
+    "newFCConnectedToOB1": false
+  },
+  "line": {
+    "objects": 133,
+    "threeBoxes": 3,
+    "bypass": 2,
+    "infeed": 1,
+    "transferId": 1,
+    "transferAck": 1,
+    "blockedSeconds": 10,
+    "loadedResetRejected": true,
+    "emptyResetVerified": true,
+    "motionStopVerified": true,
+    "feedbackLossVerified": true,
+    "feedbackRestored": true,
+    "noRestartSeconds": 2,
+    "sceneSaved": true,
+    "guiActions": 0,
+    "apiInputWrites": 0,
+    "apiActuatorWrites": 0,
+    "forces": 0,
+    "realFeedbackDbWrites": true
+  },
+  "traces": [
+    {
+      "test": "sort-regression01",
+      "frames": 536,
+      "sha256": "1a0667a77714e31cb632f395ae231ceab46eccb317a5ef7b58a1968fcc4ee725",
+      "feedbackDbWritesRecorded": true
+    },
+    {
+      "test": "pallet-safety01",
+      "frames": 478,
+      "sha256": "8b8c5e7a6787f7d2d0b40d5301329858a6b51e18df25930453196fac6c630a45",
+      "feedbackDbWritesRecorded": true
+    }
+  ],
+  "notRun": [
+    "Native HMI control",
+    "Loaded pallet layers",
+    "Full pallet outfeed"
+  ],
+  "runtimeScope": "C16 sorting and separate pallet stop/fault tests only",
+  "controlSourceSha256": "ce47177f96302afb9d9a8f55d333e3def9db72ed7de066ca6626c03168b126b4",
+  "receiptSha256": {
+    "mcpPositive": "ee6046aeb99ea1c9babbf9a609938c39411c8491a329c625313134fcd7351e07",
+    "mcpNegative": "a9234a46144ea5c0416fa46438525680ef90429de7682e6bad5949cd8c429a48",
+    "download": "928a5e6b85c75cda30d2b2e26c8cdda15c216fe6b93fdc35932e5d8a56a6df07",
+    "sort": "dd0a5c215d4151505fdbd0198d08bcedc1dfada441f7dd0569eece4e526b6453",
+    "safety": "f4cabdf97a41cb210995185bd8f9f34b0b8a5bbf5d11e04c1902dd73dccf2190",
+    "nativeSave": "e3978f8c0341b86678ededbf152d05f42651e23f0151ead1a1a89dc1e5e9b28d"
+  }
+}

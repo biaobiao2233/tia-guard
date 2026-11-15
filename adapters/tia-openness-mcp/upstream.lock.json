@@ -16,6 +16,7 @@
     "executableSha256": "a2c6406920c42ebc9d248f9489aa3d1c211b71fe4177bb7e474cdbed02d3c9ea",
     "tiaMajorVersion": 21,
     "ownedReadProtocolSha256": "e65fda10b0c4c42243ea07825dece533d5b832536aeaebbc8bb23f71ef0c3fd4",
+    "ownedProgramProtocolSha256": "adfa1eb4b3926d98f7965c74811dce97ffbc1f271438a90e9146f6a7e2325847",
     "protocol": {
       "serverName": "TiaMcpServer",
       "serverVersion": "2.7.11.0",

@@ -72,7 +72,7 @@ class Upstream {
     const pending = this.queue.then(operation); this.queue = pending.catch(() => {}); return pending;
   }
   status() {
-    return { adapterVersion: "0.1.0", stage: this.config?.ownedRead ? "owned-read-candidate" : "P0-discovery", upstreamVersion: this.pin.version,
+    return { adapterVersion: "0.1.0", stage: this.config?.ownedProgram ? "owned-program-candidate" : this.config?.ownedRead ? "owned-read-candidate" : "P0-discovery", upstreamVersion: this.pin.version,
       sourceCommit: this.pin.sourceCommit, configured: !!this.config, started: !!this.client,
       closed: this.closed, failed: this.failed, engineSessionId: this.engineSessionId,
       accepted: lock.accepted, rollback: lock.rollback,
@@ -94,11 +94,31 @@ class Upstream {
       }
     });
   }
-  async start() {
+  programCopy() {
+    return this.serial(async()=>{
+      if(!this.config?.ownedProgram)throw new AdapterError("owned-program-not-configured","policy");
+      const workflow=require("./program-copy.js");
+      workflow.validatePlan(this.config.ownedProgram);
+      if(this.client)throw new AdapterError("program-requires-fresh-session","lifecycle");
+      try{
+        await this.start("owned-program");
+        const list=await this.client.listTools({}, {timeout:this.timeoutMs});
+        if(workflow.contract(list.tools)!==this.pin.ownedProgramProtocolSha256)throw new AdapterError("program-tool-contract-drift","contract");
+        return await workflow.programCopy(this.client,this.config.ownedProgram,this.config.ownedProgram);
+      }catch(e){this.failed=true;throw e;}
+      finally{this.closed=true;await this.stopInternal();}
+    });
+  }
+  async start(mode="read") {
     if (this.closed || this.failed) throw new AdapterError("upstream-session-ended", "lifecycle");
     if (this.client) return;
     if (!this.config) throw new AdapterError("missing-local-configuration", "configuration");
     const parameters = launchParameters(this.config, this.pin);
+    if(mode!=="read") {
+      if(mode!=="owned-program"||!this.config.ownedProgram)throw new AdapterError("invalid-engine-mode","policy");
+      require("./program-copy.js").validatePlan(this.config.ownedProgram);
+      parameters.args=parameters.args.filter(v=>v!=="--read-only");parameters.env.TIA_MCP_READ_ONLY="0";
+    }
     this.transport = this.transportFactory(parameters);
     this.transport.stderr?.on("data", chunk => { this.stderr = (this.stderr + chunk.toString()).slice(-8192); });
     const client = new Client({ name: "tia-guard-upstream", version: "0.1.0" }, { mode: "legacy" });

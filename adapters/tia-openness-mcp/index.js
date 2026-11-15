@@ -44,6 +44,15 @@ function buildServer(provider) {
       }
     });
   }
+  if(provider.config?.ownedProgram) {
+    server.registerTool("upstream_program_copy",{
+      description:"Compile a hash-pinned single new FC_TG_* function in a fresh owned offline copy, save/reopen/verify its logic, and disconnect. Target and source are fixed in local configuration. No downloads or online operations. Requires a fresh session.",
+      inputSchema:z.strictObject({}),annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:false,openWorldHint:false}
+    },async()=>{
+      try{return envelope(await provider.programCopy());}
+      catch(e){const safe=e instanceof AdapterError?e:new AdapterError("owned-program-failed","engineering");return {...envelope({success:false,code:safe.code,phase:safe.phase,artifactDirectory:safe.artifactDirectory,compilerDiagnostics:safe.compilerDiagnostics,runtimeQualified:false}),isError:true};}
+    });
+  }
   return server;
 }
 function main(provider = fromEnvironment()) {
