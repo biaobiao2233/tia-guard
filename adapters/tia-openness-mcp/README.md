@@ -91,6 +91,14 @@ node native-smoke.js
 
 ## 持续升级
 
+### 离线编程验收入口
+
+`native-program-smoke.js` 是单独的原生验收程序，通过上游公开 MCP 验证编程操作，尚未作为通用写入工具加入本适配器的 MCP 列表。默认 MCP 引擎继续只读。
+
+显式提供机器专用配置：沿用运行配置的版本/文件身份和 ownedRead 源工程、产物根，另增加 `allowOwnedProgramProbe: true`；用 `TG_TIA_PROGRAM_PROBE_CONFIG` 指向它。运行 `node native-program-smoke.js` 后，只在全新工程副本中新建固定测试函数，执行基线编译、错误源码反例、修复编译、保存、关闭重开与再次编译；不下载、不连接 PLC，不把函数接入产线。
+
+此入口会为本次专属原版引擎移除只读启动参数；不会修改厂商文件或默认运行配置。首次缺少配置或显式开关时直接拒绝。原始回执和工程产物只保留本机。验收范围与失败记录见[编程验证](../../docs/verification/upstream-mcp-programming-20261115.md)。
+
 ```powershell
 node probe.js --check-update
 ```
