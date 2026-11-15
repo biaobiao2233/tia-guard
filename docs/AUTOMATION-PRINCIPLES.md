@@ -16,7 +16,15 @@
 4. 将可用入口接成适合 Agent 调用的语义操作。按需提供 CLI、MCP 或 API，不要求每个适配器同时提供三种入口，也不预设新增统一 HTTP Gateway。
 5. 若目标动作确无可用接口，再采用受限 GUI 备选或必要人工步骤，同时明确已核查的入口、限制和替换方向。其他有接口的步骤继续使用接口。
 
-### 什么算无 GUI 适配
+### MCP 优先与上游持续升级
+
+Agent 的交互入口优先使用已有 MCP；CLI 主要服务环境诊断、批处理、回归和人工排查。两种入口复用同一后端，不要求每个 MCP 工具都有 CLI 对应物。入口形式不会增加厂商接口能力，也不替代工程或运行验收。
+
+成熟第三方引擎保持独立进程和自己的版本，默认不修改源码。薄适配层只负责公开协议、参数和结果转换、能力检测及目标约束；TIA-Guard 保留独立验证、仿真与验收职责。禁止散落复制上游实现、调用私有类型或跨越适配边界共享进程内状态。需要补丁时单独保留原因、差异与退出条件，并优先贡献上游。
+
+追踪上游最新稳定版，和提升默认使用版本是两个动作。升级候选必须绑定 tag、准确提交、下载资产及 SHA-256；检查初始化协议、工具名称/参数/返回值、失败与清理行为，按声明范围补真实工程验收。通过后显式提升，保留上一已验证版本与回退说明；检测到新版本不能自动热替换运行中的引擎。不同版本的工程读写与运行结论不得互相继承。具体关卡见[上游 MCP 接入方案](UPSTREAM-MCP-INTEGRATION.md)。
+
+### 原生接口与 GUI 备选的区别
 
 调用工程 API、脚本或运行时协议完成动作，并读取软件实际结果，属于接口适配。工程软件进程或窗口仍可能存在；无鼠标不等于无需安装 IDE，也不自动意味着支持无头、锁屏或远程桌面运行。
 
@@ -47,6 +55,10 @@
 ## English
 
 These principles apply to every current, candidate and future adapter, including TIA Portal, TwinCAT, CODESYS and Factory I/O. They cover engineering, configuration, compilation, diagnostics, runtime commands and feedback. They are development policy, not a claim that all capabilities already work.
+
+Prefer existing MCP capabilities as the agent entry point; use CLI for diagnostics, batch work and regression. Both should share a backend without duplicating every tool. Keep upstream engines independent and unchanged by default, integrate through public protocols, and isolate compatibility in a thin adapter. Engineering logic stays upstream; TIA-Guard owns its validation, simulation and acceptance responsibilities. Track required patches separately and contribute them upstream where possible.
+
+Track newer stable releases, but promote a default only after checks bound to the exact tag, source commit, artifact and SHA-256. Detect protocol/schema/result/error drift and perform the real engineering checks required for the claimed scope. Retain a verified rollback version; never hot-swap a running engine or inherit qualification across versions. See the [integration plan](UPSTREAM-MCP-INTEGRATION.md#english).
 
 Whenever a task needs a GUI step, identify the intended action and software version, inspect existing adapters, and assess supported vendor interfaces before using screenshots, coordinates or repeated manual work. Within the authorized task and resource boundaries, implement and verify an available interface; record precise gaps and next steps when blocked or outside scope.
 

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-15",
+  "scope": "P0 protocol/disconnected diagnostics only",
+  "upstream": {
+    "repository": "bulaofen0036-coder/TIA_Portal_Openness_MCP",
+    "version": "2.7.11",
+    "sourceCommit": "70764a118bc74eb11adc39e0936d0181882acfa3"
+  },
+  "verdict": {
+    "protocolVerified": true,
+    "engineeringQualified": false,
+    "runtimeQualified": false
+  },
+  "cloud": {
+    "nodeVersion": "v22.23.1",
+    "nodeTests": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0
+    },
+    "pythonVersion": null,
+    "pythonVersionNote": "Exact Python version was not recorded in the P0 receipt; later owned-read tests record their own runtime.",
+    "pythonTests": {
+      "passed": 4,
+      "failed": 0
+    },
+    "syntaxCheck": true,
+    "sourceNormalization": "UTF-8 without BOM; universal LF newlines; exactly one final LF",
+    "sourceSha256": {
+      "package.json": "240a7dd45cc3858fbee2d60915b45cfd554f52a38735e5d8d719f8711bc72d8f",
+      "package-lock.json": "b24195298dd7cc381158538bca1fcebb03bdd3508c88c524b5a4537ae0a701ce",
+      "upstream.lock.json": "f8f88d689ff024ba824f6457551cf368827d53728e958eb2982ae64bc00cf6ab",
+      "prepare.py": "0eb4a582685b11c72bc223cef63d5e3df1ff69b6de208f4374c3fd133b26c6f3",
+      "contract.js": "afca2b67658802485d769fe36415df10b4353a60a8d62b02c2388615f9de1aae",
+      "upstream.js": "6175885c037bd4b2da9c5e1a2f325b6827b1525800a716b15be7adf9ced601e2",
+      "index.js": "11a9c041a89225ccce384d918acf8b39044edefbc45434492d5a5cf998eabbc5",
+      "probe.js": "ed4a81017873745bf1850bb737dbcd92cd6ad1ce41c958dfd1935435c234065a",
+      "update.js": "4d01e0fc96bcb6450a3d018eefc706b039c065c04151f0685a46422d901eed32",
+      "tests/adapter-fixture.js": "6d2755029a33ed6321aae826157d015ce35f10fa0b8653c5850ae2e39e9bf8f7",
+      "tests/contract.test.js": "7237faa2db66b2b732ccbf9aef0455738030f6b7909493a6a6eec4a1b53966c5",
+      "tests/facade.test.js": "1e837a840115d30bc84b96885b2e83ed25aa8c4fe43d70974a92b60e4774e61a",
+      "tests/fake-upstream.js": "32cada3e7d777aa1416c5bc7433ce923efa5b89cf4afa42f49a8a74692b87d5a",
+      "tests/support.js": "4602ca0eea34496c9fba04b21693a8d1d9145ea7a2e94f7a00073d579d19e604",
+      "tests/transport.test.js": "6a369580ff01dd99fc21d90b51282a251a549652cb35e00d4df3003ac3b00b9c",
+      "tests/update.test.js": "e8067c8339c501121361e3578d54e6cc3a1629b337eadde06f3a77e7cafab5cb",
+      "tests/test_prepare.py": "46738c48ee38c0896d438813df11065cce2d21f8f0f53ccde3ca34bf75a06236"
+    }
+  },
+  "native": {
+    "os": "Windows 11",
+    "nodeVersion": "v24.13.0",
+    "tiaMajorVersion": 21,
+    "facadeToolCount": 6,
+    "upstreamToolCount": 238,
+    "coldStartsSamePreparedDirectory": 2,
+    "disconnected": true,
+    "doctorFix": false,
+    "forbiddenCallsRejected": true,
+    "cleanupConfirmed": true,
+    "rawReceiptSha256": {
+      ".local/native-smoke-reboot03.json": "8b32cebbd432072238d376edf8e1b6b073fd772c11ce9b472c5777fe48dc0ddd",
+      ".local/native-smoke-reboot04.json": "0773a3dd6df0dbc0d497d65b7808878329d8a933c8437e9e8a47500e06757d47",
+      ".local/native-smoke-reboot05.json": "e6f5a5d357a1b54853d04040e70ee86c623e5d16d1b09111b58fd9bba5851d4c",
+      "native-smoke.js": "621f291e2d715bcd1f7b2bec1f6907c8e5e252cd2d92a2cd70f3ad0c14966501"
+    }
+  }
+}

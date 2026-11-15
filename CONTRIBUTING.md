@@ -12,6 +12,7 @@ Development principles:
 6. Run the pure contract suite and schema checks in README; changes to Openness calls additionally need disposable V21 integration evidence. Never substitute a passing pure test for that evidence.
 7. Do not commit test results, raw integration exports, machine paths, private projects, or proprietary dependency binaries.
 8. Follow the repository-wide [automation principles](docs/AUTOMATION-PRINCIPLES.md#english). Whenever a task requires GUI interaction, assess existing adapters and official API / SDK / COM / scripting / CLI / plugin / documented-file interfaces, and implement a usable semantic operation within the authorized scope when possible. Record precise gaps when blocked or outside scope. A mouse, keyboard, UI Automation or UI DOM wrapper remains a GUI fallback, not completed native API integration.
+9. Prefer existing MCP capabilities for agent access. Keep upstream engines independent and unchanged by default; isolate public-protocol compatibility in the adapter. Pin source/artifact identity, detect schema and behavior drift, and promote upgrades only after the checks for the claimed scope. Keep a verified rollback version. See [upstream integration](docs/UPSTREAM-MCP-INTEGRATION.md#english).
 
 ## PLC platform adapters
 

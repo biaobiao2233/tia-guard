@@ -1,0 +1,20 @@
+{
+  "name": "@tia-guard/tia-openness-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pinned, out-of-process upstream TIA MCP adapter with opt-in owned-copy reads",
+  "type": "commonjs",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node index.js",
+    "probe": "node probe.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "test:prepare": "python -m unittest discover -s tests -p test_prepare.py",
+    "check": "node --check index.js && node --check upstream.js && node --check contract.js && node --check probe.js && node --check update.js && node --check pages.js && node --check owned-read.js && node --check native-owned-smoke.js && node --check native-program-smoke.js && node --check program-copy.js && node --check native-program-mcp-smoke.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
+    "@modelcontextprotocol/server": "2.3.1",
+    "zod": "4.6.6"
+  }
+}

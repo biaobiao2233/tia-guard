@@ -14,6 +14,10 @@ Every current and future adapter follows the same rule: **when a task needs a GU
 
 Bounded GUI fallback is allowed when no usable interface covers the action, with researched entry points, dependencies and replacement direction documented. Wrapping mouse actions in an API does not establish native API support. See the [repository-wide automation principles](docs/AUTOMATION-PRINCIPLES.md#english), [Agent rules](AGENTS.md) and [contribution guide](CONTRIBUTING.md). This policy does not expand the verified capabilities below.
 
+**Integration direction (2026-11-14):** prefer existing MCP tools for agents and keep CLI commands for diagnostics, batch work and regression. Run third-party engines independently, unchanged by default, behind public protocols and a thin compatibility adapter. Promote pinned upgrade candidates through contract checks, real engineering acceptance and a rollback path instead of freezing an old fork. See the [upstream MCP integration plan](docs/UPSTREAM-MCP-INTEGRATION.md#english). Candidate evidence is separate from released capabilities.
+
+The [independent upstream MCP candidate](adapters/tia-openness-mcp/README.md#english) supports diagnostics, owned-copy inspection and restricted creation/compilation/save/reopen of one hash-pinned new FC. A dedicated software CPU received the full candidate and passed a three-box Factory I/O regression, stop/reset and feedback-loss tests through the existing independent runtime backend. No generic MCP download is exposed. HMI and full palletizing/outfeed remain unqualified; this candidate is not in existing release packages. See the [exact verification scope](docs/verification/upstream-mcp-line-20261115.md).
+
 ## Download for your software
 
 Choose the adapter you need from [one GitHub Release](https://github.com/biaobiao2233/tia-guard/releases). Install both packages if you use both applications; a shared Gateway or core installation is not required.

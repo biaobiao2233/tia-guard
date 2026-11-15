@@ -1,0 +1,28 @@
+name: Upstream MCP contracts
+on:
+  push:
+    paths: ['adapters/tia-openness-mcp/**', '.github/workflows/upstream-mcp.yml']
+  pull_request:
+    paths: ['adapters/tia-openness-mcp/**', '.github/workflows/upstream-mcp.yml']
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: adapters/tia-openness-mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: adapters/tia-openness-mcp/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check
+      - run: npm test
+      - run: npm run test:prepare

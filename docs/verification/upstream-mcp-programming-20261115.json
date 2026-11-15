@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-15",
+  "scope": "Native acceptance through unchanged upstream MCP; dedicated offline copy only",
+  "programmingProbeVerified": true,
+  "generalMcpWriteToolAvailable": false,
+  "runtimeQualified": false,
+  "baseline": {
+    "errors": 0,
+    "warnings": 1
+  },
+  "negativeCompile": {
+    "errors": 1,
+    "undefinedSymbolConfirmed": true
+  },
+  "repairedCompile": {
+    "errors": 0,
+    "warnings": 1
+  },
+  "reopenedCompile": {
+    "errors": 0,
+    "warnings": 1
+  },
+  "reopenedXmlLogicIdentical": true,
+  "sourceUnchanged": true,
+  "disconnected": true,
+  "receiptSha256": "195e67211cf6497edbee0fe6a6fccefd5609267f61cdec2ec7e584caf9de1bc8",
+  "probeSourceSha256": "7ccbc22db13a275370264e69223256cabcfffd7b42af310b3fce9010cec192b5"
+}
