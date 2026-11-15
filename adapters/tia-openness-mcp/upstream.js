@@ -72,11 +72,27 @@ class Upstream {
     const pending = this.queue.then(operation); this.queue = pending.catch(() => {}); return pending;
   }
   status() {
-    return { adapterVersion: "0.1.0", stage: "P0-discovery", upstreamVersion: this.pin.version,
+    return { adapterVersion: "0.1.0", stage: this.config?.ownedRead ? "owned-read-candidate" : "P0-discovery", upstreamVersion: this.pin.version,
       sourceCommit: this.pin.sourceCommit, configured: !!this.config, started: !!this.client,
       closed: this.closed, failed: this.failed, engineSessionId: this.engineSessionId,
       accepted: lock.accepted, rollback: lock.rollback,
       engineeringQualified: false, runtimeQualified: false };
+  }
+  inspectCopy() {
+    return this.serial(async () => {
+      if (!this.config?.ownedRead) throw new AdapterError("owned-read-not-configured", "configuration");
+      try {
+        await this.start();
+        const { inspectOwnedCopy, verifyReadContract } = require("./owned-read.js");
+        const tools = await this.client.listTools({}, { timeout: this.timeoutMs });
+        verifyReadContract(tools.tools, this.pin.ownedReadProtocolSha256);
+        return await inspectOwnedCopy(this.client, this.config.ownedRead);
+      } catch (error) {
+        this.failed = true; throw error;
+      } finally {
+        this.closed = true; await this.stopInternal();
+      }
+    });
   }
   async start() {
     if (this.closed || this.failed) throw new AdapterError("upstream-session-ended", "lifecycle");

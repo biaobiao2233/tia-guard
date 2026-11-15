@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-15",
+  "scope": "Owned offline copy: PLC-root reads, XML export and close/reopen identity comparison",
+  "upstream": {
+    "version": "2.7.11",
+    "sourceCommit": "70764a118bc74eb11adc39e0936d0181882acfa3",
+    "ownedReadProtocolSha256": "e65fda10b0c4c42243ea07825dece533d5b832536aeaebbc8bb23f71ef0c3fd4"
+  },
+  "verdict": {
+    "ownedReadVerified": true,
+    "fullP1Qualified": false,
+    "projectEditSaveQualified": false,
+    "engineeringQualified": false,
+    "runtimeQualified": false
+  },
+  "cloud": {
+    "nodeTests": {
+      "passed": 27,
+      "failed": 0,
+      "skipped": 0
+    },
+    "pythonVersion": "3.12.3",
+    "pythonTests": {
+      "passed": 4,
+      "failed": 0
+    },
+    "syntaxCheck": true,
+    "sourceNormalization": "UTF-8 without BOM; universal LF newlines; exactly one final LF",
+    "sourceSha256": {
+      "package.json": "168978544f0ff35301da8340288fc8ba2a7db5fde1a3526413b1c9a7e40588c3",
+      "package-lock.json": "b24195298dd7cc381158538bca1fcebb03bdd3508c88c524b5a4537ae0a701ce",
+      "upstream.lock.json": "bd349217ce9b57579d0d4e8b2a91ce9608bba46b0e57abe788c53af8f6bd3c1b",
+      "prepare.py": "0eb4a582685b11c72bc223cef63d5e3df1ff69b6de208f4374c3fd133b26c6f3",
+      "contract.js": "17e52949ee7549cdf34506f9b94e57a539e1669f59132431a72ddf251e772ccf",
+      "upstream.js": "fc0c0d1e40a6e0998ec5fcd6d571e20f4324b4b435068db69b92b8ba8e7c1b11",
+      "index.js": "2758a283ff3b73fc228f80514876e9ae52c6b33be92b08c2ebcfde29ecd75f35",
+      "probe.js": "ed4a81017873745bf1850bb737dbcd92cd6ad1ce41c958dfd1935435c234065a",
+      "update.js": "4d01e0fc96bcb6450a3d018eefc706b039c065c04151f0685a46422d901eed32",
+      "pages.js": "dcdc9a59f8e809df9bcf7cc7072c5397c5fbef1520391b8ca680dbfbef7df8cd",
+      "owned-read.js": "5c41259527da9fa75c253254038dbb6a5731b31368b48f3081521c3cec1d72c6",
+      "native-owned-smoke.js": "06e0be64726f3f06f829d3b76f703cd319ce7238a2f58560ad906d63d35286a0",
+      "tests/adapter-fixture.js": "6d2755029a33ed6321aae826157d015ce35f10fa0b8653c5850ae2e39e9bf8f7",
+      "tests/contract.test.js": "7237faa2db66b2b732ccbf9aef0455738030f6b7909493a6a6eec4a1b53966c5",
+      "tests/facade.test.js": "c19928184d7f7c73717b420169d73296faff25f0b07551e495e249a847f3c63c",
+      "tests/fake-upstream.js": "32cada3e7d777aa1416c5bc7433ce923efa5b89cf4afa42f49a8a74692b87d5a",
+      "tests/owned-read.test.js": "0b737d4bb3b5537e982a70caee8fd0286fd60c477fd9be67b6fe065aaa3b691e",
+      "tests/support.js": "4602ca0eea34496c9fba04b21693a8d1d9145ea7a2e94f7a00073d579d19e604",
+      "tests/test_prepare.py": "46738c48ee38c0896d438813df11065cce2d21f8f0f53ccde3ca34bf75a06236",
+      "tests/transport.test.js": "6a369580ff01dd99fc21d90b51282a251a549652cb35e00d4df3003ac3b00b9c",
+      "tests/update.test.js": "e8067c8339c501121361e3578d54e6cc3a1629b337eadde06f3a77e7cafab5cb"
+    }
+  },
+  "native": {
+    "os": "Windows 11",
+    "tiaMajorVersion": 21,
+    "facadeToolsWithExplicitOwnedRead": 7,
+    "sourceFiles": 71,
+    "blocks": 14,
+    "tags": 67,
+    "xmlExports": 14,
+    "xmlNamesMatchNativeBlocks": true,
+    "sourceUnchanged": true,
+    "reopenVerified": true,
+    "disconnected": true,
+    "ownedChildExitConfirmed": true,
+    "ordinaryConfirmationNeededAfterTrust": false,
+    "rawFinalReceiptSha256": "d52a05e2f9f4b10aaaee9d1c3ed6dd0a16d5cb891653b254f5dc4d7f6dccd6d3"
+  },
+  "notRun": [
+    "SaveProject",
+    "Project edits",
+    "Compile",
+    "HMI authoring",
+    "PLC download",
+    "PLC execution",
+    "Factory I/O line run"
+  ]
+}

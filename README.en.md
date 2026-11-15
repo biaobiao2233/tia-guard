@@ -16,7 +16,7 @@ Bounded GUI fallback is allowed when no usable interface covers the action, with
 
 **Integration direction (2026-11-14):** prefer existing MCP tools for agents and keep CLI commands for diagnostics, batch work and regression. Run third-party engines independently, unchanged by default, behind public protocols and a thin compatibility adapter. Promote pinned upgrade candidates through contract checks, real engineering acceptance and a rollback path instead of freezing an old fork. See the [upstream MCP integration plan](docs/UPSTREAM-MCP-INTEGRATION.md#english). Candidate evidence is separate from released capabilities.
 
-The first [independent upstream MCP candidate](adapters/tia-openness-mcp/README.md#english) provides P0 protocol discovery, disconnected diagnostics and release-metadata checks. It does not provide project reads/writes or PLC execution and is not in the existing release packages.
+The first [independent upstream MCP candidate](adapters/tia-openness-mcp/README.md#english) provides protocol diagnostics and update checks, plus opt-in MCP inspection/export of a fresh offline copy in an isolated TIA instance, with close/reopen comparison. Native evidence covers 14 blocks and 67 tags. Project editing, compilation, HMI authoring and PLC execution remain unqualified through this candidate; it is not in existing release packages.
 
 ## Download for your software
 

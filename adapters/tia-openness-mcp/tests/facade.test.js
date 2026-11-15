@@ -51,3 +51,16 @@ test("production facade reports missing configuration without pretending it has 
     assert.equal(r.isError, true); assert.equal(r.structuredContent.code, "missing-local-configuration");
   } finally { await client.close(); }
 });
+test("owned-copy MCP is opt-in and caller paths are rejected before any upstream launch", async t => {
+  const f=await fixture(t); f.config.ownedRead={sourceProjectFile:path.join(f.root,"Owned.ap21"),artifactRoot:path.join(f.root,"artifacts")};
+  const options=path.join(f.root,"owned-options.json");await fs.writeFile(options,JSON.stringify({config:f.config,pin:f.pin}));
+  const transport=new StdioClientTransport({command:process.execPath,args:[path.join(__dirname,"adapter-fixture.js")],cwd:__dirname,stderr:"pipe",env:{...getDefaultEnvironment(),UPSTREAM_TEST_OPTIONS:options,UPSTREAM_TEST_CALLS:f.calls}});
+  transport.stderr.on("data",()=>{});const client=new Client({name:"owned-scope-test",version:"1.0.0"},{mode:"legacy"});
+  try{
+    await client.connect(transport);const tools=(await client.listTools()).tools;
+    assert.equal(tools.filter(t=>t.name==="upstream_inspect_copy").length,1);
+    let denied=false;try{denied=(await client.callTool({name:"upstream_inspect_copy",arguments:{sourceProjectFile:path.join(f.root,"Other.ap21")}})).isError===true;}catch{denied=true;}
+    assert.equal(denied,true);await assert.rejects(fs.access(f.calls));
+    const close=await client.callTool({name:"upstream_close",arguments:{}});assert.equal(close.structuredContent.cleanupConfirmed,true);
+  }finally{await client.close();}
+});

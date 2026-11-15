@@ -19,7 +19,8 @@
       "failed": 0,
       "skipped": 0
     },
-    "pythonVersion": "3.11",
+    "pythonVersion": null,
+    "pythonVersionNote": "Exact Python version was not recorded in the P0 receipt; later owned-read tests record their own runtime.",
     "pythonTests": {
       "passed": 4,
       "failed": 0

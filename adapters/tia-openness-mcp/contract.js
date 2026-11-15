@@ -77,4 +77,4 @@ function assertDisconnected(value) {
   }
   return value;
 }
-module.exports = { AdapterError, object, sha256, runtimeDigest, checkTools, payload, alias, assertDisconnected };
+module.exports = { AdapterError, object, canonical, sha256, runtimeDigest, checkTools, payload, alias, assertDisconnected };

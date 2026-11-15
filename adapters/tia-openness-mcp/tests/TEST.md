@@ -18,3 +18,9 @@ General tests run on an isolated cloud workspace; original Windows engine checks
 - Windows 11 / TIA V21: the real facade and unchanged v2.7.11 engine passed discovery, disconnected GetState, Doctor(fix=false), persistent session, forbidden-call rejection and owned-child cleanup. Two consecutive cold starts used the same already-used runtime directory.
 - Earlier failed runs and fixes are retained in the [sanitized verification](../../../docs/verification/upstream-mcp-p0-20261115.md), with exact source/receipt hashes. Raw machine-specific receipts stay in .local.
 - Engineering and PLC runtime qualification remain false; first onboarding has no accepted or verified rollback version.
+
+## Owned-copy read subset on 2026-11-15
+
+- Final cloud checks: 27 Node tests, 4 Python tests; no failed/skipped tests. Pagination, exact project binding, new output directories, partial-result denial and caller path rejection are covered.
+- The native MCP workflow read 14 PLC-root blocks and 67 tags, exported 14 XML files, reopened the copy and compared block identities, confirmed unchanged source files, disconnected and exited. XML names were independently checked against the native list.
+- See the [owned-read evidence](../../../docs/verification/upstream-mcp-owned-read-20261115.md). This does not qualify project edits/save, compilation, HMI or PLC execution. Earlier failures remain in their original local receipts.

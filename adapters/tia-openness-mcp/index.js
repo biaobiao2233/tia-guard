@@ -32,6 +32,18 @@ function buildServer(provider) {
       }
     });
   }
+  if (provider.config?.ownedRead) {
+    server.registerTool("upstream_inspect_copy", {
+      description: "Create an owned offline copy of the explicitly configured .ap21, start isolated headless TIA, read/export PLC-root blocks and tags, close/reopen and disconnect. Never open the original or go online. Ends this engine session.",
+      inputSchema: z.strictObject({}), annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
+    }, async () => {
+      try { return envelope(await provider.inspectCopy()); }
+      catch (error) {
+        const safe = error instanceof AdapterError ? error : new AdapterError("owned-read-failed", "engineering");
+        return { ...envelope({ success: false, code: safe.code, phase: safe.phase, engineeringQualified: false, runtimeQualified: false }), isError: true };
+      }
+    });
+  }
   return server;
 }
 function main(provider = fromEnvironment()) {
